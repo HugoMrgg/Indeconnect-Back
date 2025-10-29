@@ -1,0 +1,6 @@
+@IndeConnect_Back.Web_HostAddress = http://localhost:5237
+
+GET {{IndeConnect_Back.Web_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
