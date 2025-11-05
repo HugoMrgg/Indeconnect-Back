@@ -1,0 +1,15 @@
+**/bin/
+**/obj/
+**/.vs/
+**/.idea/
+**/.vscode/
+**/node_modules/
+**/*.user
+**/*.suo
+**/*.ncrunch*
+**/*.DotSettings*
+.git
+.gitignore
+Dockerfile*
+docker-compose*.yml
+.env
