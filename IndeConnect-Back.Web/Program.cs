@@ -26,10 +26,11 @@ if (app.Environment.IsDevelopment())
 {
     app.MapOpenApi();
 }
-else
-{
-    app.UseHttpsRedirection();
-}
+// Pas de redirection HTTPS en prod locale
+// else
+// {
+//     app.UseHttpsRedirection();
+// }
 
 
 

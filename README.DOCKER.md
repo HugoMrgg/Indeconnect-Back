@@ -1,6 +1,6 @@
 # 🐳 Dockerisation de **IndeConnect-Back**
 
-Ce guide décrit comment exécuter le backend **IndeConnect-Back** dans un environnement Docker complet avec **.NET 9**, **PostgreSQL** et **pgAdmin**.
+Ce guide décrit comment exécuter le backend IndeConnect-Back dans un environnement Docker de production locale avec .NET 9, PostgreSQL 16 et pgAdmin 8.
 
 ---
 
@@ -57,23 +57,27 @@ IndeConnect-Back/
 
 ## 🚀 Démarrage rapide
 
-```bash
-cd Indeconnect-Back
-cp .env.example .env
-docker compose up --build
-```
+  ```bash
+  cd Indeconnect-Back
+  cp .env.example .env
+  # Development
+  docker compose up --build 
+  # Production
+  docker compose up -d --build 
+  ```
 
-Accès à :
-  - API -> http://localhost:8080
-  - pgAdmin (optionnel) -> http://localhost:5050
+> Les services sont exposés uniquement en local (`127.0.0.1`).  
+> L’API est accessible sur http://localhost:8080  
+> pgAdmin est accessible sur http://localhost:5050
+
 
 ## 🧩 Architecture Docker
 
-| **Service** | **Image**             | **Port** | **Description**                                     |
-|:------------|:----------------------|:---------|:----------------------------------------------------|
-| api         | `indeconnect/api:dev` | 8080     | Conteneur .NET 9 ASP.NET Core servant l’API         |
-| db          | `postgres:16`         | 5432     | Base de données PostgreSQL                          |
-| pgadmin     | `dpage/pgadmin4:8`    | 5050     | Interface d’administration PostgreSQL (optionnelle) |
+| **Service** | **Image**                                     | **Port** | **Description**                                     |
+|:------------|:----------------------------------------------|:---------|:----------------------------------------------------|
+| api         | `indeconnect/api:dev`  `indeconnect/api:prod` | 8080     | Conteneur .NET 9 ASP.NET Core servant l’API         |
+| db          | `postgres:16`                                 | 5432     | Base de données PostgreSQL                          |
+| pgadmin     | `dpage/pgadmin4:8`                            | 5050     | Interface d’administration PostgreSQL (optionnelle) |
 
 			
 **Volumes persistants :**
@@ -128,18 +132,12 @@ using (var scope = app.Services.CreateScope())
 ```
 
 ## ❤️ Santé et supervision
-Actuellement, aucun endpoint `/health` n’est défini.
-
-Ajoutez simplement :
-```csharp
-app.MapGet("/health", () => Results.Ok("ok"));
-```
-
 Le `docker-compose.yml` inclut un healthcheck basique :
 
 ```yaml
-test: ["CMD", "wget", "-qO-", "http://localhost:8080/health || exit 1"]
+test: ["CMD-SHELL", "curl -fsS http://localhost:8080/health >/dev/null || exit 1"]
 ```
+> L’API expose un endpoint `/health` utilisé par le healthcheck Docker.
 
 ## 🧰 Commandes utiles
 ```bash
@@ -158,23 +156,22 @@ docker compose down -v
 
 ## 🧾 Notes supplémentaires
 - **Base de données** : PostgreSQL est utilisée via `Npgsql.EntityFrameworkCore.PostgreSQL`.
-- **Sécurité** : un utilisateur non-root (`appuser`) est défini dans le conteneur.
-- **Environnement** : `ASPNETCORE_ENVIRONMENT=Development` par défaut.
+- **Sécurité** : Le conteneur exécute l’application sous un utilisateur non-root (`appuser`), avec un système de fichiers en lecture seule (`read_only: true`), un espace temporaire isolé (`tmpfs /tmp`) et `no-new-privileges:true` pour limiter les permissions.
+- **Environnement** : `ASPNETCORE_ENVIRONMENT=Development` ou `ASPNETCORE_ENVIRONMENT=Production`.
 - **Ports exposés** : modifiables dans `docker-compose.yml`.
 
 ## ✅ Résumé
 
-| Élément             | Statut               |
-|:--------------------|:---------------------|
-| .NET SDK            | 9.0                  |
-| Base de données     | PostgreSQL 16        |
-| Orchestration       | Docker Compose v3.9  |
-| Migrations EF Core  | à créer              |
-| Endpoint Health     | à ajouter            |
+| Élément             | Statut                |
+|:--------------------|:----------------------|
+| .NET SDK            | 9.0                   |
+| Base de données     | PostgreSQL 16         |
+| Orchestration       | Docker Compose v3.9   |
+| Migrations EF Core  | à créer               |
+| Endpoint Health     | `/health` présent     |
 
 
 ## 🧭 Prochaines étapes
-1. Ajouter les entités et migrations.
+1. Ajouter les entités et migrations. 
 2. Tester l’API sur localhost:8080.
-3. Intégrer un endpoint /health.
-4. Passer à un environnement production avec image runtime slim si besoin.
+3. Ajouter la base de données et la tester sur prod.
