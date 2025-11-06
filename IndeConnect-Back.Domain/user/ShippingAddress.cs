@@ -1,5 +1,7 @@
-﻿namespace IndeConnect_Back.Domain;
-
+﻿namespace IndeConnect_Back.Domain.user;
+/**
+ * Represents a User's shipping adress
+ */
 public class ShippingAddress
 {
     public long Id { get; private set; }
@@ -11,7 +13,7 @@ public class ShippingAddress
     public string PostalCode { get; private set; } = default!;
     public string City { get; private set; } = default!;
     public string Country { get; private set; } = "BE";
-    public string? Extra { get; private set; } // Ex : appartement, étage
+    public string? Extra { get; private set; } 
 
     public bool IsDefault { get; private set; } = false;
 

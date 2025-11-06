@@ -1,20 +1,23 @@
-﻿namespace IndeConnect_Back.Domain;
+﻿using IndeConnect_Back.Domain.order;
+
+namespace IndeConnect_Back.Domain.user;
+/**
+ * Represents a User's delivry, with all the informations needed for a user to follow it.
+ */
 
 public class Delivery
 {
     public long Id { get; private set; }
-    public string Description { get; private set; } = default!; // "BPost", "Pickup", etc.
-
-    public string? TrackingNumber { get; private set; } // Numéro de suivi (fourni par BPost)
-    public DateTime? ShippedAt { get; private set; } // Date d’expédition
-    public DeliveryStatus Status { get; private set; } = DeliveryStatus.Pending; // Enumération d’états
+    public string Description { get; private set; } = default!; 
+    public string? TrackingNumber { get; private set; } 
+    public DateTimeOffset? ShippedAt { get; private set; } 
+    public DeliveryStatus Status { get; private set; } = DeliveryStatus.Pending; 
 
     public long OrderId { get; private set; }
     public Order Order { get; private set; } = default!;
 
     private Delivery() { }
 
-    // Constructeur pour nouvelle livraison
     public Delivery(string description, long orderId, string? trackingNumber = null)
     {
         Description = description;
@@ -22,7 +25,6 @@ public class Delivery
         TrackingNumber = trackingNumber;
     }
 
-    // Méthodes métier : changement de statut
     public void MarkAsShipped(DateTime shippedAt, string trackingNumber)
     {
         ShippedAt = shippedAt;

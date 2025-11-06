@@ -1,11 +1,13 @@
-﻿namespace IndeConnect_Back.Domain;
+﻿namespace IndeConnect_Back.Domain.user;
 
 public class Role
 {
     public long Id { get; private set; }
     public string Name { get; private set; } = default!;
-
-    private Role() { } // EF
+    public string Description { get; private set; } = default!;
+    private readonly List<User> _users = new();
+    public IReadOnlyCollection<User> Users => _users;
+    private Role() { } 
 
     public Role(string name)
     {

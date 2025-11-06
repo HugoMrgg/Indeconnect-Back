@@ -1,4 +1,4 @@
-﻿namespace IndeConnect_Back.Domain;
+﻿namespace IndeConnect_Back.Domain.user;
 
 public enum DeliveryStatus
 {
