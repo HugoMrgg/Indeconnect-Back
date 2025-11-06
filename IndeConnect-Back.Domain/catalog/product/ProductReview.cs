@@ -1,4 +1,6 @@
-﻿namespace IndeConnect_Back.Domain.catalog.product;
+﻿using IndeConnect_Back.Domain.user;
+
+namespace IndeConnect_Back.Domain.catalog.product;
 
 public class ProductReview
 {
@@ -11,22 +13,22 @@ public class ProductReview
 
     public int Rating { get; private set; } // 1 à 5
     public string? Comment { get; private set; }
-    public DateTime CreatedAt { get; private set; }
-    public ReviewStatus Status { get; private set; } = ReviewStatus.Pending; // modération
+    public DateTimeOffset CreatedAt { get; private set; }
+    public DateTimeOffset? UpdatedAt { get; private set; }
+    public ReviewStatus Status { get; private set; } = ReviewStatus.Pending;
 
-    private ProductReview() { } // EF
+    private ProductReview() { }
 
     public ProductReview(long productId, long userId, int rating, string? comment)
     {
-        if (rating < 1 || rating > 5) throw new ArgumentOutOfRangeException(nameof(rating));
+        if (rating < 1 || rating > 5)
+            throw new ArgumentOutOfRangeException(nameof(rating), "Rating must be between 1 and 5");
+            
         ProductId = productId;
         UserId = userId;
         Rating = rating;
         Comment = string.IsNullOrWhiteSpace(comment) ? null : comment.Trim();
-        CreatedAt = DateTime.UtcNow;
+        CreatedAt = DateTimeOffset.UtcNow;
         Status = ReviewStatus.Pending;
     }
-
-    public void Approve() => Status = ReviewStatus.Approved;
-    public void Reject() => Status = ReviewStatus.Rejected;
 }

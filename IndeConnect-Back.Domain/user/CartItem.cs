@@ -1,33 +1,36 @@
-﻿namespace IndeConnect_Back.Domain;
+﻿using IndeConnect_Back.Domain.catalog.product;
 
+namespace IndeConnect_Back.Domain.user;
+/**
+ * Represents an item of a Cart, an Item has a Product, a quantity and a unitPrice
+ */
 public class CartItem
 {
+    // Composite key : CartId + ProductId
     public long CartId { get; private set; }
     public Cart Cart { get; private set; } = default!;
 
     public long ProductId { get; private set; }
-    public Product Product { get; private set; }
+    public Product Product { get; private set; } = default!;
+    
     public int Quantity { get; private set; }
     public decimal UnitPrice { get; private set; }
+    
+    public DateTimeOffset AddedAt { get; private set; }
 
-    private CartItem(Product product)
-    {
-        Product = product;
-    } // EF
+    private CartItem() { }
 
-    public CartItem(long cartId, long productId, int quantity, decimal unitPrice, Product product)
+    public CartItem(long cartId, long productId, int quantity, decimal unitPrice)
     {
+        if (quantity <= 0)
+            throw new ArgumentException("Quantity must be positive", nameof(quantity));
+        if (unitPrice < 0)
+            throw new ArgumentException("Unit price cannot be negative", nameof(unitPrice));
+
         CartId = cartId;
         ProductId = productId;
         Quantity = quantity;
         UnitPrice = unitPrice;
-        Product = product;
-    }
-
-    public void Increase(int delta) => Quantity += delta;
-    public void SetQuantity(int qty)
-    {
-        if (qty < 0) throw new ArgumentOutOfRangeException(nameof(qty));
-        Quantity = qty;
+        AddedAt = DateTimeOffset.UtcNow;
     }
 }

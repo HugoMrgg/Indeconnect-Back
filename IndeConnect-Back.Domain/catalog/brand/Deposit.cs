@@ -1,8 +1,8 @@
 ﻿namespace IndeConnect_Back.Domain.catalog.brand;
 
-public class Depot
+public class Deposit
 {
-    public string Id { get; private set; } = default!; // conforme au script: VARCHAR(50)
+    public string Id { get; private set; } = default!; 
     public int Number { get; private set; }
     public string Street { get; private set; } = default!;
     public string PostalCode { get; private set; } = default!;
@@ -10,9 +10,9 @@ public class Depot
     public long BrandId { get; private set; }
     public Brand Brand { get; private set; } = default!;
 
-    private Depot() { }
+    private Deposit() { }
 
-    public Depot(string id, int number, string street, string postalCode, long brandId)
+    public Deposit(string id, int number, string street, string postalCode, long brandId)
     {
         Id = id;
         Number = number;

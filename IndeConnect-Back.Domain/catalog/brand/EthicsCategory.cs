@@ -4,4 +4,5 @@ public enum EthicsCategory
 {
     MaterialsManufacturing = 1, 
     Transport = 2
+    // ...
 }
