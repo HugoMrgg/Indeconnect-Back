@@ -43,9 +43,9 @@ public class BrandPolicyConfiguration : IEntityTypeConfiguration<BrandPolicy>
         // Enable the fact that a brand could have two policy about the same subject
         // Like more than one policy for the return policy
         builder.HasIndex(bp => new { bp.BrandId, bp.Type, bp.IsActive })
-               .HasFilter("[IsActive] = 1") 
                .IsUnique()
-               .HasDatabaseName("IX_BrandPolicy_UniqueActivePerType");
+               .HasDatabaseName("IX_BrandPolicy_UniqueActivePerType")
+               .HasFilter("\"IsActive\" = true");
         
         // Type's filter Index
         builder.HasIndex(bp => bp.Type)

@@ -44,9 +44,7 @@ public class AppDbContext : DbContext
     public DbSet<ProductReview> ProductReviews { get; set; }
     public DbSet<Sale> Sales { get; set; }
     
-    // ========================================
     // ORDER DOMAIN
-    // ========================================
     public DbSet<Order> Orders { get; set; }
     public DbSet<OrderItem> OrderItems { get; set; }
     public DbSet<Invoice> Invoices { get; set; }

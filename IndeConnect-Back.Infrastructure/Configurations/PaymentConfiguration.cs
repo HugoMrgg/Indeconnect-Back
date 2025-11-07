@@ -56,7 +56,7 @@ public class PaymentConfiguration : IEntityTypeConfiguration<Payment>
         
         builder.HasIndex(p => p.TransactionId)
                .IsUnique()
-               .HasFilter("[TransactionId] IS NOT NULL")
+               .HasFilter("\"TransactionId\" IS NOT NULL")
                .HasDatabaseName("IX_Payment_UniqueTransactionId");
         
         builder.HasIndex(p => p.OrderId)
