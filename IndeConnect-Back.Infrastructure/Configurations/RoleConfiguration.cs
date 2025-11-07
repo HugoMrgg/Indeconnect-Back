@@ -32,11 +32,11 @@ public class RoleConfiguration : IEntityTypeConfiguration<Role>
         
         // Seed Data
         builder.HasData(
-            new { Id = 1, Name = "Admin", Description = "Gestion de la gouvernance globale du système" },
-            new { Id = 2, Name = "Moderator", Description = "Responsable du contrôle qualité et modération" },
-            new { Id = 3, Name = "SuperVendor", Description = "Représente une marque et gère son image" },
-            new { Id = 4, Name = "Seller", Description = "Gère le catalogue produit de sa marque" },
-            new { Id = 5, Name = "User", Description = "Client inscrit pouvant passer commande" }
+            new { Id = 1L, Name = "Admin", Description = "Gestion de la gouvernance globale du système" },
+            new { Id = 2L, Name = "Moderator", Description = "Responsable du contrôle qualité et modération" },
+            new { Id = 3L, Name = "SuperVendor", Description = "Représente une marque et gère son image" },
+            new { Id = 4L, Name = "Seller", Description = "Gère le catalogue produit de sa marque" },
+            new { Id = 5L, Name = "User", Description = "Client inscrit pouvant passer commande" }
         );
     }
 }

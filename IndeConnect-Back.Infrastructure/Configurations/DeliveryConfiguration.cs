@@ -40,7 +40,7 @@ public class DeliveryConfiguration : IEntityTypeConfiguration<Delivery>
         
         builder.HasIndex(d => d.TrackingNumber)
                .IsUnique()
-               .HasFilter("[TrackingNumber] IS NOT NULL")
+               .HasFilter("\"TrackingNumber\" IS NOT NULL")
                .HasDatabaseName("IX_Delivery_UniqueTrackingNumber");
         
         builder.HasIndex(d => d.Status)
