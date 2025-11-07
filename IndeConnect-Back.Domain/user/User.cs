@@ -76,5 +76,9 @@ public class User
         CreatedAt = DateTimeOffset.UtcNow;
         IsEnabled = true;
     }
+    public void SetPasswordHash(string passwordHash)
+    {
+        PasswordHash = passwordHash;
+    }
 }
 
