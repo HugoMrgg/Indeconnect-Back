@@ -19,13 +19,21 @@ builder.Services.AddOpenApi();
 
 var app = builder.Build();
 
+
+
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
 {
     app.MapOpenApi();
 }
+// Pas de redirection HTTPS en prod locale
+// else
+// {
+//     app.UseHttpsRedirection();
+// }
 
-app.UseHttpsRedirection();
+
+
 
 var summaries = new[]
 {
@@ -45,6 +53,8 @@ app.MapGet("/weatherforecast", () =>
     return forecast;
 })
 .WithName("GetWeatherForecast");
+
+app.MapGet("/health", () => Results.Ok("ok"));
 
 app.Run();
 
