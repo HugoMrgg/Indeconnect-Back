@@ -2,7 +2,10 @@ using System.Text;
 using IndeConnect_Back.Infrastructure;
 using Microsoft.EntityFrameworkCore;
 using DotNetEnv;
+using FluentValidation;
+using FluentValidation.AspNetCore;
 using IndeConnect_Back.Application.Services.Interfaces;
+using IndeConnect_Back.Application.Validators;
 using IndeConnect_Back.Infrastructure.services.Implementations;
 using IndeConnect_Back.Infrastructure.Services.Implementations;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
@@ -33,6 +36,11 @@ builder.Services.AddSwaggerGen();
 
 builder.Services.AddScoped<IJwtTokenGenerator, JwtTokenGenerator>();
 builder.Services.AddScoped<IAuthService, AuthService>();
+
+builder.Services.AddFluentValidationAutoValidation();
+builder.Services.AddValidatorsFromAssemblyContaining<RegisterAnonymousRequestValidator>();
+builder.Services.AddValidatorsFromAssemblyContaining<LoginAnonymousRequestValidator>();
+
 var jwtSecret = builder.Configuration["JWT_SECRET"]; // ou "Jwt:Secret" selon ton JwtTokenGenerator
 
 if (string.IsNullOrEmpty(jwtSecret))

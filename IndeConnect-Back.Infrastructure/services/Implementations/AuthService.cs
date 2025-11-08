@@ -18,10 +18,6 @@ public class AuthService : IAuthService
 
     public async Task<AuthResponse> RegisterAnonymousAsync(RegisterAnonymousRequest request)
     {
-        // Validation
-        if (request.Password != request.ConfirmPassword)
-            throw new InvalidOperationException("Passwords do not match");
-
         if (await _context.Users.AnyAsync(u => u.Email == request.Email))
             throw new InvalidOperationException("Email already exists");
 
@@ -33,16 +29,13 @@ public class AuthService : IAuthService
             request.Email,
             request.FirstName,
             request.LastName,
-            roleId: 5 // User role
+            Role.Client
         );
 
         user.SetPasswordHash(passwordHash);
         
         _context.Users.Add(user);
         await _context.SaveChangesAsync();
-
-        // Load role for response
-        await _context.Entry(user).Reference(u => u.Role).LoadAsync();
 
         // Generate JWT
         var token = _jwtGenerator.GenerateToken(user);
@@ -52,7 +45,7 @@ public class AuthService : IAuthService
             user.Email,
             user.FirstName,
             user.LastName,
-            user.Role.Name,
+            user.Role.ToString(),
             token
         );
     }
@@ -78,7 +71,7 @@ public class AuthService : IAuthService
             user.Email,
             user.FirstName,
             user.LastName,
-            user.Role.Name,
+            user.Role.ToString(),
             token
         );
     }

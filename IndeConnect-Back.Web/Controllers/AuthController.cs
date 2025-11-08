@@ -7,7 +7,8 @@ using Microsoft.AspNetCore.Mvc;
 namespace IndeConnect_Back.Web.Controllers;
 
 [ApiController]
-[Route("api/[controller]")]
+[Route("indeconnect/")]
+
 public class AuthController : ControllerBase
 {
     private readonly IAuthService _authService;
@@ -20,7 +21,7 @@ public class AuthController : ControllerBase
     /// <summary>
     /// Register a new user account (public)
     /// </summary>
-    [HttpPost("register")]
+    [HttpPost("usersClients")]
     [AllowAnonymous]
     public async Task<ActionResult<AuthResponse>> Register([FromBody] RegisterAnonymousRequest request)
     {
@@ -38,7 +39,7 @@ public class AuthController : ControllerBase
     /// <summary>
     /// Login with email and password
     /// </summary>
-    [HttpPost("login")]
+    [HttpPost("sessions")]
     [AllowAnonymous]
     public async Task<ActionResult<AuthResponse>> Login([FromBody] LoginAnonymousRequest request)
     {
@@ -56,7 +57,7 @@ public class AuthController : ControllerBase
     /// <summary>
     /// Get current user info (authenticated)
     /// </summary>
-    [HttpGet("me")]
+    [HttpGet("users/current")]
     [Authorize]
     public ActionResult GetCurrentUser()
     {
