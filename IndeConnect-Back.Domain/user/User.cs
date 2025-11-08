@@ -76,5 +76,29 @@ public class User
         CreatedAt = DateTimeOffset.UtcNow;
         IsEnabled = true;
     }
+    
+    public void SubscribeToBrand(Brand brand)
+    {
+        if (_brandSubscriptions.Any(bs => bs.BrandId == brand.Id))
+            throw new InvalidOperationException($"Already subscribed to brand {brand.Name}");
+
+        var subscription = new BrandSubscription(Id, brand.Id);
+        _brandSubscriptions.Add(subscription);
+    }
+
+    public void UnsubscribeFromBrand(long brandId)
+    {
+        var subscription = _brandSubscriptions.FirstOrDefault(bs => bs.BrandId == brandId);
+        if (subscription == null)
+            throw new InvalidOperationException("Subscription not found");
+
+        _brandSubscriptions.Remove(subscription);
+    }
+
+    public bool IsSubscribedToBrand(long brandId)
+    {
+        return _brandSubscriptions.Any(bs => bs.BrandId == brandId);
+    }
+
 }
 
