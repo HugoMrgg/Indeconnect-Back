@@ -14,6 +14,8 @@ public class User
     public string? PasswordHash { get; private set; }
     public DateTimeOffset CreatedAt { get; private set; }
     public bool IsEnabled { get; private set; }
+    public ICollection<UserReview> Reviews { get; private set; } = new List<UserReview>();
+
     
     // Invitation informations
     public string? InvitationTokenHash { get; private set; }
@@ -21,7 +23,6 @@ public class User
     public bool IsInvitationPending => InvitationTokenHash != null && PasswordHash == null;
     
     // Role
-    public long RoleId { get; private set; }
     public Role Role { get; private set; } = default!;
     
     // Wishlist - relation One-to-One
@@ -60,7 +61,7 @@ public class User
     
     private User() { }
 
-    public User(string email, string firstName, string lastName, long roleId)
+    public User(string email, string firstName, string lastName, Role role)
     {
         if (string.IsNullOrWhiteSpace(email))
             throw new ArgumentException("Email is required", nameof(email));
@@ -72,9 +73,13 @@ public class User
         Email = email.Trim().ToLower();
         FirstName = firstName.Trim();
         LastName = lastName.Trim();
-        RoleId = roleId;
         CreatedAt = DateTimeOffset.UtcNow;
         IsEnabled = true;
+        Role = role;
+    }
+    public void SetPasswordHash(string passwordHash)
+    {
+        PasswordHash = passwordHash;
     }
 }
 

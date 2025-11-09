@@ -1382,64 +1382,6 @@ namespace IndeConnect_Back.Infrastructure.Migrations
                     b.ToTable("Deliveries");
                 });
 
-            modelBuilder.Entity("IndeConnect_Back.Domain.user.Role", b =>
-                {
-                    b.Property<long>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("bigint");
-
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("Id"));
-
-                    b.Property<string>("Description")
-                        .HasMaxLength(500)
-                        .HasColumnType("character varying(500)");
-
-                    b.Property<string>("Name")
-                        .IsRequired()
-                        .HasMaxLength(50)
-                        .HasColumnType("character varying(50)");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("Name")
-                        .IsUnique()
-                        .HasDatabaseName("IX_Role_UniqueName");
-
-                    b.ToTable("Roles");
-
-                    b.HasData(
-                        new
-                        {
-                            Id = 1L,
-                            Description = "Gestion de la gouvernance globale du système",
-                            Name = "Admin"
-                        },
-                        new
-                        {
-                            Id = 2L,
-                            Description = "Responsable du contrôle qualité et modération",
-                            Name = "Moderator"
-                        },
-                        new
-                        {
-                            Id = 3L,
-                            Description = "Représente une marque et gère son image",
-                            Name = "SuperVendor"
-                        },
-                        new
-                        {
-                            Id = 4L,
-                            Description = "Gère le catalogue produit de sa marque",
-                            Name = "Seller"
-                        },
-                        new
-                        {
-                            Id = 5L,
-                            Description = "Client inscrit pouvant passer commande",
-                            Name = "User"
-                        });
-                });
-
             modelBuilder.Entity("IndeConnect_Back.Domain.user.ShippingAddress", b =>
                 {
                     b.Property<long>("Id")
@@ -1543,8 +1485,9 @@ namespace IndeConnect_Back.Infrastructure.Migrations
                         .HasMaxLength(255)
                         .HasColumnType("character varying(255)");
 
-                    b.Property<long>("RoleId")
-                        .HasColumnType("bigint");
+                    b.Property<string>("Role")
+                        .IsRequired()
+                        .HasColumnType("text");
 
                     b.Property<long?>("WishlistId")
                         .HasColumnType("bigint");
@@ -1561,13 +1504,45 @@ namespace IndeConnect_Back.Infrastructure.Migrations
                     b.HasIndex("IsEnabled")
                         .HasDatabaseName("IX_User_IsEnabled");
 
-                    b.HasIndex("RoleId")
+                    b.HasIndex("Role")
                         .HasDatabaseName("IX_User_RoleId");
 
                     b.HasIndex("LastName", "FirstName")
                         .HasDatabaseName("IX_User_FullName");
 
                     b.ToTable("Users");
+                });
+
+            modelBuilder.Entity("IndeConnect_Back.Domain.user.UserReview", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("Id"));
+
+                    b.Property<long>("BrandId")
+                        .HasColumnType("bigint");
+
+                    b.Property<string>("Comment")
+                        .HasColumnType("text");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("Rating")
+                        .HasColumnType("integer");
+
+                    b.Property<long>("UserId")
+                        .HasColumnType("bigint");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("BrandId");
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("UserReview");
                 });
 
             modelBuilder.Entity("IndeConnect_Back.Domain.user.Wishlist", b =>
@@ -2029,15 +2004,23 @@ namespace IndeConnect_Back.Infrastructure.Migrations
                     b.Navigation("User");
                 });
 
-            modelBuilder.Entity("IndeConnect_Back.Domain.user.User", b =>
+            modelBuilder.Entity("IndeConnect_Back.Domain.user.UserReview", b =>
                 {
-                    b.HasOne("IndeConnect_Back.Domain.user.Role", "Role")
-                        .WithMany("Users")
-                        .HasForeignKey("RoleId")
-                        .OnDelete(DeleteBehavior.Restrict)
+                    b.HasOne("IndeConnect_Back.Domain.catalog.brand.Brand", "Brand")
+                        .WithMany()
+                        .HasForeignKey("BrandId")
+                        .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.Navigation("Role");
+                    b.HasOne("IndeConnect_Back.Domain.user.User", "User")
+                        .WithMany("Reviews")
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Brand");
+
+                    b.Navigation("User");
                 });
 
             modelBuilder.Entity("IndeConnect_Back.Domain.user.Wishlist", b =>
@@ -2129,11 +2112,6 @@ namespace IndeConnect_Back.Infrastructure.Migrations
                     b.Navigation("Items");
                 });
 
-            modelBuilder.Entity("IndeConnect_Back.Domain.user.Role", b =>
-                {
-                    b.Navigation("Users");
-                });
-
             modelBuilder.Entity("IndeConnect_Back.Domain.user.User", b =>
                 {
                     b.Navigation("BrandSubscriptions");
@@ -2149,6 +2127,8 @@ namespace IndeConnect_Back.Infrastructure.Migrations
                     b.Navigation("PaymentMethods");
 
                     b.Navigation("Returns");
+
+                    b.Navigation("Reviews");
 
                     b.Navigation("ShippingAddresses");
 
