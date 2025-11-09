@@ -36,6 +36,9 @@ public class BrandConfiguration : IEntityTypeConfiguration<Brand>
         builder.Property(b => b.Contact)
                .HasMaxLength(500);
 
+        builder.Property(b => b.PriceRange)
+               .HasMaxLength(3);
+
         // Relation with SuperVendor (User)
         builder.HasOne(b => b.SuperVendorUser)
                .WithMany()

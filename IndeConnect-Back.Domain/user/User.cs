@@ -14,6 +14,8 @@ public class User
     public string? PasswordHash { get; private set; }
     public DateTimeOffset CreatedAt { get; private set; }
     public bool IsEnabled { get; private set; }
+    // Reviews
+    public ICollection<UserReview> Reviews { get; private set; } = new List<UserReview>();
     
     // Invitation informations
     public string? InvitationTokenHash { get; private set; }

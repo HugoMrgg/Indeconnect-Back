@@ -19,32 +19,65 @@ public class BrandService : IBrandService
 
     public async Task<BrandsListResponse> GetBrandsSortedByEthicsAsync(GetBrandsQuery query)
     {
-        // Get active brands with ethics data
-        var brands = await _context.Brands
+        var brandsQuery = _context.Brands
             .Where(b => b.Status == BrandStatus.Approved)
             .Include(b => b.EthicTags)
             .Include(b => b.Deposits)
-            .ToListAsync();
+            .Include(b => b.Reviews)
+            .Include(b => b.Questionnaires)
+                .ThenInclude(q => q.Responses)
+                    .ThenInclude(r => r.Option)
+            .Include(b => b.Questionnaires)
+                .ThenInclude(q => q.Responses)
+                    .ThenInclude(r => r.Question)
+            .AsQueryable();
 
-        bool locationUsed = query.Latitude.HasValue && query.Longitude.HasValue;
+        if (!string.IsNullOrEmpty(query.PriceRange))
+        {
+            brandsQuery = brandsQuery.Where(b => b.PriceRange == query.PriceRange);
+        }
 
-        // Calculate scores
-        var scoredBrands = brands
+        var brands = await brandsQuery.ToListAsync();
+
+        var enrichedBrands = brands
             .Select(b => new
             {
                 Brand = b,
-                Score = CalculateEthicsScore(b, query.SortBy, query.Latitude, query.Longitude)
+                EthicsScore = CalculateEthicsScore(b, query.SortBy, query.Latitude, query.Longitude),
+                UserRating = b.Reviews.Any() ? b.Reviews.Average(r => (double)r.Rating) : 0.0,
+                MinDistance = query.Latitude.HasValue && query.Longitude.HasValue
+                    ? GetMinimumDistanceToDeposits(b.Deposits, query.Latitude.Value, query.Longitude.Value)
+                    : double.MaxValue
             })
-            .OrderByDescending(x => x.Score)
             .ToList();
 
-        var totalCount = scoredBrands.Count;
+        if (query.UserRatingMin.HasValue)
+        {
+            enrichedBrands = enrichedBrands
+                .Where(x => x.UserRating >= query.UserRatingMin.Value)
+                .ToList();
+        }
 
-        // Paginate
-        var paginatedBrands = scoredBrands
+        if (query.MaxDistanceKm.HasValue && query.Latitude.HasValue && query.Longitude.HasValue)
+        {
+            enrichedBrands = enrichedBrands
+                .Where(x => x.MinDistance <= query.MaxDistanceKm.Value)
+                .ToList();
+        }
+
+        var sortedBrands = query.SortBy switch
+        {
+            EthicsSortType.Note => enrichedBrands.OrderByDescending(x => x.UserRating).ToList(),
+            EthicsSortType.Distance => enrichedBrands.OrderBy(x => x.MinDistance).ToList(),
+            _ => enrichedBrands.OrderByDescending(x => x.EthicsScore).ToList()
+        };
+
+        var totalCount = sortedBrands.Count;
+
+        var paginatedBrands = sortedBrands
             .Skip((query.Page - 1) * query.PageSize)
             .Take(query.PageSize)
-            .Select(x => MapToBrandSummary(x.Brand, x.Score, query.Latitude, query.Longitude))
+            .Select(x => MapToBrandSummary(x.Brand, x.EthicsScore, x.UserRating, query.Latitude, query.Longitude))
             .ToList();
 
         return new BrandsListResponse(
@@ -52,7 +85,7 @@ public class BrandService : IBrandService
             totalCount,
             query.Page,
             query.PageSize,
-            locationUsed
+            LocationUsed: query.Latitude.HasValue && query.Longitude.HasValue
         );
     }
 
@@ -77,14 +110,17 @@ public class BrandService : IBrandService
                 userLon.Value
             );
 
-            var distanceMultiplier = minDistance switch {
+            var distanceMultiplier = minDistance switch
+            {
                 < 50 => 2.0m,
                 < 200 => 1.5m,
                 < 500 => 1.0m,
                 _ => 0.5m
             };
+            
             baseScore *= distanceMultiplier;
         }
+        
         return (double)baseScore;
     }
     
@@ -93,21 +129,26 @@ public class BrandService : IBrandService
         double userLat,
         double userLon)
     {
-        if (!deposits.Any()) return double.MaxValue;
+        if (!deposits.Any()) 
+            return double.MaxValue;
 
-        var distances = deposits
-            .Select(d => CalculateDistanceKm(
-                userLat, userLon,
-                d.Latitude, d.Longitude  
-            ))
+        var validDeposits = deposits
+            .Where(d => d.Latitude != 0 && d.Longitude != 0)
             .ToList();
 
-        return distances.Any() ? distances.Min() : double.MaxValue;
+        if (!validDeposits.Any())
+            return double.MaxValue;
+
+        var distances = validDeposits
+            .Select(d => CalculateDistanceKm(userLat, userLon, d.Latitude, d.Longitude))
+            .ToList();
+
+        return distances.Min();
     }
 
     private double CalculateDistanceKm(double lat1, double lon1, double lat2, double lon2)
     {
-        const double R = 6371;
+        const double R = 6371; 
         
         var dLat = ToRadians(lat2 - lat1);
         var dLon = ToRadians(lon2 - lon1);
@@ -123,7 +164,8 @@ public class BrandService : IBrandService
 
     private BrandSummaryDto MapToBrandSummary(
         Brand brand,
-        double score,
+        double ethicsScore,
+        double userRating,
         double? userLat,
         double? userLon)
     {
@@ -143,9 +185,10 @@ public class BrandService : IBrandService
             brand.Name,
             brand.LogoUrl,
             brand.Description,
-            Math.Round(score, 2),
+            Math.Round(ethicsScore, 2),
             brand.EthicTags.Select(et => et.TagKey),
-            distanceKm
+            distanceKm,
+            Math.Round(userRating, 1)
         );
     }
 

@@ -20,8 +20,12 @@ public class Brand
     public string? WhereAreWe { get; private set; }
     public string? OtherInfo { get; private set; }
     public string? Contact { get; private set; }
+    public string? PriceRange { get; private set; }
     public BrandStatus Status { get; private set; } = BrandStatus.Draft;
 
+    // Reviews
+    public ICollection<UserReview> Reviews { get; private set; } = new List<UserReview>();
+    
     // Deposits
     private readonly List<Deposit> _deposits = new();
     public IReadOnlyCollection<Deposit> Deposits => _deposits;

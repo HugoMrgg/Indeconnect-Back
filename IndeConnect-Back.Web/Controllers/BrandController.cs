@@ -33,11 +33,14 @@ public class BrandController : ControllerBase
         [FromQuery] double? lat = null,
         [FromQuery] double? lon = null,
         [FromQuery] int page = 1,
-        [FromQuery] int pageSize = 20)
+        [FromQuery] int pageSize = 20,
+        [FromQuery] string priceRange = null,
+        [FromQuery] double? userRatingMin = null,
+        [FromQuery] double? maxDistanceKm = 80)
     {
         try
         {
-            var query = new GetBrandsQuery(sortBy, lat, lon, page, pageSize);
+            var query = new GetBrandsQuery(sortBy, lat, lon, page, pageSize, priceRange, userRatingMin, maxDistanceKm);
             var response = await _brandService.GetBrandsSortedByEthicsAsync(query);
             return Ok(response);
         }
