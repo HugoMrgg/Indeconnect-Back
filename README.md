@@ -105,12 +105,12 @@ ConnectionStrings__Default: "Host=db;Port=5432;Database=${POSTGRES_DB};Username=
 ```
 
 ## 🧱 Migrations Entity Framework Core
-Aucune migration n’est encore présente. Pour créer la première :
-
+Les migrations se trouvent dans Indeconnect-Back\IndeConnect-Back.Infrastructure\Migrations
+Si les entités métiers changent, il vaut mieux recréer directement les migrations et update la BD.
 ```bash
 dotnet tool install --global dotnet-ef
-dotnet ef migrations add InitialCreate -p IndeConnect-Back.Infrastructure -s IndeConnect-Back.Web
-dotnet ef database update -p IndeConnect-Back.Infrastructure -s IndeConnect-Back.Web
+dotnet ef migrations add InitialCreate --project IndeConnect-Back.Infrastructure --startup-project IndeConnect-Back.Web
+dotnet ef database update --project IndeConnect-Back.Infrastructure --startup-project IndeConnect-Back.Web
 ```
 
 Ensuite, rebuild l’image :
@@ -172,6 +172,5 @@ docker compose down -v
 
 
 ## 🧭 Prochaines étapes
-1. Ajouter les entités et migrations. 
-2. Tester l’API sur localhost:8080.
-3. Ajouter la base de données et la tester sur prod.
+1. Ajouter la base de données et la tester sur prod.
+2. Commencer les US
