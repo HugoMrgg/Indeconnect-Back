@@ -66,7 +66,7 @@ public class BrandSubscriptionService : IBrandSubscriptionService
             .Select(bs => new BrandSubscriptionItem(
                 bs.BrandId,
                 bs.Brand.Name,
-                null, // Ajoute bs.Brand.LogoUrl si tu as cette propriété
+                bs.Brand.LogoUrl,
                 bs.SubscribedAt
             ))
             .OrderByDescending(s => s.SubscribedAt)

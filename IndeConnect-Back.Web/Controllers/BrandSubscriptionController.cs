@@ -17,23 +17,26 @@ public class BrandSubscriptionController : ControllerBase
     {
         _subscriptionService = subscriptionService;
     }
-
+    
     /// <summary>
     /// Subscribe to a brand
-    /// POST /indeconnect/users/{userId}/brand-subscriptions
     /// </summary>
+    /// <param name="request">Brand subscription request</param>
+    /// <returns>Created subscription details</returns>
     [HttpPost]
+    [Authorize(Roles = "Client")]
+    [ProducesResponseType(typeof(BrandSubscriptionResponse), StatusCodes.Status201Created)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status403Forbidden)]
     public async Task<ActionResult<BrandSubscriptionResponse>> SubscribeToBrand(
-        [FromRoute] long userId, 
         [FromBody] CreateBrandSubscriptionRequest request)
     {
         try
         {
-            var authenticatedUserId = GetAuthenticatedUserId();
-            if (authenticatedUserId != userId)
-                return Forbid();
-
+            var userId = GetAuthenticatedUserId();
             var response = await _subscriptionService.SubscribeToBrandAsync(userId, request.BrandId);
+            
             return CreatedAtAction(
                 nameof(GetSubscriptions), 
                 new { userId }, 
@@ -44,22 +47,27 @@ public class BrandSubscriptionController : ControllerBase
         {
             return BadRequest(new { message = ex.Message });
         }
+        catch (UnauthorizedAccessException ex)
+        {
+            return Unauthorized(new { message = ex.Message });
+        }
     }
 
     /// <summary>
-    /// Get all brand subscriptions for a user
-    /// GET /indeconnect/users/{userId}/brand-subscriptions
+    /// Get all brand subscriptions for the authenticated user
     /// </summary>
+    /// <returns>List of subscriptions</returns>
     [HttpGet]
-    public async Task<ActionResult<UserBrandSubscriptionsResponse>> GetSubscriptions(
-        [FromRoute] long userId)
+    [Authorize(Roles = "Client")]
+    [ProducesResponseType(typeof(UserBrandSubscriptionsResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+    public async Task<ActionResult<UserBrandSubscriptionsResponse>> GetSubscriptions()
     {
         try
         {
-            var authenticatedUserId = GetAuthenticatedUserId();
-            if (authenticatedUserId != userId)
-                return Forbid();
-
+            var userId = GetAuthenticatedUserId();
             var subscriptions = await _subscriptionService.GetUserSubscriptionsAsync(userId);
             return Ok(subscriptions);
         }
@@ -67,23 +75,28 @@ public class BrandSubscriptionController : ControllerBase
         {
             return NotFound(new { message = ex.Message });
         }
+        catch (UnauthorizedAccessException ex)
+        {
+            return Unauthorized(new { message = ex.Message });
+        }
     }
 
     /// <summary>
     /// Unsubscribe from a brand
-    /// DELETE /indeconnect/users/{userId}/brand-subscriptions/{brandId}
     /// </summary>
+    /// <param name="brandId">Brand ID to unsubscribe from</param>
+    /// <returns>No content on success</returns>
     [HttpDelete("{brandId}")]
-    public async Task<IActionResult> UnsubscribeFromBrand(
-        [FromRoute] long userId, 
-        [FromRoute] long brandId)
+    [Authorize(Roles = "Client")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> UnsubscribeFromBrand([FromRoute] long brandId)
     {
         try
         {
-            var authenticatedUserId = GetAuthenticatedUserId();
-            if (authenticatedUserId != userId)
-                return Forbid();
-
+            var userId = GetAuthenticatedUserId();
             await _subscriptionService.UnsubscribeFromBrandAsync(userId, brandId);
             return NoContent();
         }
@@ -91,9 +104,13 @@ public class BrandSubscriptionController : ControllerBase
         {
             return NotFound(new { message = ex.Message });
         }
+        catch (UnauthorizedAccessException ex)
+        {
+            return Unauthorized(new { message = ex.Message });
+        }
     }
 
-    // tODO : à faire un user service
+    // TODO : à déplacer dans ICurrentUserService
     private long GetAuthenticatedUserId()
     {
         var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
