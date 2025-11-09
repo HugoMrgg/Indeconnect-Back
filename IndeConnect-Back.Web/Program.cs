@@ -1,9 +1,21 @@
+using System.Text;
 using IndeConnect_Back.Infrastructure;
 using Microsoft.EntityFrameworkCore;
 using DotNetEnv;
 using IndeConnect_Back.Application.Services.Interfaces;
 using IndeConnect_Back.Domain;
 using IndeConnect_Back.Infrastructure.Services.Implementations;
+using FluentValidation;
+using FluentValidation.AspNetCore;
+using IndeConnect_Back.Application.Services.Interfaces;
+using IndeConnect_Back.Application.Validators;
+using IndeConnect_Back.Infrastructure.services.Implementations;
+using IndeConnect_Back.Infrastructure.Services.Implementations;
+using IndeConnect_Back.Web.Attributes;
+using IndeConnect_Back.Web.Handlers;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.IdentityModel.Tokens;
 
 // Charger les variables d'environnement
 Env.Load();
@@ -32,6 +44,54 @@ builder.Services.AddScoped<BrandEthicsScorer>();
 builder.Services.AddScoped<IBrandService, BrandService>();
 builder.Services.AddScoped<IDepositService, DepositService>();
 builder.Services.AddScoped<IGeocodeService, NominatimGeocodeService>();
+builder.Services.AddScoped<IJwtTokenGenerator, JwtTokenGenerator>();
+builder.Services.AddScoped<IAuthService, AuthService>();
+builder.Services.AddScoped<IUserService, UserService>();
+
+builder.Services.AddFluentValidationAutoValidation();
+builder.Services.AddValidatorsFromAssemblyContaining<RegisterAnonymousRequestValidator>();
+builder.Services.AddValidatorsFromAssemblyContaining<LoginAnonymousRequestValidator>();
+
+// Token
+var jwtSecret = builder.Configuration["JWT_SECRET"];
+
+if (string.IsNullOrEmpty(jwtSecret))
+{
+    throw new InvalidOperationException("JWT secret not configured");
+}
+
+builder.Services.AddSingleton<IAuthorizationHandler, RegisterAuthorizationHandler>();
+builder.Services.AddSingleton<IAuthorizationHandler, GetuserIdHandler>();
+
+builder.Services.AddAuthorization(options =>
+{
+    options.AddPolicy("RegisterPolicy", policy =>
+    {
+        policy.Requirements.Add(new RoleAuthorizationAttribute());
+    });
+    options.AddPolicy("UserAccessPolicy", policy =>
+        policy.Requirements.Add(new UserIdAttribute()));
+});
+
+builder.Services
+    .AddAuthentication(options =>
+    {
+        options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
+        options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
+    })
+    .AddJwtBearer(options =>
+    {
+        options.RequireHttpsMetadata = false; 
+        options.SaveToken = true;
+        options.TokenValidationParameters = new TokenValidationParameters
+        {
+            ValidateIssuerSigningKey = true,
+            IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSecret)),
+            ValidateIssuer = false,
+            ValidateAudience = false,
+            ClockSkew = TimeSpan.Zero
+        };
+    });
 
 var app = builder.Build();
 
@@ -50,6 +110,8 @@ if (app.Environment.IsDevelopment())
 
 
 app.UseHttpsRedirection();
+app.UseAuthentication();
+app.UseAuthorization();
 app.MapControllers();
 
 app.MapGet("/health", () => Results.Ok("ok"));

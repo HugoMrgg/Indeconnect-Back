@@ -16,6 +16,8 @@ public class User
     public bool IsEnabled { get; private set; }
     // Reviews
     public ICollection<UserReview> Reviews { get; private set; } = new List<UserReview>();
+    public ICollection<UserReview> Reviews { get; private set; } = new List<UserReview>();
+
     
     // Invitation informations
     public string? InvitationTokenHash { get; private set; }
@@ -23,7 +25,6 @@ public class User
     public bool IsInvitationPending => InvitationTokenHash != null && PasswordHash == null;
     
     // Role
-    public long RoleId { get; private set; }
     public Role Role { get; private set; } = default!;
     
     // Wishlist - relation One-to-One
@@ -62,7 +63,7 @@ public class User
     
     private User() { }
 
-    public User(string email, string firstName, string lastName, long roleId)
+    public User(string email, string firstName, string lastName, Role role)
     {
         if (string.IsNullOrWhiteSpace(email))
             throw new ArgumentException("Email is required", nameof(email));
@@ -74,9 +75,37 @@ public class User
         Email = email.Trim().ToLower();
         FirstName = firstName.Trim();
         LastName = lastName.Trim();
-        RoleId = roleId;
         CreatedAt = DateTimeOffset.UtcNow;
         IsEnabled = true;
+        Role = role;
     }
+    public void SetPasswordHash(string passwordHash)
+    {
+        PasswordHash = passwordHash;
+    }
+    
+    public void SubscribeToBrand(Brand brand)
+    {
+        if (_brandSubscriptions.Any(bs => bs.BrandId == brand.Id))
+            throw new InvalidOperationException($"Already subscribed to brand {brand.Name}");
+
+        var subscription = new BrandSubscription(Id, brand.Id);
+        _brandSubscriptions.Add(subscription);
+    }
+
+    public void UnsubscribeFromBrand(long brandId)
+    {
+        var subscription = _brandSubscriptions.FirstOrDefault(bs => bs.BrandId == brandId);
+        if (subscription == null)
+            throw new InvalidOperationException("Subscription not found");
+
+        _brandSubscriptions.Remove(subscription);
+    }
+
+    public bool IsSubscribedToBrand(long brandId)
+    {
+        return _brandSubscriptions.Any(bs => bs.BrandId == brandId);
+    }
+
 }
 

@@ -2,6 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 using IndeConnect_Back.Domain.user;
 using IndeConnect_Back.Domain.catalog.brand;
+using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 namespace IndeConnect_Back.Infrastructure.Configurations;
 
@@ -46,11 +47,9 @@ public class UserConfiguration : IEntityTypeConfiguration<User>
         
         builder.Ignore(u => u.IsInvitationPending);
         
-        // Relation with Role
-        builder.HasOne(u => u.Role)
-               .WithMany(r => r.Users)
-               .HasForeignKey(u => u.RoleId)
-               .OnDelete(DeleteBehavior.Restrict)
+        // ✅ CORRECTION : Converter pour Role (pas BrandStatus!)
+        builder.Property(u => u.Role)
+               .HasConversion<string>() // ou .HasConversion(new EnumToStringConverter<Role>())
                .IsRequired();
         
         // Relation One-to-One with Cart
@@ -110,11 +109,16 @@ public class UserConfiguration : IEntityTypeConfiguration<User>
                .HasForeignKey(bs => bs.SellerId)
                .OnDelete(DeleteBehavior.Restrict);
         
+        builder.HasMany(u => u.Reviews)
+               .WithOne(r => r.User)
+               .HasForeignKey(r => r.UserId)
+               .OnDelete(DeleteBehavior.Cascade);
+        
         builder.HasIndex(u => u.Email)
                .IsUnique()
                .HasDatabaseName("IX_User_UniqueEmail");
         
-        builder.HasIndex(u => u.RoleId)
+        builder.HasIndex(u => u.Role)
                .HasDatabaseName("IX_User_RoleId");
         
         builder.HasIndex(u => u.IsEnabled)

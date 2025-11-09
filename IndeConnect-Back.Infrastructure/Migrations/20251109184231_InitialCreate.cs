@@ -87,20 +87,6 @@ namespace IndeConnect_Back.Infrastructure.Migrations
                 });
 
             migrationBuilder.CreateTable(
-                name: "Roles",
-                columns: table => new
-                {
-                    Id = table.Column<long>(type: "bigint", nullable: false)
-                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
-                    Name = table.Column<string>(type: "character varying(50)", maxLength: 50, nullable: false),
-                    Description = table.Column<string>(type: "character varying(500)", maxLength: 500, nullable: true)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_Roles", x => x.Id);
-                });
-
-            migrationBuilder.CreateTable(
                 name: "Sales",
                 columns: table => new
                 {
@@ -132,6 +118,28 @@ namespace IndeConnect_Back.Infrastructure.Migrations
                 });
 
             migrationBuilder.CreateTable(
+                name: "Users",
+                columns: table => new
+                {
+                    Id = table.Column<long>(type: "bigint", nullable: false)
+                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
+                    Email = table.Column<string>(type: "character varying(255)", maxLength: 255, nullable: false),
+                    FirstName = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: false),
+                    LastName = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: false),
+                    PasswordHash = table.Column<string>(type: "character varying(255)", maxLength: 255, nullable: true),
+                    CreatedAt = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: false),
+                    IsEnabled = table.Column<bool>(type: "boolean", nullable: false, defaultValue: true),
+                    InvitationTokenHash = table.Column<string>(type: "character varying(255)", maxLength: 255, nullable: true),
+                    InvitationExpiresAt = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: true),
+                    Role = table.Column<string>(type: "text", nullable: false),
+                    WishlistId = table.Column<long>(type: "bigint", nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_Users", x => x.Id);
+                });
+
+            migrationBuilder.CreateTable(
                 name: "EthicsOptions",
                 columns: table => new
                 {
@@ -151,34 +159,6 @@ namespace IndeConnect_Back.Infrastructure.Migrations
                         principalTable: "EthicsQuestions",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
-                });
-
-            migrationBuilder.CreateTable(
-                name: "Users",
-                columns: table => new
-                {
-                    Id = table.Column<long>(type: "bigint", nullable: false)
-                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
-                    Email = table.Column<string>(type: "character varying(255)", maxLength: 255, nullable: false),
-                    FirstName = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: false),
-                    LastName = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: false),
-                    PasswordHash = table.Column<string>(type: "character varying(255)", maxLength: 255, nullable: true),
-                    CreatedAt = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: false),
-                    IsEnabled = table.Column<bool>(type: "boolean", nullable: false, defaultValue: true),
-                    InvitationTokenHash = table.Column<string>(type: "character varying(255)", maxLength: 255, nullable: true),
-                    InvitationExpiresAt = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: true),
-                    RoleId = table.Column<long>(type: "bigint", nullable: false),
-                    WishlistId = table.Column<long>(type: "bigint", nullable: true)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_Users", x => x.Id);
-                    table.ForeignKey(
-                        name: "FK_Users_Roles_RoleId",
-                        column: x => x.RoleId,
-                        principalTable: "Roles",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Restrict);
                 });
 
             migrationBuilder.CreateTable(
@@ -481,6 +461,35 @@ namespace IndeConnect_Back.Infrastructure.Migrations
                         principalTable: "Sales",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.SetNull);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "UserReview",
+                columns: table => new
+                {
+                    Id = table.Column<long>(type: "bigint", nullable: false)
+                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
+                    UserId = table.Column<long>(type: "bigint", nullable: false),
+                    BrandId = table.Column<long>(type: "bigint", nullable: false),
+                    Rating = table.Column<int>(type: "integer", nullable: false),
+                    Comment = table.Column<string>(type: "text", nullable: true),
+                    CreatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_UserReview", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_UserReview_Brands_BrandId",
+                        column: x => x.BrandId,
+                        principalTable: "Brands",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                    table.ForeignKey(
+                        name: "FK_UserReview_Users_UserId",
+                        column: x => x.UserId,
+                        principalTable: "Users",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
                 });
 
             migrationBuilder.CreateTable(
@@ -894,18 +903,6 @@ namespace IndeConnect_Back.Infrastructure.Migrations
                     { 1L, "Paiement par carte bancaire via Stripe", true, null, "Stripe" },
                     { 2L, "Paiement via compte PayPal", true, null, "PayPal" },
                     { 3L, "Paiement Bancontact (Belgique)", true, null, "Bancontact" }
-                });
-
-            migrationBuilder.InsertData(
-                table: "Roles",
-                columns: new[] { "Id", "Description", "Name" },
-                values: new object[,]
-                {
-                    { 1L, "Gestion de la gouvernance globale du système", "Admin" },
-                    { 2L, "Responsable du contrôle qualité et modération", "Moderator" },
-                    { 3L, "Représente une marque et gère son image", "SuperVendor" },
-                    { 4L, "Gère le catalogue produit de sa marque", "Seller" },
-                    { 5L, "Client inscrit pouvant passer commande", "User" }
                 });
 
             migrationBuilder.InsertData(
@@ -1385,12 +1382,6 @@ namespace IndeConnect_Back.Infrastructure.Migrations
                 columns: new[] { "UserId", "Status" });
 
             migrationBuilder.CreateIndex(
-                name: "IX_Role_UniqueName",
-                table: "Roles",
-                column: "Name",
-                unique: true);
-
-            migrationBuilder.CreateIndex(
                 name: "IX_Sale_ActiveDates",
                 table: "Sales",
                 columns: new[] { "IsActive", "StartDate", "EndDate" });
@@ -1442,6 +1433,16 @@ namespace IndeConnect_Back.Infrastructure.Migrations
                 column: "UserId");
 
             migrationBuilder.CreateIndex(
+                name: "IX_UserReview_BrandId",
+                table: "UserReview",
+                column: "BrandId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_UserReview_UserId",
+                table: "UserReview",
+                column: "UserId");
+
+            migrationBuilder.CreateIndex(
                 name: "IX_User_CreatedAt",
                 table: "Users",
                 column: "CreatedAt");
@@ -1459,7 +1460,7 @@ namespace IndeConnect_Back.Infrastructure.Migrations
             migrationBuilder.CreateIndex(
                 name: "IX_User_RoleId",
                 table: "Users",
-                column: "RoleId");
+                column: "Role");
 
             migrationBuilder.CreateIndex(
                 name: "IX_User_UniqueEmail",
@@ -1544,6 +1545,9 @@ namespace IndeConnect_Back.Infrastructure.Migrations
                 name: "UserPaymentMethods");
 
             migrationBuilder.DropTable(
+                name: "UserReview");
+
+            migrationBuilder.DropTable(
                 name: "WishlistItems");
 
             migrationBuilder.DropTable(
@@ -1596,9 +1600,6 @@ namespace IndeConnect_Back.Infrastructure.Migrations
 
             migrationBuilder.DropTable(
                 name: "Users");
-
-            migrationBuilder.DropTable(
-                name: "Roles");
         }
     }
 }
