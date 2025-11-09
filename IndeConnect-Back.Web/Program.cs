@@ -1,6 +1,9 @@
 using IndeConnect_Back.Infrastructure;
 using Microsoft.EntityFrameworkCore;
 using DotNetEnv;
+using IndeConnect_Back.Application.Services.Interfaces;
+using IndeConnect_Back.Domain;
+using IndeConnect_Back.Infrastructure.Services.Implementations;
 
 // Charger les variables d'environnement
 Env.Load();
@@ -24,6 +27,11 @@ builder.Services.AddOpenApi();
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
+
+builder.Services.AddScoped<BrandEthicsScorer>();
+builder.Services.AddScoped<IBrandService, BrandService>();
+builder.Services.AddScoped<IDepositService, DepositService>();
+builder.Services.AddScoped<IGeocodeService, NominatimGeocodeService>();
 
 var app = builder.Build();
 
