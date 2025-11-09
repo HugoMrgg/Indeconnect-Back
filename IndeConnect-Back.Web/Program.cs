@@ -8,7 +8,10 @@ using IndeConnect_Back.Application.Services.Interfaces;
 using IndeConnect_Back.Application.Validators;
 using IndeConnect_Back.Infrastructure.services.Implementations;
 using IndeConnect_Back.Infrastructure.Services.Implementations;
+using IndeConnect_Back.Web.Attributes;
+using IndeConnect_Back.Web.Handlers;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.IdentityModel.Tokens;
 
 // Charger les variables d'environnement
@@ -36,17 +39,32 @@ builder.Services.AddSwaggerGen();
 
 builder.Services.AddScoped<IJwtTokenGenerator, JwtTokenGenerator>();
 builder.Services.AddScoped<IAuthService, AuthService>();
+builder.Services.AddScoped<IUserService, UserService>();
 
 builder.Services.AddFluentValidationAutoValidation();
 builder.Services.AddValidatorsFromAssemblyContaining<RegisterAnonymousRequestValidator>();
 builder.Services.AddValidatorsFromAssemblyContaining<LoginAnonymousRequestValidator>();
 
-var jwtSecret = builder.Configuration["JWT_SECRET"]; // ou "Jwt:Secret" selon ton JwtTokenGenerator
+// Token
+var jwtSecret = builder.Configuration["JWT_SECRET"];
 
 if (string.IsNullOrEmpty(jwtSecret))
 {
     throw new InvalidOperationException("JWT secret not configured");
 }
+
+builder.Services.AddSingleton<IAuthorizationHandler, RegisterAuthorizationHandler>();
+builder.Services.AddSingleton<IAuthorizationHandler, GetuserIdHandler>();
+
+builder.Services.AddAuthorization(options =>
+{
+    options.AddPolicy("RegisterPolicy", policy =>
+    {
+        policy.Requirements.Add(new RoleAuthorizationAttribute());
+    });
+    options.AddPolicy("UserAccessPolicy", policy =>
+        policy.Requirements.Add(new UserIdAttribute()));
+});
 
 builder.Services
     .AddAuthentication(options =>
@@ -56,7 +74,7 @@ builder.Services
     })
     .AddJwtBearer(options =>
     {
-        options.RequireHttpsMetadata = false; // en dev
+        options.RequireHttpsMetadata = false; 
         options.SaveToken = true;
         options.TokenValidationParameters = new TokenValidationParameters
         {

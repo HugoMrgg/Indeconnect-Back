@@ -47,9 +47,9 @@ public class UserConfiguration : IEntityTypeConfiguration<User>
         
         builder.Ignore(u => u.IsInvitationPending);
         
-        // Relation with Role
-        builder.Property(u => u.Role )
-               .HasConversion(new EnumToStringConverter<BrandStatus>())
+        // ✅ CORRECTION : Converter pour Role (pas BrandStatus!)
+        builder.Property(u => u.Role)
+               .HasConversion<string>() // ou .HasConversion(new EnumToStringConverter<Role>())
                .IsRequired();
         
         // Relation One-to-One with Cart
@@ -108,6 +108,11 @@ public class UserConfiguration : IEntityTypeConfiguration<User>
                .WithOne(bs => bs.Seller)
                .HasForeignKey(bs => bs.SellerId)
                .OnDelete(DeleteBehavior.Restrict);
+        
+        builder.HasMany(u => u.Reviews)
+               .WithOne(r => r.User)
+               .HasForeignKey(r => r.UserId)
+               .OnDelete(DeleteBehavior.Cascade);
         
         builder.HasIndex(u => u.Email)
                .IsUnique()

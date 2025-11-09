@@ -7,7 +7,7 @@ using Microsoft.AspNetCore.Mvc;
 namespace IndeConnect_Back.Web.Controllers;
 
 [ApiController]
-[Route("indeconnect/")]
+[Route("indeconnect/auth/")]
 
 public class AuthController : ControllerBase
 {
@@ -19,15 +19,15 @@ public class AuthController : ControllerBase
     }
 
     /// <summary>
-    /// Register a new user account (public)
+    /// Register a new user account (public + role-based)
     /// </summary>
-    [HttpPost("usersClients")]
-    [AllowAnonymous]
-    public async Task<ActionResult<AuthResponse>> Register([FromBody] RegisterAnonymousRequest request)
+    [HttpPut]
+    [Authorize(Policy = "RegisterPolicy")]
+    public async Task<ActionResult<AuthResponse>> Register([FromBody] RegisterRequest request)
     {
         try
         {
-            var response = await _authService.RegisterAnonymousAsync(request);
+            var response = await _authService.RegisterAsync(request);
             return Ok(response);
         }
         catch (InvalidOperationException ex)
@@ -36,10 +36,11 @@ public class AuthController : ControllerBase
         }
     }
 
+
     /// <summary>
     /// Login with email and password
     /// </summary>
-    [HttpPost("sessions")]
+    [HttpPost]
     [AllowAnonymous]
     public async Task<ActionResult<AuthResponse>> Login([FromBody] LoginAnonymousRequest request)
     {
@@ -52,19 +53,5 @@ public class AuthController : ControllerBase
         {
             return Unauthorized(new { message = ex.Message });
         }
-    }
-
-    /// <summary>
-    /// Get current user info (authenticated)
-    /// </summary>
-    [HttpGet("users/current")]
-    [Authorize]
-    public ActionResult GetCurrentUser()
-    {
-        var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-        var email = User.FindFirst(ClaimTypes.Email)?.Value;
-        var role = User.FindFirst(ClaimTypes.Role)?.Value;
-
-        return Ok(new { userId, email, role });
     }
 }

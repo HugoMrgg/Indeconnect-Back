@@ -3,7 +3,7 @@ using IndeConnect_Back.Application.DTOs.Auth;
 
 namespace IndeConnect_Back.Application.Validators;
 
-public class RegisterAnonymousRequestValidator : AbstractValidator<RegisterAnonymousRequest>
+public class RegisterAnonymousRequestValidator : AbstractValidator<RegisterRequest>
 {
     
     public RegisterAnonymousRequestValidator()

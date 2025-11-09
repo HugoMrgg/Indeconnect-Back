@@ -2,10 +2,11 @@
 /**
  * Represents the body of a register's request
  */
-public record RegisterAnonymousRequest(
+public record RegisterRequest(
     string Email,
     string FirstName,
     string LastName,
     string Password,
-    string ConfirmPassword
+    string ConfirmPassword,
+    string TargetRole
 );

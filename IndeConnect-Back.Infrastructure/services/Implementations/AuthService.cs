@@ -16,7 +16,7 @@ public class AuthService : IAuthService
         _jwtGenerator = jwtGenerator;
     }
 
-    public async Task<AuthResponse> RegisterAnonymousAsync(RegisterAnonymousRequest request)
+    public async Task<AuthResponse> RegisterAsync(RegisterRequest request)
     {
         if (await _context.Users.AnyAsync(u => u.Email == request.Email))
             throw new InvalidOperationException("Email already exists");
@@ -24,13 +24,14 @@ public class AuthService : IAuthService
         // Hash password
         var passwordHash = BCrypt.Net.BCrypt.HashPassword(request.Password);
 
-        // Create user with role "User" (ID: 5)
+        var targetRole = ParseRole(request.TargetRole);
+
         var user = new User(
             request.Email,
             request.FirstName,
             request.LastName,
-            Role.Client
-        );
+            targetRole
+            );
 
         user.SetPasswordHash(passwordHash);
         
@@ -53,7 +54,6 @@ public class AuthService : IAuthService
     public async Task<AuthResponse> LoginAsync(LoginAnonymousRequest request)
     {
         var user = await _context.Users
-            .Include(u => u.Role)
             .FirstOrDefaultAsync(u => u.Email == request.Email);
 
         if (user == null)
@@ -74,5 +74,18 @@ public class AuthService : IAuthService
             user.Role.ToString(),
             token
         );
+    }
+
+    private Role ParseRole(string role)
+    {
+        return role switch
+        {
+            "client" => Role.Client,
+            "vendor" => Role.Vendor,
+            "supervendor" => Role.SuperVendor,
+            "moderator" => Role.Moderator,
+            "administrator" => Role.Administrator
+        };
+
     }
 }
