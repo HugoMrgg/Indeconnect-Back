@@ -35,12 +35,11 @@ public class ProductConfiguration : IEntityTypeConfiguration<Product>
         
         builder.Property(p => p.UpdatedAt)
                .IsRequired(false);
-        
+
         builder.Property(p => p.Status)
                .HasConversion(new EnumToStringConverter<ProductStatus>())
                .IsRequired()
-               .HasMaxLength(50)
-               .HasDefaultValue(ProductStatus.Draft);
+               .HasMaxLength(50);
         
         // Relation with Brand
         builder.HasOne(p => p.Brand)
@@ -67,12 +66,6 @@ public class ProductConfiguration : IEntityTypeConfiguration<Product>
         builder.HasMany(p => p.Variants)
                .WithOne(pv => pv.Product)
                .HasForeignKey(pv => pv.ProductId)
-               .OnDelete(DeleteBehavior.Cascade);
-        
-        // Relation with ProductMedia
-        builder.HasMany(p => p.Media)
-               .WithOne(pm => pm.Product)
-               .HasForeignKey(pm => pm.ProductId)
                .OnDelete(DeleteBehavior.Cascade);
         
         // Relation with ProductKeyword

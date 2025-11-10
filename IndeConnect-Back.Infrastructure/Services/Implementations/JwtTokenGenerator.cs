@@ -6,7 +6,7 @@ using IndeConnect_Back.Domain.user;
 using Microsoft.Extensions.Configuration;
 using Microsoft.IdentityModel.Tokens;
 
-namespace IndeConnect_Back.Infrastructure.services.Implementations;
+namespace IndeConnect_Back.Infrastructure.Services.Implementations;
 
 public class JwtTokenGenerator : IJwtTokenGenerator
 {

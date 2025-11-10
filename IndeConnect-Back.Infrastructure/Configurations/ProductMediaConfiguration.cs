@@ -31,13 +31,6 @@ public class ProductMediaConfiguration : IEntityTypeConfiguration<ProductMedia>
             .HasMaxLength(200)
             .IsRequired(false);
 
-        // Relation with Product
-        builder.HasOne(pm => pm.Product)
-            .WithMany(p => p.Media)
-            .HasForeignKey(pm => pm.ProductId)
-            .OnDelete(DeleteBehavior.Cascade)
-            .IsRequired();
-
         builder.HasIndex(pm => new { pm.ProductId, pm.DisplayOrder })
             .HasDatabaseName("IX_ProductMedia_ProductOrder");
 

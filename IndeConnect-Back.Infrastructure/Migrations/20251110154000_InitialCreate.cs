@@ -175,6 +175,7 @@ namespace IndeConnect_Back.Infrastructure.Migrations
                     WhereAreWe = table.Column<string>(type: "character varying(1000)", maxLength: 1000, nullable: true),
                     OtherInfo = table.Column<string>(type: "character varying(1000)", maxLength: 1000, nullable: true),
                     Contact = table.Column<string>(type: "character varying(500)", maxLength: 500, nullable: true),
+                    PriceRange = table.Column<string>(type: "character varying(3)", maxLength: 3, nullable: true),
                     Status = table.Column<string>(type: "text", nullable: false),
                     SuperVendorUserId = table.Column<long>(type: "bigint", nullable: true)
                 },
@@ -410,6 +411,8 @@ namespace IndeConnect_Back.Infrastructure.Migrations
                     Number = table.Column<int>(type: "integer", nullable: false),
                     Street = table.Column<string>(type: "character varying(200)", maxLength: 200, nullable: false),
                     PostalCode = table.Column<string>(type: "character varying(20)", maxLength: 20, nullable: false),
+                    Latitude = table.Column<double>(type: "double precision", nullable: false),
+                    Longitude = table.Column<double>(type: "double precision", nullable: false),
                     BrandId = table.Column<long>(type: "bigint", nullable: false)
                 },
                 constraints: table =>
@@ -435,7 +438,7 @@ namespace IndeConnect_Back.Infrastructure.Migrations
                     IsEnabled = table.Column<bool>(type: "boolean", nullable: false, defaultValue: true),
                     CreatedAt = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: false),
                     UpdatedAt = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: true),
-                    Status = table.Column<string>(type: "character varying(50)", maxLength: 50, nullable: false, defaultValue: "Draft"),
+                    Status = table.Column<string>(type: "character varying(50)", maxLength: 50, nullable: false),
                     SaleId = table.Column<long>(type: "bigint", nullable: true),
                     BrandId = table.Column<long>(type: "bigint", nullable: false),
                     CategoryId = table.Column<long>(type: "bigint", nullable: false)
@@ -464,7 +467,7 @@ namespace IndeConnect_Back.Infrastructure.Migrations
                 });
 
             migrationBuilder.CreateTable(
-                name: "UserReview",
+                name: "UserReviews",
                 columns: table => new
                 {
                     Id = table.Column<long>(type: "bigint", nullable: false)
@@ -477,15 +480,15 @@ namespace IndeConnect_Back.Infrastructure.Migrations
                 },
                 constraints: table =>
                 {
-                    table.PrimaryKey("PK_UserReview", x => x.Id);
+                    table.PrimaryKey("PK_UserReviews", x => x.Id);
                     table.ForeignKey(
-                        name: "FK_UserReview_Brands_BrandId",
+                        name: "FK_UserReviews_Brands_BrandId",
                         column: x => x.BrandId,
                         principalTable: "Brands",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
                     table.ForeignKey(
-                        name: "FK_UserReview_Users_UserId",
+                        name: "FK_UserReviews_Users_UserId",
                         column: x => x.UserId,
                         principalTable: "Users",
                         principalColumn: "Id",
@@ -895,6 +898,29 @@ namespace IndeConnect_Back.Infrastructure.Migrations
                         onDelete: ReferentialAction.Restrict);
                 });
 
+            migrationBuilder.CreateTable(
+                name: "ProductVariantMedia",
+                columns: table => new
+                {
+                    Id = table.Column<long>(type: "bigint", nullable: false)
+                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
+                    VariantId = table.Column<long>(type: "bigint", nullable: false),
+                    Url = table.Column<string>(type: "character varying(500)", maxLength: 500, nullable: false),
+                    Type = table.Column<int>(type: "integer", nullable: false),
+                    DisplayOrder = table.Column<int>(type: "integer", nullable: false),
+                    IsPrimary = table.Column<bool>(type: "boolean", nullable: false, defaultValue: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_ProductVariantMedia", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_ProductVariantMedia_ProductVariants_VariantId",
+                        column: x => x.VariantId,
+                        principalTable: "ProductVariants",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
             migrationBuilder.InsertData(
                 table: "PaymentProviders",
                 columns: new[] { "Id", "Description", "IsEnabled", "LogoUrl", "Name" },
@@ -1020,14 +1046,15 @@ namespace IndeConnect_Back.Infrastructure.Migrations
                 column: "SellerId");
 
             migrationBuilder.CreateIndex(
+                name: "IX_BrandSubscription_UserId_BrandId",
+                table: "BrandSubscriptions",
+                columns: new[] { "UserId", "BrandId" },
+                unique: true);
+
+            migrationBuilder.CreateIndex(
                 name: "IX_BrandSubscriptions_BrandId",
                 table: "BrandSubscriptions",
                 column: "BrandId");
-
-            migrationBuilder.CreateIndex(
-                name: "IX_BrandSubscriptions_UserId",
-                table: "BrandSubscriptions",
-                column: "UserId");
 
             migrationBuilder.CreateIndex(
                 name: "IX_CartItem_AddedAt",
@@ -1336,6 +1363,11 @@ namespace IndeConnect_Back.Infrastructure.Migrations
                 column: "SaleId");
 
             migrationBuilder.CreateIndex(
+                name: "IX_ProductVariantMedia_VariantId",
+                table: "ProductVariantMedia",
+                column: "VariantId");
+
+            migrationBuilder.CreateIndex(
                 name: "IX_ProductVariant_ProductId",
                 table: "ProductVariants",
                 column: "ProductId");
@@ -1433,13 +1465,13 @@ namespace IndeConnect_Back.Infrastructure.Migrations
                 column: "UserId");
 
             migrationBuilder.CreateIndex(
-                name: "IX_UserReview_BrandId",
-                table: "UserReview",
+                name: "IX_UserReviews_BrandId",
+                table: "UserReviews",
                 column: "BrandId");
 
             migrationBuilder.CreateIndex(
-                name: "IX_UserReview_UserId",
-                table: "UserReview",
+                name: "IX_UserReviews_UserId",
+                table: "UserReviews",
                 column: "UserId");
 
             migrationBuilder.CreateIndex(
@@ -1539,13 +1571,16 @@ namespace IndeConnect_Back.Infrastructure.Migrations
                 name: "ProductReviews");
 
             migrationBuilder.DropTable(
+                name: "ProductVariantMedia");
+
+            migrationBuilder.DropTable(
                 name: "ReturnRequests");
 
             migrationBuilder.DropTable(
                 name: "UserPaymentMethods");
 
             migrationBuilder.DropTable(
-                name: "UserReview");
+                name: "UserReviews");
 
             migrationBuilder.DropTable(
                 name: "WishlistItems");
@@ -1560,10 +1595,10 @@ namespace IndeConnect_Back.Infrastructure.Migrations
                 name: "Carts");
 
             migrationBuilder.DropTable(
-                name: "ProductVariants");
+                name: "Keywords");
 
             migrationBuilder.DropTable(
-                name: "Keywords");
+                name: "ProductVariants");
 
             migrationBuilder.DropTable(
                 name: "Orders");

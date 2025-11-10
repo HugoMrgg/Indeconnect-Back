@@ -7,10 +7,7 @@ using IndeConnect_Back.Domain;
 using IndeConnect_Back.Infrastructure.Services.Implementations;
 using FluentValidation;
 using FluentValidation.AspNetCore;
-using IndeConnect_Back.Application.Services.Interfaces;
 using IndeConnect_Back.Application.Validators;
-using IndeConnect_Back.Infrastructure.services.Implementations;
-using IndeConnect_Back.Infrastructure.Services.Implementations;
 using IndeConnect_Back.Web.Attributes;
 using IndeConnect_Back.Web.Handlers;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
@@ -39,6 +36,8 @@ builder.Services.AddOpenApi();
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
+builder.Services.AddHttpClient(); 
+builder.Services.AddMemoryCache(); 
 
 builder.Services.AddScoped<BrandEthicsScorer>();
 builder.Services.AddScoped<IBrandService, BrandService>();
@@ -47,6 +46,7 @@ builder.Services.AddScoped<IGeocodeService, NominatimGeocodeService>();
 builder.Services.AddScoped<IJwtTokenGenerator, JwtTokenGenerator>();
 builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<IUserService, UserService>();
+builder.Services.AddScoped<IProductService, ProductService>();
 
 builder.Services.AddFluentValidationAutoValidation();
 builder.Services.AddValidatorsFromAssemblyContaining<RegisterAnonymousRequestValidator>();

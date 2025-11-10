@@ -2,7 +2,8 @@
 
 public enum ProductStatus
 {
-    Draft = 0,
-    Online = 1,
-    Disabled = 2
+    Draft = 0,   
+    Active = 1,
+    Online = 2,
+    Disabled = 3
 }

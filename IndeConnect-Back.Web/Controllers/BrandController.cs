@@ -1,4 +1,5 @@
 ﻿using IndeConnect_Back.Application.DTOs.Brands;
+using IndeConnect_Back.Application.DTOs.Products; 
 using IndeConnect_Back.Application.Services.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -10,20 +11,17 @@ namespace IndeConnect_Back.Web.Controllers;
 public class BrandController : ControllerBase
 {
     private readonly IBrandService _brandService;
+    private readonly IProductService _productService; 
 
-    public BrandController(IBrandService brandService)
+    public BrandController(IBrandService brandService, IProductService productService) 
     {
         _brandService = brandService;
+        _productService = productService; 
     }
 
     /// <summary>
     /// Get brands sorted by ethics criteria
     /// </summary>
-    /// <param name="sortBy">Ethics category to sort by</param>
-    /// <param name="lat">User latitude (optional, for transport ethics)</param>
-    /// <param name="lon">User longitude (optional, for transport ethics)</param>
-    /// <param name="page">Page number</param>
-    /// <param name="pageSize">Items per page</param>
     [HttpGet]
     [AllowAnonymous]
     [ProducesResponseType(typeof(BrandsListResponse), StatusCodes.Status200OK)]
@@ -34,7 +32,7 @@ public class BrandController : ControllerBase
         [FromQuery] double? lon = null,
         [FromQuery] int page = 1,
         [FromQuery] int pageSize = 20,
-        [FromQuery] string priceRange = null,
+        [FromQuery] string? priceRange = null,
         [FromQuery] double? userRatingMin = null,
         [FromQuery] double? maxDistanceKm = 80)
     {
@@ -48,5 +46,48 @@ public class BrandController : ControllerBase
         {
             return BadRequest(new { message = ex.Message });
         }
+    }
+    
+    /// <summary>
+    /// Get detailed brand information (presentation page)
+    /// </summary>
+    [HttpGet("{brandId}")]
+    [AllowAnonymous]
+    [ProducesResponseType(typeof(BrandDetailDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<ActionResult<BrandDetailDto>> GetBrandById(
+        [FromRoute] long brandId,
+        [FromQuery] double? lat = null,
+        [FromQuery] double? lon = null)
+    {
+        var brand = await _brandService.GetBrandByIdAsync(brandId, lat, lon);
+        
+        if (brand == null)
+            return NotFound(new { message = "Brand not found" });
+
+        return Ok(brand);
+    }
+    
+    /// <summary>
+    /// Get products of a specific brand with filters (products page)
+    /// </summary>
+    [HttpGet("{brandId}/products")]
+    [AllowAnonymous]
+    [ProducesResponseType(typeof(ProductsListResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<ActionResult<ProductsListResponse>> GetBrandProducts(
+        [FromRoute] long brandId,
+        [FromQuery] int page = 1,
+        [FromQuery] int pageSize = 20,
+        [FromQuery] decimal? minPrice = null,
+        [FromQuery] decimal? maxPrice = null,
+        [FromQuery] string? category = null,
+        [FromQuery] string? searchTerm = null,
+        [FromQuery] ProductSortType sortBy = ProductSortType.Newest)
+    {
+        var query = new GetProductsQuery(brandId, page, pageSize, minPrice, maxPrice, category, searchTerm, sortBy);
+        var response = await _productService.GetProductsByBrandAsync(query);
+        
+        return Ok(response);
     }
 }

@@ -89,6 +89,51 @@ public class BrandService : IBrandService
         );
     }
 
+    public async Task<BrandDetailDto?> GetBrandByIdAsync(long brandId, double? userLat, double? userLon)
+    {
+        var brand = await _context.Brands
+            .Include(b => b.EthicTags)
+            .Include(b => b.Deposits)
+            .Include(b => b.Reviews)
+            .Include(b => b.Questionnaires)
+            .ThenInclude(q => q.Responses)
+            .ThenInclude(r => r.Option)
+            .FirstOrDefaultAsync(b => b.Id == brandId && b.Status == BrandStatus.Approved);
+
+        if (brand == null)
+            return null;
+
+        var avgRating = brand.Reviews.Any() ? brand.Reviews.Average(r => (double)r.Rating) : 0.0;
+        var ethicsScore = CalculateEthicsScore(brand, EthicsSortType.MaterialsManufacturing, userLat, userLon);
+
+        var deposits = brand.Deposits.Select(d => new DepositDto(
+            d.Id,
+            d.GetFullAddress(),
+            userLat.HasValue && userLon.HasValue 
+                ? (int?)CalculateDistanceKm(userLat.Value, userLon.Value, d.Latitude, d.Longitude)
+                : null
+        ));
+
+        return new BrandDetailDto(
+            brand.Id,
+            brand.Name,
+            brand.LogoUrl,
+            brand.BannerUrl,
+            brand.Description,
+            brand.AboutUs,
+            brand.WhereAreWe,
+            brand.OtherInfo,
+            brand.Contact,
+            brand.PriceRange,
+            Math.Round(avgRating, 1),
+            brand.Reviews.Count,
+            brand.EthicTags.Select(et => et.TagKey),
+            deposits,
+            Math.Round(ethicsScore, 2)
+        );
+    }
+
+    
     private double CalculateEthicsScore(
         Brand brand,
         EthicsSortType sortBy,

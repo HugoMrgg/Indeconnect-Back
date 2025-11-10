@@ -1,28 +1,24 @@
 ﻿namespace IndeConnect_Back.Domain.catalog.product;
-/**
- * Represents a product variant with its own stock management
- * Each variant is a unique combination of size + color with independent stock
- */
+
 public class ProductVariant
 {
     public long Id { get; private set; }
-    
     public long ProductId { get; private set; }
     public Product Product { get; private set; } = default!;
 
-    // Size
     public long? SizeId { get; private set; }
     public Size? Size { get; private set; }
 
-    // Color 
     public long? ColorId { get; private set; }
     public Color? Color { get; private set; }
 
     public string SKU { get; private set; } = default!;
-    
     public int StockCount { get; private set; }
-    
     public decimal? PriceOverride { get; private set; }
+
+    // ✅ Images spécifiques à cette variante
+    private readonly List<ProductVariantMedia> _media = new();
+    public IReadOnlyCollection<ProductVariantMedia> Media => _media;
 
     private ProductVariant() { }
 
@@ -39,5 +35,28 @@ public class ProductVariant
         SizeId = sizeId;
         ColorId = colorId;
         PriceOverride = priceOverride;
+    }
+}
+
+public class ProductVariantMedia
+{
+    public long Id { get; private set; }
+    public long VariantId { get; private set; }
+    public ProductVariant Variant { get; private set; } = default!;
+    
+    public string Url { get; private set; } = default!;
+    public MediaType Type { get; private set; }
+    public int DisplayOrder { get; private set; }
+    public bool IsPrimary { get; private set; }
+
+    private ProductVariantMedia() { }
+
+    public ProductVariantMedia(long variantId, string url, MediaType type, int displayOrder, bool isPrimary = false)
+    {
+        VariantId = variantId;
+        Url = url;
+        Type = type;
+        DisplayOrder = displayOrder;
+        IsPrimary = isPrimary;
     }
 }

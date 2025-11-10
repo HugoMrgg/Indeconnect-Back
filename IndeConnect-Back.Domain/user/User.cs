@@ -16,7 +16,6 @@ public class User
     public bool IsEnabled { get; private set; }
     // Reviews
     public ICollection<UserReview> Reviews { get; private set; } = new List<UserReview>();
-    public ICollection<UserReview> Reviews { get; private set; } = new List<UserReview>();
 
     
     // Invitation informations

@@ -30,10 +30,6 @@ public class Product
     // Category
     public long CategoryId { get; private set; }
     public Category Category { get; private set; } = default!;
-
-    // MetaDatas
-    private readonly List<ProductMedia> _media = new();
-    public IReadOnlyCollection<ProductMedia> Media => _media;
     
     // Variants
     private readonly List<ProductVariant> _variants = new();
