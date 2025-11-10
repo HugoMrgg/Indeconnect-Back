@@ -13,6 +13,7 @@ using IndeConnect_Back.Web.Handlers;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.IdentityModel.Tokens;
+using Microsoft.OpenApi.Models;
 
 // Charger les variables d'environnement
 Env.Load();
@@ -47,6 +48,8 @@ builder.Services.AddScoped<IJwtTokenGenerator, JwtTokenGenerator>();
 builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<IUserService, UserService>();
 builder.Services.AddScoped<IProductService, ProductService>();
+builder.Services.AddScoped<IWishlistService, WishlistService>();
+builder.Services.AddScoped<IBrandSubscriptionService, BrandSubscriptionService>();
 
 builder.Services.AddFluentValidationAutoValidation();
 builder.Services.AddValidatorsFromAssemblyContaining<RegisterAnonymousRequestValidator>();
@@ -89,9 +92,92 @@ builder.Services
             IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSecret)),
             ValidateIssuer = false,
             ValidateAudience = false,
+            ValidateLifetime = true, // ✅ Vérifie l'expiration
             ClockSkew = TimeSpan.Zero
         };
+        
+        options.Events = new JwtBearerEvents
+        {
+            OnMessageReceived = context =>
+            {
+                var authHeader = context.Request.Headers["Authorization"].FirstOrDefault();
+                Console.WriteLine($"Full Authorization Header: '{authHeader}'");
+    
+                var token = authHeader?.Split(" ").Last();
+                Console.WriteLine($" Token length: {token?.Length ?? 0}");
+                Console.WriteLine($" Token start: {token?.Substring(0, Math.Min(50, token?.Length ?? 0))}...");
+    
+                return Task.CompletedTask;
+            },
+            OnTokenValidated = context =>
+            {
+                Console.WriteLine("✅✅✅ TOKEN VALIDATED SUCCESSFULLY ✅✅✅");
+                var claims = context.Principal?.Claims;
+                if (claims != null)
+                {
+                    foreach (var claim in claims)
+                    {
+                        Console.WriteLine($"  Claim: {claim.Type} = {claim.Value}");
+                    }
+                }
+                return Task.CompletedTask;
+            },
+            OnAuthenticationFailed = context =>
+            {
+                Console.WriteLine($"❌❌❌ AUTHENTICATION FAILED ❌❌❌");
+                Console.WriteLine($"Exception: {context.Exception.GetType().Name}");
+                Console.WriteLine($"Message: {context.Exception.Message}");
+                Console.WriteLine($"Stack: {context.Exception.StackTrace}");
+                return Task.CompletedTask;
+            },
+            OnChallenge = context =>
+            {
+                Console.WriteLine($"⚠️⚠️⚠️ CHALLENGE ⚠️⚠️⚠️");
+                Console.WriteLine($"Error: '{context.Error}'");
+                Console.WriteLine($"ErrorDescription: '{context.ErrorDescription}'");
+                Console.WriteLine($"AuthenticateFailure: {context.AuthenticateFailure?.Message}");
+                return Task.CompletedTask;
+            }
+        };
     });
+
+
+
+builder.Services.AddSwaggerGen(options =>
+{
+    options.SwaggerDoc("v1", new OpenApiInfo
+    {
+        Title = "IndeConnect API",
+        Version = "v1",
+        Description = "API REST pour IndeConnect"
+    });
+
+    options.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
+    {
+        Name = "Authorization",
+        Type = SecuritySchemeType.Http,
+        Scheme = "bearer",
+        BearerFormat = "JWT",
+        In = ParameterLocation.Header,
+        Description = "Entrez votre token JWT dans le format: Bearer {votre token}"
+    });
+
+    options.AddSecurityRequirement(new OpenApiSecurityRequirement
+    {
+        {
+            new OpenApiSecurityScheme
+            {
+                Reference = new OpenApiReference
+                {
+                    Type = ReferenceType.SecurityScheme,
+                    Id = "Bearer"
+                }
+            },
+            Array.Empty<string>()
+        }
+    });
+});
+
 
 var app = builder.Build();
 
