@@ -12,23 +12,26 @@ namespace IndeConnect_Back.Web.Controllers;
 public class WishlistController : ControllerBase
 {
     private readonly IWishlistService _wishlistService;
-
-    public WishlistController(IWishlistService wishlistService)
+    private readonly UserHelper _userHelper;
+    public WishlistController(IWishlistService wishlistService, UserHelper userHelper)
     {
         _wishlistService = wishlistService;
+        _userHelper = userHelper;
     }
 
-    /// <summary>
-    /// Get user's wishlist
-    /// </summary>
+    /**
+     * Get user's wishlist
+     */
     [HttpGet]
+    [ProducesResponseType(typeof(WishlistDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
     public async Task<ActionResult<WishlistDto>> GetWishlist([FromRoute] long userId)
     {
         try
         {
-            // Vérifier que l'utilisateur accède à sa propre wishlist
-            var currentUserId = GetCurrentUserId();
-            if (currentUserId != userId && !IsAdminOrModerator())
+            var currentUserId = _userHelper.GetUserId();
+            if (currentUserId != userId && !_userHelper.IsAdminOrModerator())
                 return Forbid();
 
             var wishlist = await _wishlistService.GetUserWishlistAsync(userId);
@@ -40,17 +43,21 @@ public class WishlistController : ControllerBase
         }
     }
 
-    /// <summary>
-    /// Add a product to wishlist
-    /// </summary>
+    /**
+     * Add a product to wishlist
+     */
     [HttpPost("items")]
+    [ProducesResponseType(typeof(WishlistDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
     public async Task<ActionResult<WishlistDto>> AddToWishlist(
         [FromRoute] long userId,
         [FromBody] AddToWishlistRequest request)
     {
         try
         {
-            var currentUserId = GetCurrentUserId();
+            var currentUserId = _userHelper.GetUserId();
             if (currentUserId != userId)
                 return Forbid();
 
@@ -63,17 +70,20 @@ public class WishlistController : ControllerBase
         }
     }
 
-    /// <summary>
-    /// Remove a product from wishlist
-    /// </summary>
+    /**
+     * Remove a product from wishlist
+     */
     [HttpDelete("items/{productId}")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
     public async Task<IActionResult> RemoveFromWishlist(
         [FromRoute] long userId,
         [FromRoute] long productId)
     {
         try
         {
-            var currentUserId = GetCurrentUserId();
+            var currentUserId = _userHelper.GetUserId();
             if (currentUserId != userId)
                 return Forbid();
 
@@ -86,34 +96,22 @@ public class WishlistController : ControllerBase
         }
     }
 
-    /// <summary>
-    /// Check if a product is in user's wishlist
-    /// </summary>
+    /**
+     * Check if a product is in user's wishlist
+     */
     [HttpGet("items/{productId}/exists")]
+    [ProducesResponseType(typeof(object), StatusCodes.Status200OK)] 
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
     public async Task<ActionResult<bool>> IsInWishlist(
         [FromRoute] long userId,
         [FromRoute] long productId)
     {
-        var currentUserId = GetCurrentUserId();
-        if (currentUserId != userId && !IsAdminOrModerator())
+        var currentUserId = _userHelper.GetUserId();
+        if (currentUserId != userId && !_userHelper.IsAdminOrModerator())
             return Forbid();
 
         var exists = await _wishlistService.IsProductInWishlistAsync(userId, productId);
         return Ok(new { exists });
-    }
-
-    private long GetCurrentUserId()
-    {
-        var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-        if (string.IsNullOrEmpty(userIdClaim) || !long.TryParse(userIdClaim, out var userId))
-            throw new UnauthorizedAccessException("Invalid user token");
-
-        return userId;
-    }
-
-    private bool IsAdminOrModerator()
-    {
-        var role = User.FindFirst(ClaimTypes.Role)?.Value;
-        return role == "Administrator" || role == "Moderator";
     }
 }

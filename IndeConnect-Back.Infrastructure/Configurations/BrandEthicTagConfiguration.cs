@@ -16,11 +16,11 @@ public class BrandEthicTagConfiguration : IEntityTypeConfiguration<BrandEthicTag
         builder.Property(bet => bet.Category)
                .HasConversion(new EnumToStringConverter<EthicsCategory>())
                .IsRequired()
-               .HasMaxLength(50); // Limite pour le string converti
+               .HasMaxLength(50);
         
         builder.Property(bet => bet.TagKey)
                .IsRequired()
-               .HasMaxLength(100); // Limite raisonnable pour un tag
+               .HasMaxLength(100); 
         
         // Relation with Brand
         // This configuration assure the two-way coherence.

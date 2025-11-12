@@ -6,7 +6,7 @@ public class Sale
     public string Name { get; private set; } = default!;
     public string Description { get; private set; } = default!;
     
-    public decimal DiscountPercentage { get; private set; } // Ex: 20 pour -20%
+    public decimal DiscountPercentage { get; private set; } 
     public DateTimeOffset StartDate { get; private set; }
     public DateTimeOffset EndDate { get; private set; }
     public bool IsActive { get; private set; } = true;

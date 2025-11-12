@@ -18,8 +18,8 @@ public class Payment
     public string Currency { get; private set; } = "EUR";
     public decimal Amount { get; private set; }
 
-    public string? TransactionId { get; private set; } // ID fourni par PSP (Stripe, PayPal)
-    public string? RawPayload { get; private set; } // Webhook payload complet
+    public string? TransactionId { get; private set; } 
+    public string? RawPayload { get; private set; }
 
     private Payment() { }
     

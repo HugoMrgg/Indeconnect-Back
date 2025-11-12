@@ -31,7 +31,6 @@ public class WishlistService : IWishlistService
         if (user == null)
             throw new InvalidOperationException("User not found");
 
-        // Si l'utilisateur n'a pas encore de wishlist, en créer une
         if (user.Wishlist == null)
         {
             var wishlist = new Wishlist(userId);
@@ -50,14 +49,12 @@ public class WishlistService : IWishlistService
         {
             var product = item.Product;
             
-            // Récupérer l'image primaire du premier variant qui en a une
             var primaryImage = product.Variants
                 .SelectMany(v => v.Media)
                 .Where(m => m.IsPrimary)
                 .Select(m => m.Url)
                 .FirstOrDefault();
             
-            // Sinon, prendre la première image disponible
             if (primaryImage == null)
             {
                 primaryImage = product.Variants
@@ -67,7 +64,6 @@ public class WishlistService : IWishlistService
                     .FirstOrDefault();
             }
             
-            // Vérifier si au moins un variant a du stock
             var hasStock = product.Variants.Any(v => v.StockCount > 0);
 
             return new WishlistItemDto(

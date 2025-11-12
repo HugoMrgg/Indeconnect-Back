@@ -11,7 +11,7 @@ public class ProductReview
     public long UserId { get; private set; }
     public User User { get; private set; } = default!;
 
-    public int Rating { get; private set; } // 1 à 5
+    public int Rating { get; private set; } 
     public string? Comment { get; private set; }
     public DateTimeOffset CreatedAt { get; private set; }
     public DateTimeOffset? UpdatedAt { get; private set; }
