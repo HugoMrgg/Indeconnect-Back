@@ -19,9 +19,9 @@ public class BrandController : ControllerBase
         _productService = productService; 
     }
 
-    /// <summary>
-    /// Get brands sorted by ethics criteria
-    /// </summary>
+    /**
+     * Get brands sorted by ethics criteria
+     */
     [HttpGet]
     [AllowAnonymous]
     [ProducesResponseType(typeof(BrandsListResponse), StatusCodes.Status200OK)]
@@ -48,9 +48,9 @@ public class BrandController : ControllerBase
         }
     }
     
-    /// <summary>
-    /// Get detailed brand information (presentation page)
-    /// </summary>
+    /**
+     * Get detailed brand information (presentation page)
+     */
     [HttpGet("{brandId}")]
     [AllowAnonymous]
     [ProducesResponseType(typeof(BrandDetailDto), StatusCodes.Status200OK)]
@@ -68,9 +68,9 @@ public class BrandController : ControllerBase
         return Ok(brand);
     }
     
-    /// <summary>
-    /// Get products of a specific brand with filters (products page)
-    /// </summary>
+    /**
+     * Get products of a specific brand with filters (products page)
+     */
     [HttpGet("{brandId}/products")]
     [AllowAnonymous]
     [ProducesResponseType(typeof(ProductsListResponse), StatusCodes.Status200OK)]

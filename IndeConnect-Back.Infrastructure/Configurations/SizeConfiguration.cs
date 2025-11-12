@@ -36,7 +36,7 @@ public class SizeConfiguration : IEntityTypeConfiguration<Size>
             new { Id = 5L, Name = "XL" },
             new { Id = 6L, Name = "XXL" },
             new { Id = 7L, Name = "XXXL" },
-            // Tailles numériques chaussures
+
             new { Id = 10L, Name = "36" },
             new { Id = 11L, Name = "37" },
             new { Id = 12L, Name = "38" },
@@ -47,7 +47,7 @@ public class SizeConfiguration : IEntityTypeConfiguration<Size>
             new { Id = 17L, Name = "43" },
             new { Id = 18L, Name = "44" },
             new { Id = 19L, Name = "45" },
-            // Taille unique
+
             new { Id = 99L, Name = "Unique" }
         );
     }

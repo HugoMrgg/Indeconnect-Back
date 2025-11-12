@@ -16,7 +16,7 @@ public class UserService : IUserService
     public async Task<UserDetailDto?> GetUserByIdAsync(long userId)
     {
         var user = await _context.Users
-            .Include(u => u.Role)
+
             .Include(u => u.BrandSubscriptions)
             .Include(u => u.Reviews)
             .Include(u => u.Orders)

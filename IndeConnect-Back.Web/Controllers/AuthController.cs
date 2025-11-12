@@ -18,11 +18,13 @@ public class AuthController : ControllerBase
         _authService = authService;
     }
 
-    /// <summary>
-    /// Register a new user account (public + role-based)
-    /// </summary>
+    /**
+     * Register a new user account (public + role-based)
+     */
     [HttpPut]
     [Authorize(Policy = "RegisterPolicy")]
+    [ProducesResponseType(typeof(AuthResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
     public async Task<ActionResult<AuthResponse>> Register([FromBody] RegisterRequest request)
     {
         try
@@ -37,11 +39,14 @@ public class AuthController : ControllerBase
     }
 
 
-    /// <summary>
-    /// Login with email and password
-    /// </summary>
+    /**
+     * Login with email and password
+     */
     [HttpPost]
     [AllowAnonymous]
+    [ProducesResponseType(typeof(AuthResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
     public async Task<ActionResult<AuthResponse>> Login([FromBody] LoginAnonymousRequest request)
     {
         try

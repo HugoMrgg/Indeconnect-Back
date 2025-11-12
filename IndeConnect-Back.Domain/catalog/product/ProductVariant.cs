@@ -16,7 +16,6 @@ public class ProductVariant
     public int StockCount { get; private set; }
     public decimal? PriceOverride { get; private set; }
 
-    // ✅ Images spécifiques à cette variante
     private readonly List<ProductVariantMedia> _media = new();
     public IReadOnlyCollection<ProductVariantMedia> Media => _media;
 
