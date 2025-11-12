@@ -21,7 +21,6 @@ public class AuthService : IAuthService
         if (await _context.Users.AnyAsync(u => u.Email == request.Email))
             throw new InvalidOperationException("Email already exists");
 
-        // Hash password
         var passwordHash = BCrypt.Net.BCrypt.HashPassword(request.Password);
 
         var targetRole = ParseRole(request.TargetRole);
@@ -38,7 +37,6 @@ public class AuthService : IAuthService
         _context.Users.Add(user);
         await _context.SaveChangesAsync();
 
-        // Generate JWT
         var token = _jwtGenerator.GenerateToken(user);
 
         return new AuthResponse(

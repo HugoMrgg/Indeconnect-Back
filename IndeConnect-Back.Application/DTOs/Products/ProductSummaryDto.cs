@@ -1,9 +1,9 @@
 ﻿namespace IndeConnect_Back.Application.DTOs.Products;
 
 
-/// <summary>
-/// Summary information for a product in list view
-/// </summary>
+/**
+ * Summary information for a product in list view
+ */
 public record ProductSummaryDto(
     long Id,
     string Name,

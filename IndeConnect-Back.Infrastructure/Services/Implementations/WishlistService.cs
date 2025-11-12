@@ -5,6 +5,9 @@ using Microsoft.EntityFrameworkCore;
 
 namespace IndeConnect_Back.Infrastructure.Services.Implementations;
 
+/**
+ * Service handling all wishlist-related operations, including retrieval and update logic.
+ */
 public class WishlistService : IWishlistService
 {
     private readonly AppDbContext _context;
@@ -14,6 +17,9 @@ public class WishlistService : IWishlistService
         _context = context;
     }
 
+    /**
+     * Retrieves the wishlist of the given user, creating an empty wishlist if none exists.
+     */
     public async Task<WishlistDto> GetUserWishlistAsync(long userId)
     {
         var user = await _context.Users
@@ -31,6 +37,7 @@ public class WishlistService : IWishlistService
         if (user == null)
             throw new InvalidOperationException("User not found");
 
+        // If the user does not have a wishlist yet, create an empty one
         if (user.Wishlist == null)
         {
             var wishlist = new Wishlist(userId);
@@ -45,10 +52,12 @@ public class WishlistService : IWishlistService
             );
         }
 
+        // Map wishlist products to DTOs with info and main image
         var items = user.Wishlist.Items.Select(item =>
         {
             var product = item.Product;
             
+            // Get the primary image of the first available variant; fall back to first image
             var primaryImage = product.Variants
                 .SelectMany(v => v.Media)
                 .Where(m => m.IsPrimary)
@@ -64,6 +73,7 @@ public class WishlistService : IWishlistService
                     .FirstOrDefault();
             }
             
+            // Determine if any variant is in stock
             var hasStock = product.Variants.Any(v => v.StockCount > 0);
 
             return new WishlistItemDto(
@@ -87,6 +97,9 @@ public class WishlistService : IWishlistService
         );
     }
 
+    /**
+     * Adds a product to the user's wishlist, creating the wishlist if needed.
+     */
     public async Task<WishlistDto> AddProductToWishlistAsync(long userId, long productId)
     {
         var user = await _context.Users
@@ -104,25 +117,25 @@ public class WishlistService : IWishlistService
         if (product == null)
             throw new InvalidOperationException("Product not found");
 
-        // Vérifier que le produit est activé
+        // Check that the product is active/enabled
         if (!product.IsEnabled)
             throw new InvalidOperationException("Product is not available");
 
-        // Créer la wishlist si elle n'existe pas
+        // Create wishlist if it doesn't exist
         if (user.Wishlist == null)
         {
             var newWishlist = new Wishlist(userId);
             _context.Wishlists.Add(newWishlist);
             await _context.SaveChangesAsync();
             
-            // Recharger l'utilisateur avec la nouvelle wishlist
+            // Reload the user to attach the new wishlist
             user = await _context.Users
                 .Include(u => u.Wishlist)
                     .ThenInclude(w => w!.Items)
                 .FirstAsync(u => u.Id == userId);
         }
 
-        // Vérifier si le produit est déjà dans la wishlist
+        // Prevent duplicates: do not add if product is already in wishlist
         if (user.Wishlist!.Items.Any(i => i.ProductId == productId))
             throw new InvalidOperationException("Product is already in wishlist");
 
@@ -133,6 +146,9 @@ public class WishlistService : IWishlistService
         return await GetUserWishlistAsync(userId);
     }
 
+    /**
+     * Removes a product from the user's wishlist.
+     */
     public async Task RemoveProductFromWishlistAsync(long userId, long productId)
     {
         var user = await _context.Users
@@ -154,6 +170,9 @@ public class WishlistService : IWishlistService
         await _context.SaveChangesAsync();
     }
 
+    /**
+     * Checks if a product is present in a user's wishlist.
+     */
     public async Task<bool> IsProductInWishlistAsync(long userId, long productId)
     {
         return await _context.WishlistItems

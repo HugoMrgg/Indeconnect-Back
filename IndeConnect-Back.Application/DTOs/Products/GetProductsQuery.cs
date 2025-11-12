@@ -1,9 +1,9 @@
 ﻿namespace IndeConnect_Back.Application.DTOs.Products;
 
 
-/// <summary>
-/// Query parameters for filtering and sorting products
-/// </summary>
+/**
+ * Query parameters for filtering and sorting products
+ */
 public record GetProductsQuery(
     long BrandId,
     int Page = 1,
@@ -15,9 +15,9 @@ public record GetProductsQuery(
     ProductSortType SortBy = ProductSortType.Newest
 );
 
-/// <summary>
-/// Sort options for products
-/// </summary>
+/**
+ * Sort options for products
+ */
 public enum ProductSortType
 {
     Newest, // Most recent first
