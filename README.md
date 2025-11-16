@@ -145,11 +145,11 @@ From the root of the repository:
 
 ## 5. Available Services in Docker
 
-    Service       Port   Description
-    ------------- ------ ----------------------
-    **api**       8080   ASP.NET Core Web API
-    **db**        5432   PostgreSQL database
-    **pgadmin**   5050   Database admin UI
+| Service     | Port | Description          |
+|-------------|------|----------------------|
+| **api**     | 8080 | ASP.NET Core Web API |
+| **db**      | 5432 | PostgreSQL database  |
+| **pgadmin** | 5050 | Database admin UI    |
 
   ------------------------------------------------------------------------
 
@@ -157,7 +157,7 @@ From the root of the repository:
 
 ### Base URL
 
-      http://localhost:8080
+    http://localhost:8080
 
 ### Swagger (OpenAPI)
 
@@ -177,8 +177,9 @@ From the root of the repository:
 
 All endpoints follow the structure:
 
-      /api/{controller}/{action}
-
+```
+/api/{controller}/{action}
+```
   ------------------------------------------------------------------------
 
 ## 7. Authentication (JWT)
@@ -349,31 +350,5 @@ Run:
 ### JWT errors
 
 Ensure `JWT_SECRET` is set.
-
-  ------------------------------------------------------------------------
-
-## 17. Contribution Workflow
-
-### Branch strategy
-
-    Branch       Purpose
-    ------------ --------------------
-    `main`       stable releases
-    `dev`        development branch
-    feature/\*   new features
-
-### Commit messages
-
-Follow conventional commits:
-
--   `feat:` new feature\
--   `fix:` bug fix\
--   `refactor:` code cleanup\
--   `docs:` documentation
-
-### Code style
-
--   C# 12 recommended\
--   Nullable reference types enabled
 
   ------------------------------------------------------------------------
