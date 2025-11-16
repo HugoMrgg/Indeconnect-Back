@@ -1,34 +1,36 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
-  <ItemGroup>
-    <ProjectReference Include="..\IndeConnect-Back.Domain\IndeConnect-Back.Domain.csproj" />
-    <ProjectReference Include="..\IndeConnect-Back.Application\IndeConnect-Back.Application.csproj" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <PackageReference Include="BCrypt.Net-Next" Version="4.0.3" />
-    <PackageReference Include="Microsoft.EntityFrameworkCore" Version="9.0.10" />
-    <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="9.0.10">
-      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
-      <PrivateAssets>all</PrivateAssets>
-    </PackageReference>
-    <PackageReference Include="Microsoft.IdentityModel.Tokens" Version="8.14.0" />
-    <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="9.0.4" />
-    <PackageReference Include="System.Net.Http.Json" Version="9.0.10" />
-    <PackageReference Include="System.IdentityModel.Tokens.Jwt" Version="8.14.0" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <Reference Include="Microsoft.AspNetCore.Identity">
-      <HintPath>..\..\..\..\..\Program Files\dotnet\shared\Microsoft.AspNetCore.App\9.0.9\Microsoft.AspNetCore.Identity.dll</HintPath>
-    </Reference>
-  </ItemGroup>
-
   <PropertyGroup>
     <TargetFramework>net9.0</TargetFramework>
     <RootNamespace>IndeConnect_Back.Infrastructure</RootNamespace>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
   </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\IndeConnect-Back.Domain\IndeConnect-Back.Domain.csproj" />
+    <ProjectReference Include="..\IndeConnect-Back.Application\IndeConnect-Back.Application.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Hashing mots de passe -->
+    <PackageReference Include="BCrypt.Net-Next" Version="4.0.3" />
+
+    <!-- EF Core -->
+    <PackageReference Include="Microsoft.EntityFrameworkCore" Version="9.0.10" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Relational" Version="9.0.10" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="9.0.10">
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+      <PrivateAssets>all</PrivateAssets>
+    </PackageReference>
+
+    <!-- Provider PostgreSQL -->
+    <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="9.0.4" />
+
+    <!-- JWT -->
+    <PackageReference Include="Microsoft.IdentityModel.Tokens" Version="8.14.0" />
+    <PackageReference Include="System.IdentityModel.Tokens.Jwt" Version="8.14.0" />
+
+  </ItemGroup>
 
 </Project>

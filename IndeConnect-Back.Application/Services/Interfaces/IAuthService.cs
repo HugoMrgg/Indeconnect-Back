@@ -1,6 +1,4 @@
 ﻿using IndeConnect_Back.Application.DTOs.Auth;
-using Microsoft.AspNetCore.Identity.Data;
-using RegisterRequest = IndeConnect_Back.Application.DTOs.Auth.RegisterRequest;
 
 namespace IndeConnect_Back.Application.Services.Interfaces;
 

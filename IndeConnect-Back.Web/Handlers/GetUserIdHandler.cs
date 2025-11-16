@@ -5,7 +5,7 @@ using Microsoft.AspNetCore.Mvc.Filters;
 
 namespace IndeConnect_Back.Web.Handlers;
 
-public class GetuserIdHandler
+public class GetUserIdHandler
     : AuthorizationHandler<UserIdAttribute>
 {
     protected override Task HandleRequirementAsync(AuthorizationHandlerContext context, UserIdAttribute requirement)

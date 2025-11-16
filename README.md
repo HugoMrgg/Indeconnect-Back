@@ -20,6 +20,81 @@ This README provides a complete guide to:
 
   ------------------------------------------------------------------------
 
+## Table of Contents
+
+1. [Project Structure](#1-project-structure)
+    - Folder Architecture
+    - Layer Responsibilities
+
+2. [Environment Requirements](#2-environment-requirements)
+    - Required Software
+    - Optional Tools
+
+3. [Environment Configuration (.env)](#3-environment-configuration-env)
+    - Copying the Example File
+    - Variable Description
+    - How Variables Are Used
+
+4. [Running the Backend With Docker](#4-running-the-backend-with-docker)
+    - Build & Run
+    - Run in Background
+    - Stop Containers
+    - Cleaning Volumes
+
+5. [Available Services in Docker](#5-available-services-in-docker)
+    - API
+    - Database
+    - pgAdmin
+
+6. [API Endpoints](#6-api-endpoints)
+    - Base URL
+    - Swagger
+    - Healthcheck
+    - Controllers Overview
+
+7. [Authentication (JWT)](#7-authentication-jwt)
+    - Token Generation
+    - Token Validation
+    - Authorization Attributes
+
+8. [Database](#8-database)
+    - ORM: Entity Framework Core
+    - Applying Migrations
+    - Creating Migrations
+
+9. [Data Models (Overview)](#9-data-models-overview)
+    - Users
+    - Missions
+    - Availability Periods
+
+10. [Error Handling](#10-error-handling)
+    - Exception Middleware
+    - Error Response Format
+
+11. [Dockerfile Summary](#11-dockerfile-summary)
+    - Build Stage
+    - Runtime Stage
+
+12. [docker-compose Summary](#12-docker-compose-summary)
+    - Services
+    - Healthchecks
+
+13. [Logging](#13-logging)
+    - Default Logging
+    - Extensions
+
+14. [Deployment Notes](#14-deployment-notes)
+    - Hosting Options
+    - Environment Variables
+
+15. [Recommended Folder Permissions](#15-recommended-folder-permissions)
+
+16. [Troubleshooting](#16-troubleshooting)
+    - PostgreSQL Connection Issues
+    - Database Initialization Issues
+    - JWT Problems
+
+    
 ## 1. Project Structure
 
 The repository uses a **clean architecture-inspired** organization:
@@ -47,22 +122,12 @@ The repository uses a **clean architecture-inspired** organization:
 
 ### Layers Summary
 
-    -----------------------------------------------------------------------------
-    Layer                Responsibility                     Contains
-    -------------------- ---------------------------------- ---------------------
-    **Domain**           Business rules                     Entities, enums
-
-    **Application**      Use cases & logic                  Services, interfaces,
-                                                            validation
-
-    **Infrastructure**   External systems                   DbContext,
-                                                            PostgreSQL,
-                                                            repository
-                                                            implementations
-
-    **Web**              API layer                          Controllers,
-                                                            middleware, routing
-    -----------------------------------------------------------------------------
+| Layer              | Responsibility    | Contains                                          |
+|--------------------|-------------------|---------------------------------------------------|
+| **Domain**         | Business rules    | Entities, enums                                   |
+| **Application**    | Use cases & logic | Services, interfaces, validation                  |
+| **Infrastructure** | External systems  | DbContext, PostgreSQL, repository implementations |
+| **Web**            | API layer         | Controllers, middleware, routing                  |
 
   ------------------------------------------------------------------------
 
@@ -103,13 +168,13 @@ Copy the example file:
 
 ### How it is used
 
-    Variable                       Used by    Purpose
-    ------------------------------ ---------- ---------------------------------------
-    POSTGRES_DB                    DB + API   Database name
-    POSTGRES_USER                  DB + API   PostgreSQL username
-    POSTGRES_PASSWORD              DB + API   PostgreSQL password
-    ASPNETCORE_ENVIRONMENT         API        Sets Development, Production, Staging
-    CONNECTIONSTRINGS\_\_DEFAULT   API        EF Core connection string
+| Variable                     | Used by  | Purpose                               |
+|------------------------------|----------|---------------------------------------|
+| POSTGRES_DB                  | DB + API | Database name                         |
+| POSTGRES_USER                | DB + API | PostgreSQL username                   |
+| POSTGRES_PASSWORD            | DB + API | PostgreSQL password                   |
+| ASPNETCORE_ENVIRONMENT       | API      | Sets Development, Production, Staging |
+| CONNECTIONSTRINGS\_\_DEFAULT | API      | EF Core connection string             |
 
   ------------------------------------------------------------------------
 

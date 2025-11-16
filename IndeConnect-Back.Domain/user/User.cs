@@ -78,11 +78,16 @@ public class User
         IsEnabled = true;
         Role = role;
     }
-    public void SetPasswordHash(string passwordHash)
+    public void SetPasswordHash(string hash)
     {
-        PasswordHash = passwordHash;
+        PasswordHash = hash ?? throw new ArgumentNullException(nameof(hash));
     }
     
+    public bool VerifyPassword(string password)
+    {
+        return PasswordHash is not null && BCrypt.Net.BCrypt.Verify(password, PasswordHash);
+    }
+
     public void SubscribeToBrand(Brand brand)
     {
         if (_brandSubscriptions.Any(bs => bs.BrandId == brand.Id))

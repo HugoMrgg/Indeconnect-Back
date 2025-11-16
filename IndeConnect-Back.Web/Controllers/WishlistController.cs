@@ -28,19 +28,12 @@ public class WishlistController : ControllerBase
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
     public async Task<ActionResult<WishlistDto>> GetWishlist([FromRoute] long userId)
     {
-        try
-        {
-            var currentUserId = _userHelper.GetUserId();
-            if (currentUserId != userId && !_userHelper.IsAdminOrModerator())
-                return Forbid();
+        var currentUserId = _userHelper.GetUserId();
+        if (currentUserId != userId && !_userHelper.IsAdminOrModerator())
+            return Forbid();
 
-            var wishlist = await _wishlistService.GetUserWishlistAsync(userId);
-            return Ok(wishlist);
-        }
-        catch (InvalidOperationException ex)
-        {
-            return NotFound(new { message = ex.Message });
-        }
+        var wishlist = await _wishlistService.GetUserWishlistAsync(userId);
+        return Ok(wishlist);
     }
 
     /**
@@ -55,19 +48,12 @@ public class WishlistController : ControllerBase
         [FromRoute] long userId,
         [FromBody] AddToWishlistRequest request)
     {
-        try
-        {
-            var currentUserId = _userHelper.GetUserId();
-            if (currentUserId != userId)
-                return Forbid();
+        var currentUserId = _userHelper.GetUserId();
+        if (currentUserId != userId)
+            return Forbid();
 
-            var wishlist = await _wishlistService.AddProductToWishlistAsync(userId, request.ProductId);
-            return Ok(wishlist);
-        }
-        catch (InvalidOperationException ex)
-        {
-            return BadRequest(new { message = ex.Message });
-        }
+        var wishlist = await _wishlistService.AddProductToWishlistAsync(userId, request.ProductId);
+        return Ok(wishlist);
     }
 
     /**
@@ -81,19 +67,12 @@ public class WishlistController : ControllerBase
         [FromRoute] long userId,
         [FromRoute] long productId)
     {
-        try
-        {
-            var currentUserId = _userHelper.GetUserId();
-            if (currentUserId != userId)
-                return Forbid();
+        var currentUserId = _userHelper.GetUserId();
+        if (currentUserId != userId)
+            return Forbid();
 
-            await _wishlistService.RemoveProductFromWishlistAsync(userId, productId);
-            return NoContent();
-        }
-        catch (InvalidOperationException ex)
-        {
-            return NotFound(new { message = ex.Message });
-        }
+        await _wishlistService.RemoveProductFromWishlistAsync(userId, productId);
+        return NoContent();
     }
 
     /**
