@@ -1,176 +1,379 @@
-# IndeConnect 
+# IndeConnect -- Complete Backend Documentation
 
-## 📁 Architecture du projet
+This repository contains the full backend for **IndeConnect**, a
+platform designed to manage independent workers, missions, availability
+periods, authentication flows, and administrative functions.\
+It is built using **ASP.NET Core (.NET 9)**, **Entity Framework Core**,
+and **PostgreSQL**, fully orchestrated through **Docker Compose**.
 
-```markdown
-IndeConnect-Back/
-├── IndeConnect-Back.sln
-├── IndeConnect-Back/
-│       ├── IndeConnect-Back.csproj
-│       ├── Program.cs
-│       ├── Controllers/
-│       └── appsettings.json
-├── IndeConnect-Back.Application/
-│       └── IndeConnect-Back.Application.csproj
-├── IndeConnect-Back.Domain/
-│       └── IndeConnect-Back.Domain.csproj
-├── IndeConnect-Back.Infrastructure/
-│       ├── IndeConnect-Back.Infrastructure.csproj
-│       ├── AppDbContext.cs
-│       ├── DependencyInjection.cs
-│       ├── AppUser.cs / AppRole.cs
-│       └── (migrations à venir)
-├── IndeConnect-Back.Web/
-│       ├── IndeConnect-Back.Web.csproj
-│       ├── Program.cs
-│       └── appsettings.json
-├── Dockerfile
-├── docker-compose.yml
-├── .dockerignore
-├── .env.example
-└── README.DOCKER.md
-```
+This README provides a complete guide to:
 
-**Organisation logique :**
-- `Domain` -> entités et logique métier pure
-- `Application` -> services et règles d’application
-- `Infrastructure` -> accès aux données (EF Core + PostgreSQL)
-- `Web` -> API ASP.NET Core exposée au client
-- `Dockerfile`, `docker-compose.yml` -> orchestration et build
+-   Understanding the project structure\
+-   Configuring your development environment\
+-   Building & running the backend via Docker\
+-   API structure & conventions\
+-   Database & migrations\
+-   Authentication (JWT)\
+-   Deployment notes\
+-   Troubleshooting\
+-   Contribution workflow
 
----
+  ------------------------------------------------------------------------
 
-# 🐳 Dockerisation de **IndeConnect-Back**
+## 1. Project Structure
 
-Ce guide décrit comment exécuter le backend IndeConnect-Back dans un environnement Docker de production locale avec .NET 9, PostgreSQL 16 et pgAdmin 8.
+The repository uses a **clean architecture-inspired** organization:
 
-## ⚙️ Prérequis
+      IndeConnect-Back/
+      ├── IndeConnect-Back.sln                   # Main solution
+      ├── IndeConnect-Back/                      # (Optional bootstrap project)
+      ├── IndeConnect-Back.Domain/               # Domain entities, enums, core logic
+      │    ├── Entities/
+      │    ├── Enums/
+      │    └── Exceptions/
+      ├── IndeConnect-Back.Application/          # Use cases, DTOs, validation, services
+      │    ├── Interfaces/
+      │    ├── Services/
+      │    └── Validators/
+      ├── IndeConnect-Back.Infrastructure/       # EF Core, database, repositories
+      │    ├── Context/
+      │    ├── Migrations/
+      │    └── Repositories/
+      └── IndeConnect-Back.Web/                  # API layer (controllers, middleware)
+          ├── Controllers/
+          ├── DTO/
+          ├── Middleware/
+          └── Program.cs
 
-- Docker **27+**
-- Docker Compose **v2**
-- Ports libres :
-    - `8080` -> API ASP.NET Core
-    - `5432` -> PostgreSQL
-    - `5050` -> pgAdmin (facultatif)
+### Layers Summary
 
----
+    -----------------------------------------------------------------------------
+    Layer                Responsibility                     Contains
+    -------------------- ---------------------------------- ---------------------
+    **Domain**           Business rules                     Entities, enums
 
-## 🚀 Démarrage rapide
+    **Application**      Use cases & logic                  Services, interfaces,
+                                                            validation
 
-  ```bash
-  cd Indeconnect-Back
-  cp .env.example .env
-  # Development
-  docker compose up --build 
-  # Production
-  docker compose up -d --build 
+    **Infrastructure**   External systems                   DbContext,
+                                                            PostgreSQL,
+                                                            repository
+                                                            implementations
+
+    **Web**              API layer                          Controllers,
+                                                            middleware, routing
+    -----------------------------------------------------------------------------
+
+  ------------------------------------------------------------------------
+
+## 2. Environment Requirements
+
+Make sure you have the following installed:
+
+### Required
+
+-   **.NET 9.0 SDK**
+-   **Docker Desktop** (or Docker Engine)
+-   **Docker Compose v3.9+**
+
+### Optional tools
+
+-   **pgAdmin** or **TablePlus** for database inspection\
+-   **Visual Studio / VS Code / JetBrains Rider**
+
+  ------------------------------------------------------------------------
+
+## 3. Environment Configuration (`.env`)
+
+Copy the example file:
+
+  ``` bash
+  cp env.example .env
   ```
 
-> Les services sont exposés uniquement en local (`127.0.0.1`).  
-> L’API est accessible sur http://localhost:8080  
-> pgAdmin est accessible sur http://localhost:5050
+### `.env` contents explained:
 
+      POSTGRES_DB=indeconnect
+      POSTGRES_USER=indeconnect
+      POSTGRES_PASSWORD=indeconnect
+      ASPNETCORE_ENVIRONMENT=Development
 
-## 🧩 Architecture Docker
+      # Auto-built connection string
+      CONNECTIONSTRINGS__DEFAULT=Host=db;Port=5432;Database=${POSTGRES_DB};Username=${POSTGRES_USER};Password=${POSTGRES_PASSWORD}
 
-| **Service** | **Image**                                     | **Port** | **Description**                                     |
-|:------------|:----------------------------------------------|:---------|:----------------------------------------------------|
-| api         | `indeconnect/api:dev`  `indeconnect/api:prod` | 8080     | Conteneur .NET 9 ASP.NET Core servant l’API         |
-| db          | `postgres:16`                                 | 5432     | Base de données PostgreSQL                          |
-| pgadmin     | `dpage/pgadmin4:8`                            | 5050     | Interface d’administration PostgreSQL (optionnelle) |
+### How it is used
 
-			
-**Volumes persistants :**
-  - `db_data` -> stockage des données PostgreSQL
-  - `pgadmin_data` -> configuration pgAdmin
+    Variable                       Used by    Purpose
+    ------------------------------ ---------- ---------------------------------------
+    POSTGRES_DB                    DB + API   Database name
+    POSTGRES_USER                  DB + API   PostgreSQL username
+    POSTGRES_PASSWORD              DB + API   PostgreSQL password
+    ASPNETCORE_ENVIRONMENT         API        Sets Development, Production, Staging
+    CONNECTIONSTRINGS\_\_DEFAULT   API        EF Core connection string
 
-## 🔧 Configuration
-L’application lit la chaîne de connexion `ConnectionStrings:Default` depuis les variables d’environnement.
+  ------------------------------------------------------------------------
 
-Valeur par défaut (définie dans `docker-compose.yml`) :
-```ini
-Host=db;Port=5432;Database=indeconnect;Username=indeconnect;Password=indeconnect
-```
+## 4. Running the Backend With Docker
 
-Vous pouvez personnaliser ces valeurs dans `.env` :
-```bash
-POSTGRES_DB=indeconnect
-POSTGRES_USER=indeconnect
-POSTGRES_PASSWORD=indeconnect
-```
+From the root of the repository:
 
-Puis modifier la variable dans `docker-compose.yml` :
-```yaml
-ConnectionStrings__Default: "Host=db;Port=5432;Database=${POSTGRES_DB};Username=${POSTGRES_USER};Password=${POSTGRES_PASSWORD}"
-```
+### Build and run all services
 
-## 🧱 Migrations Entity Framework Core
-Les migrations se trouvent dans Indeconnect-Back\IndeConnect-Back.Infrastructure\Migrations
-Si les entités métiers changent, il vaut mieux recréer directement les migrations et update la BD.
-```bash
-dotnet tool install --global dotnet-ef
-dotnet ef migrations add InitialCreate --project IndeConnect-Back.Infrastructure --startup-project IndeConnect-Back.Web
-dotnet ef database update --project IndeConnect-Back.Infrastructure --startup-project IndeConnect-Back.Web
-```
+  ``` bash
+  docker compose up --build
+  ```
 
-Ensuite, rebuild l’image :
+### Run in background
 
-```bash
-docker compose build api
-```
+  ``` bash
+  docker compose up -d
+  ```
 
-### Appliquer automatiquement les migrations au démarrage
+### Stop everything
 
-Ajoutez ceci dans Program.cs :
+  ``` bash
+  docker compose down
+  ```
 
-```csharp
-using (var scope = app.Services.CreateScope())
-{
-    var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-    db.Database.Migrate();
-}
-```
+### Remove all volumes (DATABASE INCLUDED)
 
-## ❤️ Santé et supervision
-Le `docker-compose.yml` inclut un healthcheck basique :
+  ``` bash
+  docker compose down -v
+  ```
 
-```yaml
-test: ["CMD-SHELL", "curl -fsS http://localhost:8080/health >/dev/null || exit 1"]
-```
-> L’API expose un endpoint `/health` utilisé par le healthcheck Docker.
+  ------------------------------------------------------------------------
 
-## 🧰 Commandes utiles
-```bash
-# Lancer en arrière-plan
-docker compose up -d
+## 5. Available Services in Docker
 
-# Voir les logs
-docker compose logs -f api
+    Service       Port   Description
+    ------------- ------ ----------------------
+    **api**       8080   ASP.NET Core Web API
+    **db**        5432   PostgreSQL database
+    **pgadmin**   5050   Database admin UI
 
-# Rebuild sans cache
-docker compose build --no-cache api
+  ------------------------------------------------------------------------
 
-# Supprimer les conteneurs/volumes
-docker compose down -v
-```
+## 6. API Endpoints
 
-## 🧾 Notes supplémentaires
-- **Base de données** : PostgreSQL est utilisée via `Npgsql.EntityFrameworkCore.PostgreSQL`.
-- **Sécurité** : Le conteneur exécute l’application sous un utilisateur non-root (`appuser`), avec un système de fichiers en lecture seule (`read_only: true`), un espace temporaire isolé (`tmpfs /tmp`) et `no-new-privileges:true` pour limiter les permissions.
-- **Environnement** : `ASPNETCORE_ENVIRONMENT=Development` ou `ASPNETCORE_ENVIRONMENT=Production`.
-- **Ports exposés** : modifiables dans `docker-compose.yml`.
+### Base URL
 
-## ✅ Résumé
+      http://localhost:8080
 
-| Élément             | Statut                |
-|:--------------------|:----------------------|
-| .NET SDK            | 9.0                   |
-| Base de données     | PostgreSQL 16         |
-| Orchestration       | Docker Compose v3.9   |
-| Migrations EF Core  | à créer               |
-| Endpoint Health     | `/health` présent     |
+### Swagger (OpenAPI)
 
+      http://localhost:8080/swagger
 
-## 🧭 Prochaines étapes
-1. Ajouter la base de données et la tester sur prod.
-2. Commencer les US
+### Healthcheck
+
+      http://localhost:8080/health
+
+### Example controllers
+
+-   `AuthController`\
+-   `IndependentController`\
+-   `MissionController`\
+-   `AvailabilityController`\
+-   `AdminController`
+
+All endpoints follow the structure:
+
+      /api/{controller}/{action}
+
+  ------------------------------------------------------------------------
+
+## 7. Authentication (JWT)
+
+The backend uses **JWT Bearer tokens**.
+
+### Token generation
+
+Implemented in `AuthService`.
+
+### Token validation
+
+Configured in `Program.cs`:
+
+-   Validates signature\
+-   Validates expiration\
+-   Validates issuer/audience (if configured)
+
+### Adding authorization to endpoints
+
+      [Authorize]
+
+Or using custom policy:
+
+      [RoleAuthorization(UserRole.Admin)]
+
+  ------------------------------------------------------------------------
+
+## 8. Database
+
+### ORM: Entity Framework Core
+
+-   Configured in `IndeConnect-Back.Infrastructure`
+-   Uses PostgreSQL provider
+-   Supports automatic migrations (optional)
+
+### Apply migrations manually
+
+  ``` bash
+  dotnet ef database update \
+    --project IndeConnect-Back.Infrastructure \
+    --startup-project IndeConnect-Back.Web
+  ```
+
+### Generate new migration
+
+  ``` bash
+  dotnet ef migrations add MigrationName \
+    --project IndeConnect-Back.Infrastructure \
+    --startup-project IndeConnect-Back.Web
+  ```
+
+  ------------------------------------------------------------------------
+
+## 9. Data Models (Overview)
+
+### Users
+
+-   Admin
+-   Independent worker
+
+### Missions
+
+-   Title
+-   Description
+-   Attached independent
+-   Start/end date
+
+### Availability Periods
+
+-   Start date
+-   End date
+-   Status
+
+  ------------------------------------------------------------------------
+
+## 10. Error Handling
+
+All exceptions pass through `ExceptionMiddleware`.
+
+Errors are returned as:
+
+  ``` json
+  {
+    "status": 400,
+    "error": "Invalid mission request",
+    "details": "Description of the issue"
+  }
+  ```
+
+  ------------------------------------------------------------------------
+
+## 11. Dockerfile Summary
+
+The Dockerfile:
+
+-   Builds using `mcr.microsoft.com/dotnet/sdk:9.0`
+-   Publishes the Web project
+-   Runs from `mcr.microsoft.com/dotnet/aspnet:9.0`
+-   Uses non-root user
+-   Exposes port `8080`
+
+  ------------------------------------------------------------------------
+
+## 12. docker-compose Summary
+
+Main services:
+
+-   **api**\
+-   **db (Postgres)**\
+-   **pgadmin** (optional)
+
+Healthchecks ensure DB is ready before API boots.
+
+  ------------------------------------------------------------------------
+
+## 13. Logging
+
+-   Uses ASP.NET Core built-in logging
+-   Logs written to console in Docker
+-   Can be extended using Serilog (recommended)
+
+  ------------------------------------------------------------------------
+
+## 14. Deployment Notes
+
+Recommended hosting environments:
+
+-   Docker Swarm
+-   Kubernetes
+-   Azure Container Apps
+-   AWS ECS
+
+Use environment variables for:
+
+-   JWT secret
+-   Database credentials
+-   SMTP credentials (if email added later)
+
+  ------------------------------------------------------------------------
+
+## 15. Recommended Folder Permissions
+
+Ensure `docker-data/` is writable:
+
+  ``` bash
+  chmod -R 777 docker-data
+  ```
+
+  ------------------------------------------------------------------------
+
+## 16. Troubleshooting
+
+### API won't connect to PostgreSQL
+
+-   Ensure `.env` matches `docker-compose.yml`
+-   Ensure the API is using `Host=db;` not `localhost`
+
+### Database not created
+
+Run:
+
+  ``` bash
+  docker compose down -v
+  docker compose up --build
+  ```
+
+### JWT errors
+
+Ensure `JWT_SECRET` is set.
+
+  ------------------------------------------------------------------------
+
+## 17. Contribution Workflow
+
+### Branch strategy
+
+    Branch       Purpose
+    ------------ --------------------
+    `main`       stable releases
+    `dev`        development branch
+    feature/\*   new features
+
+### Commit messages
+
+Follow conventional commits:
+
+-   `feat:` new feature\
+-   `fix:` bug fix\
+-   `refactor:` code cleanup\
+-   `docs:` documentation
+
+### Code style
+
+-   C# 12 recommended\
+-   Nullable reference types enabled
+
+  ------------------------------------------------------------------------
