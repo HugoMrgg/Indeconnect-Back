@@ -33,25 +33,14 @@ public class BrandSubscriptionController : ControllerBase
     public async Task<ActionResult<BrandSubscriptionResponse>> SubscribeToBrand(
         [FromBody] CreateBrandSubscriptionRequest request)
     {
-        try
-        {
-            var userId = _userHelper.GetUserId();
-            var response = await _subscriptionService.SubscribeToBrandAsync(userId, request.BrandId);
-            
-            return CreatedAtAction(
-                nameof(GetSubscriptions), 
-                new { userId }, 
-                response
-            );
-        }
-        catch (InvalidOperationException ex)
-        {
-            return BadRequest(new { message = ex.Message });
-        }
-        catch (UnauthorizedAccessException ex)
-        {
-            return Unauthorized(new { message = ex.Message });
-        }
+        var userId = _userHelper.GetUserId();
+        var response = await _subscriptionService.SubscribeToBrandAsync(userId, request.BrandId);
+
+        return CreatedAtAction(
+            nameof(GetSubscriptions),
+            new { userId },
+            response
+        );
     }
 
     /**
@@ -66,20 +55,9 @@ public class BrandSubscriptionController : ControllerBase
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
     public async Task<ActionResult<UserBrandSubscriptionsResponse>> GetSubscriptions()
     {
-        try
-        {
-            var userId = _userHelper.GetUserId();
-            var subscriptions = await _subscriptionService.GetUserSubscriptionsAsync(userId);
-            return Ok(subscriptions);
-        }
-        catch (InvalidOperationException ex)
-        {
-            return NotFound(new { message = ex.Message });
-        }
-        catch (UnauthorizedAccessException ex)
-        {
-            return Unauthorized(new { message = ex.Message });
-        }
+        var userId = _userHelper.GetUserId();
+        var subscriptions = await _subscriptionService.GetUserSubscriptionsAsync(userId);
+        return Ok(subscriptions);
     }
 
     /**
@@ -95,19 +73,8 @@ public class BrandSubscriptionController : ControllerBase
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
     public async Task<IActionResult> UnsubscribeFromBrand([FromRoute] long brandId)
     {
-        try
-        {
-            var userId = _userHelper.GetUserId();
-            await _subscriptionService.UnsubscribeFromBrandAsync(userId, brandId);
-            return NoContent();
-        }
-        catch (InvalidOperationException ex)
-        {
-            return NotFound(new { message = ex.Message });
-        }
-        catch (UnauthorizedAccessException ex)
-        {
-            return Unauthorized(new { message = ex.Message });
-        }
+        var userId = _userHelper.GetUserId();
+        await _subscriptionService.UnsubscribeFromBrandAsync(userId, brandId);
+        return NoContent();
     }
 }

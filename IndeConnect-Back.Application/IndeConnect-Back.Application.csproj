@@ -1,5 +1,12 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
+  <PropertyGroup>
+    <TargetFramework>net9.0</TargetFramework>
+    <RootNamespace>IndeConnect_Back.Application</RootNamespace>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
   <ItemGroup>
     <ProjectReference Include="..\IndeConnect-Back.Domain\IndeConnect-Back.Domain.csproj" />
   </ItemGroup>
@@ -12,18 +19,5 @@
   <ItemGroup>
     <Folder Include="Common\" />
   </ItemGroup>
-
-  <ItemGroup>
-    <Reference Include="Microsoft.AspNetCore.Identity">
-      <HintPath>..\..\..\..\..\Program Files\dotnet\shared\Microsoft.AspNetCore.App\9.0.9\Microsoft.AspNetCore.Identity.dll</HintPath>
-    </Reference>
-  </ItemGroup>
-
-  <PropertyGroup>
-    <TargetFramework>net9.0</TargetFramework>
-    <RootNamespace>IndeConnect_Back.Application</RootNamespace>
-    <ImplicitUsings>enable</ImplicitUsings>
-    <Nullable>enable</Nullable>
-  </PropertyGroup>
 
 </Project>

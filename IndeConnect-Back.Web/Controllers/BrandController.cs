@@ -36,16 +36,9 @@ public class BrandController : ControllerBase
         [FromQuery] double? userRatingMin = null,
         [FromQuery] double? maxDistanceKm = 80)
     {
-        try
-        {
-            var query = new GetBrandsQuery(sortBy, lat, lon, page, pageSize, priceRange, userRatingMin, maxDistanceKm);
-            var response = await _brandService.GetBrandsSortedByEthicsAsync(query);
-            return Ok(response);
-        }
-        catch (Exception ex)
-        {
-            return BadRequest(new { message = ex.Message });
-        }
+        var query = new GetBrandsQuery(sortBy, lat, lon, page, pageSize, priceRange, userRatingMin, maxDistanceKm);
+        var response = await _brandService.GetBrandsSortedByEthicsAsync(query);
+        return Ok(response);
     }
     
     /**

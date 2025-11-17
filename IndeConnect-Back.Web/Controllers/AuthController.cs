@@ -1,5 +1,4 @@
-﻿using System.Security.Claims;
-using IndeConnect_Back.Application.DTOs.Auth;
+﻿using IndeConnect_Back.Application.DTOs.Auth;
 using IndeConnect_Back.Application.Services.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -7,8 +6,7 @@ using Microsoft.AspNetCore.Mvc;
 namespace IndeConnect_Back.Web.Controllers;
 
 [ApiController]
-[Route("indeconnect/auth/")]
-
+[Route("indeconnect/auth")]
 public class AuthController : ControllerBase
 {
     private readonly IAuthService _authService;
@@ -18,45 +16,30 @@ public class AuthController : ControllerBase
         _authService = authService;
     }
 
-    /**
-     * Register a new user account (public + role-based)
-     */
-    [HttpPut]
-    [Authorize(Policy = "RegisterPolicy")]
+    /// <summary>
+    /// Register a new user (client by default)
+    /// </summary>
+    [HttpPost("register")]
+    [AllowAnonymous]
     [ProducesResponseType(typeof(AuthResponse), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
     public async Task<ActionResult<AuthResponse>> Register([FromBody] RegisterRequest request)
     {
-        try
-        {
-            var response = await _authService.RegisterAsync(request);
-            return Ok(response);
-        }
-        catch (InvalidOperationException ex)
-        {
-            return BadRequest(new { message = ex.Message });
-        }
+        var response = await _authService.RegisterAsync(request);
+        return Ok(response);
     }
 
-
-    /**
-     * Login with email and password
-     */
-    [HttpPost]
+    /// <summary>
+    /// Login with email/password.
+    /// </summary>
+    [HttpPost("login")]
     [AllowAnonymous]
     [ProducesResponseType(typeof(AuthResponse), StatusCodes.Status200OK)]
-    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status401Unauthorized)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status401Unauthorized)]
     public async Task<ActionResult<AuthResponse>> Login([FromBody] LoginAnonymousRequest request)
     {
-        try
-        {
-            var response = await _authService.LoginAsync(request);
-            return Ok(response);
-        }
-        catch (UnauthorizedAccessException ex)
-        {
-            return Unauthorized(new { message = ex.Message });
-        }
+        var response = await _authService.LoginAsync(request);
+        return Ok(response);
     }
 }

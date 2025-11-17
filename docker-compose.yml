@@ -5,10 +5,12 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    image: indeconnect/api:dev #image: indeconnect/api:prod
+    image: indeconnect/api:dev # switch to indeconnect/api:prod for production
+    env_file:
+      - .env
     environment:
-      ASPNETCORE_ENVIRONMENT: "${ASPNETCORE_ENVIRONMENT}"
-      ConnectionStrings__Default: "${CONNECTIONSTRINGS__DEFAULT}"
+      # Force a default if ASPNETCORE_ENVIRONMENT is missing from .env
+      ASPNETCORE_ENVIRONMENT: "${ASPNETCORE_ENVIRONMENT:-Development}"
     ports:
       - "127.0.0.1:8080:8080"   # bind local Actuellement
     depends_on:
@@ -35,10 +37,12 @@ services:
 
   db:
     image: postgres:16
+    env_file:
+      - .env
     environment:
-      POSTGRES_DB: "${POSTGRES_DB}"
-      POSTGRES_USER: "${POSTGRES_USER}"
-      POSTGRES_PASSWORD: "${POSTGRES_PASSWORD}"
+      POSTGRES_DB: "${POSTGRES_DB:-indeconnect}"
+      POSTGRES_USER: "${POSTGRES_USER:-indeconnect}"
+      POSTGRES_PASSWORD: "${POSTGRES_PASSWORD:-indeconnect}"
     ports:
       - "127.0.0.1:5432:5432"   # bind local uniquement
     volumes:
