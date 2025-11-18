@@ -14,12 +14,16 @@ public class JwtTokenGenerator : IJwtTokenGenerator
     private readonly string _issuer;
     private readonly string _audience;
 
-    public JwtTokenGenerator(IConfiguration configuration)
+    public JwtTokenGenerator()
     {
-        _secret  = configuration["JWT_SECRET"] 
+        var jwtSecret = Environment.GetEnvironmentVariable("JWT_SECRET"); 
+
+        _secret  = jwtSecret
                    ?? throw new InvalidOperationException("JWT_SECRET not configured");
-        _issuer  = configuration["JWT_ISSUER"]  ?? "IndeConnect";
-        _audience = configuration["JWT_AUDIENCE"] ?? "IndeConnectClients";
+        _issuer  = Environment.GetEnvironmentVariable("JWT_ISSUER")   
+                   ?? throw new InvalidOperationException("JWT_ISSUER not configured");
+        _audience = Environment.GetEnvironmentVariable("JWT_AUDIENCE")  
+                    ?? throw new InvalidOperationException("JWT_AUDIENCE not configured");
 
         if (_secret.Length < 32)
             throw new InvalidOperationException("JWT_SECRET must be at least 32 characters long.");

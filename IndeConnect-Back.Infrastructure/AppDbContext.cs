@@ -18,7 +18,8 @@ public class AppDbContext : DbContext
     public DbSet<ShippingAddress> ShippingAddresses { get; set; }
     public DbSet<Delivery> Deliveries { get; set; }
     public DbSet<UserReview> UserReviews { get; set; }
-    
+    public DbSet<AuditLog> AuditLogs { get; set; }
+
     // CATALOG - BRAND DOMAIN
     public DbSet<Brand> Brands { get; set; }
     public DbSet<BrandSeller> BrandSellers { get; set; } 

@@ -8,12 +8,14 @@ namespace IndeConnect_Back.Infrastructure.Services.Implementations;
 public class AuthService : IAuthService
 {
     private readonly AppDbContext _context;
+    private readonly IAuditTrailService _auditTrail;
     private readonly IJwtTokenGenerator _jwtGenerator;
 
-    public AuthService(AppDbContext context, IJwtTokenGenerator jwtGenerator)
+    public AuthService(AppDbContext context, IJwtTokenGenerator jwtGenerator, IAuditTrailService auditTrail)
     {
         _context = context;
         _jwtGenerator = jwtGenerator;
+        _auditTrail = auditTrail;
     }
 
     public async Task<AuthResponse> RegisterAsync(RegisterRequest request)
@@ -34,6 +36,11 @@ public class AuthService : IAuthService
         user.SetPasswordHash(BCrypt.Net.BCrypt.HashPassword(request.Password));
 
         _context.Users.Add(user);
+        await _auditTrail.LogAsync(
+            action: "UserRegistered",
+            userId: user.Id,
+            details: $"{user.FirstName} {user.LastName} had been registered"
+        );
         await _context.SaveChangesAsync();
 
         var token = _jwtGenerator.GenerateToken(user);
@@ -50,7 +57,11 @@ public class AuthService : IAuthService
             throw new UnauthorizedAccessException("Invalid credentials.");
 
         var token = _jwtGenerator.GenerateToken(user);
-
+        await _auditTrail.LogAsync(
+            action: "UserLogged",
+            userId: user.Id,
+            details: $"{user.FirstName} {user.LastName} had been logged in"
+        );
         return new AuthResponse(user.Id, user.Email, user.FirstName, user.LastName, user.Role.ToString(), token);
     }
 
