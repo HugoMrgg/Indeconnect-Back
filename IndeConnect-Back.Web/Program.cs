@@ -16,6 +16,9 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
+using Serilog;
+using Serilog.Formatting.Compact;
+
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -90,7 +93,19 @@ builder.Services
             ClockSkew            = TimeSpan.Zero
         };
     });
+// ---------- LOGGER ----------
+Log.Logger = new LoggerConfiguration()
+    .MinimumLevel.Debug() // Tu peux mettre .Information() en prod
+    .WriteTo.Console()
+    .WriteTo.File(
+        new CompactJsonFormatter(),          // JSON compact (idéal pour ingestion d'outils)
+        "Logs/indeconnect-.json",            // Chemin/fichier, - pour rolling
+        rollingInterval: RollingInterval.Day, // 1 fichier/jour
+        retainedFileCountLimit: 21           // Garde les 21 derniers fichiers
+    )
+    .CreateLogger();
 
+builder.Host.UseSerilog();
 // ---------- AUTHORIZATION (policies + handlers) ----------
 builder.Services.AddSingleton<IAuthorizationHandler, RegisterAuthorizationHandler>();
 builder.Services.AddSingleton<IAuthorizationHandler, GetUserIdHandler>();
