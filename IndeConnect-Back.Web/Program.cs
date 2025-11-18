@@ -95,13 +95,13 @@ builder.Services
     });
 // ---------- LOGGER ----------
 Log.Logger = new LoggerConfiguration()
-    .MinimumLevel.Debug() // Tu peux mettre .Information() en prod
+    .MinimumLevel.Debug() 
     .WriteTo.Console()
     .WriteTo.File(
-        new CompactJsonFormatter(),          // JSON compact (idéal pour ingestion d'outils)
-        "Logs/indeconnect-.json",            // Chemin/fichier, - pour rolling
-        rollingInterval: RollingInterval.Day, // 1 fichier/jour
-        retainedFileCountLimit: 21           // Garde les 21 derniers fichiers
+        new CompactJsonFormatter(),       
+        "Logs/indeconnect-.json",    
+        rollingInterval: RollingInterval.Day,
+        retainedFileCountLimit: 21         
     )
     .CreateLogger();
 
