@@ -58,6 +58,21 @@ builder.Services.AddHttpClient(); // pour Nominatim
 builder.Services.AddMemoryCache();
 
 builder.Services.AddAutoMapper(typeof(DomainAssemblyMarker).Assembly);
+// ---------- CONFIGURATION CORS (AJOUTER CECI) ----------
+const string MyAllowSpecificOrigins = "_myAllowSpecificOrigins";
+
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy(name: MyAllowSpecificOrigins,
+        policy =>
+        {
+            // 🚨 Important : Remplacez par le port de votre application React/Vite (5173 est typique)
+            policy.WithOrigins("http://localhost:5173") 
+                .AllowAnyHeader()
+                .AllowAnyMethod() // Nécessaire pour gérer le OPTIONS (preflight)
+                .AllowCredentials(); 
+        });
+});
 
 // ---------- VALIDATION ----------
 builder.Services.AddControllers()
@@ -183,7 +198,14 @@ if (app.Environment.IsDevelopment())
     app.UseSwagger();
     app.UseSwaggerUI();
 }
+// ⚠️ ACTIVATION DU ROUTAGE (si ce n'est pas implicite, bonne pratique)
+app.UseRouting();
 
+// 💡 ACTIVATION DU MIDDLEWARE CORS (AJOUTER CECI)
+// Doit être placé avant l'authentification et l'autorisation
+app.UseCors(MyAllowSpecificOrigins);
+
+//app.UseHttpsRedirection();
 app.UseHttpsRedirection();
 
 app.UseAuthentication();
