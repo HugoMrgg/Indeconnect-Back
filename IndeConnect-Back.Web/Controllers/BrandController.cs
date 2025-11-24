@@ -37,7 +37,7 @@ public class BrandController : ControllerBase
         [FromQuery] double? maxDistanceKm = 80,
         [FromQuery] double? minEthicsProduction = null,
         [FromQuery] double? minEthicsTransport = null,
-        [FromQuery] string[]? ethicTags = null)  // ← NOUVEAU : Tableau de tags
+        [FromQuery] string[]? ethicTags = null)  
     {
         var query = new GetBrandsQuery(
             sortBy, 
