@@ -74,11 +74,16 @@ public class ProductService : IProductService
                 product.Brand.Name,
                 product.Brand.LogoUrl,
                 product.Brand.Description,
-                0, // Ethics score not relevant in product detail context
-                Enumerable.Empty<string>(),
+                0,          
+                0,       
                 null,
-                0
+                product.Brand.Deposits.FirstOrDefault() != null 
+                    ? $"{product.Brand.Deposits.First().Number} {product.Brand.Deposits.First().Street}, {product.Brand.Deposits.First().PostalCode}" 
+                    : null,    
+                null,       
+                0             
             ),
+
             new CategoryDto(product.Category.Id, product.Category.Name),
             product.Variants.Select(MapToVariantDto),
             product.Details.OrderBy(d => d.DisplayOrder).Select(d => new ProductDetailItemDto(d.Key, d.Value, d.DisplayOrder)),

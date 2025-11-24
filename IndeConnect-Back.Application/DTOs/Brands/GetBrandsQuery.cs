@@ -8,7 +8,10 @@ public record GetBrandsQuery(
     int PageSize = 20,
     string? PriceRange = null,    
     double? UserRatingMin = null, 
-    double? MaxDistanceKm = null
+    double? MaxDistanceKm = null,
+    double? MinEthicsProduction = null,  
+    double? MinEthicsTransport = null,
+    IEnumerable<string>? EthicTags = null
 );
 
 public enum EthicsSortType
