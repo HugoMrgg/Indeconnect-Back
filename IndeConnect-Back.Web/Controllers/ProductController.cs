@@ -17,7 +17,7 @@ public class ProductController : ControllerBase
     }
 
     /// <summary>
-    /// Get detailed product information
+    /// Get detailed product information (includes color variants from ProductGroup)
     /// </summary>
     [HttpGet("{productId}")]
     [AllowAnonymous]
@@ -34,7 +34,7 @@ public class ProductController : ControllerBase
     }
 
     /// <summary>
-    /// Get all variants of a product with their stock
+    /// Get all size variants of a product with their stock
     /// </summary>
     [HttpGet("{productId}/variants")]
     [AllowAnonymous]
@@ -45,9 +45,21 @@ public class ProductController : ControllerBase
         var variants = await _productService.GetProductVariantsAsync(productId);
 
         if (!variants.Any())
-            return NotFound(new { message = "Product not found or has no variants" });
+            return NotFound(new { message = "Product not found or has no size variants" });
 
         return Ok(variants);
+    }
+
+    /// <summary>
+    /// NOUVEAU : Get color variants (other products in the same ProductGroup)
+    /// </summary>
+    [HttpGet("{productId}/colors")]
+    [AllowAnonymous]
+    [ProducesResponseType(typeof(IEnumerable<ProductColorVariantDto>), StatusCodes.Status200OK)]
+    public async Task<ActionResult<IEnumerable<ProductColorVariantDto>>> GetProductColorVariants([FromRoute] long productId)
+    {
+        var colorVariants = await _productService.GetProductColorVariantsAsync(productId);
+        return Ok(colorVariants);
     }
 
     /// <summary>

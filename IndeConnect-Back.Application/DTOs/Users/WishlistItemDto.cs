@@ -1,4 +1,6 @@
-﻿namespace IndeConnect_Back.Application.DTOs.Users;
+﻿using IndeConnect_Back.Application.DTOs.Products;
+
+namespace IndeConnect_Back.Application.DTOs.Users;
 
 public record WishlistItemDto(
     long ProductId,
@@ -9,5 +11,6 @@ public record WishlistItemDto(
     long CategoryId,
     string? PrimaryImageUrl,
     bool HasStock,
-    DateTimeOffset AddedAt
+    DateTimeOffset AddedAt,
+    ColorDto? PrimaryColor 
 );

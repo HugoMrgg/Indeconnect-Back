@@ -1,4 +1,5 @@
-﻿using IndeConnect_Back.Application.DTOs.Users;
+﻿using IndeConnect_Back.Application.DTOs.Products;
+using IndeConnect_Back.Application.DTOs.Users;
 using IndeConnect_Back.Application.Services.Interfaces;
 using IndeConnect_Back.Domain.user;
 using Microsoft.EntityFrameworkCore;
@@ -32,8 +33,15 @@ public class WishlistService : IWishlistService
             .Include(u => u.Wishlist)
                 .ThenInclude(w => w!.Items)
                     .ThenInclude(i => i.Product)
-                        .ThenInclude(p => p.Variants)
-                            .ThenInclude(v => v.Media)
+                        .ThenInclude(p => p.Media) // MODIFIÉ : Media sur Product directement
+            .Include(u => u.Wishlist)
+                .ThenInclude(w => w!.Items)
+                    .ThenInclude(i => i.Product)
+                        .ThenInclude(p => p.Variants) // Pour le stock
+            .Include(u => u.Wishlist)
+                .ThenInclude(w => w!.Items)
+                    .ThenInclude(i => i.Product)
+                        .ThenInclude(p => p.PrimaryColor) // NOUVEAU : couleur principale
             .FirstOrDefaultAsync(u => u.Id == userId);
 
         if (user == null)
@@ -59,23 +67,22 @@ public class WishlistService : IWishlistService
         {
             var product = item.Product;
             
-            // Get the primary image of the first available variant; fall back to first image
-            var primaryImage = product.Variants
-                .SelectMany(v => v.Media)
+            // MODIFIÉ : Get primary image from Product.Media (not from Variants)
+            var primaryImage = product.Media
                 .Where(m => m.IsPrimary)
+                .OrderBy(m => m.DisplayOrder)
                 .Select(m => m.Url)
                 .FirstOrDefault();
             
             if (primaryImage == null)
             {
-                primaryImage = product.Variants
-                    .SelectMany(v => v.Media)
+                primaryImage = product.Media
                     .OrderBy(m => m.DisplayOrder)
                     .Select(m => m.Url)
                     .FirstOrDefault();
             }
             
-            // Determine if any variant is in stock
+            // Determine if any size variant is in stock
             var hasStock = product.Variants.Any(v => v.StockCount > 0);
 
             return new WishlistItemDto(
@@ -87,7 +94,10 @@ public class WishlistService : IWishlistService
                 product.CategoryId,
                 primaryImage,
                 hasStock,
-                item.AddedAt
+                item.AddedAt,
+                product.PrimaryColor != null 
+                    ? new ColorDto(product.PrimaryColor.Id, product.PrimaryColor.Name, product.PrimaryColor.Hexa)
+                    : null // NOUVEAU : couleur du produit
             );
         });
 
@@ -175,9 +185,9 @@ public class WishlistService : IWishlistService
 
         _context.WishlistItems.Remove(item);
         await _auditTrail.LogAsync(
-            action: "WishlistAdd",
+            action: "WishlistRemove", // CORRIGÉ : était "WishlistAdd"
             userId: userId,
-            details: $"{user.FirstName} {user.LastName} has removed product{productId} in his wishlist"
+            details: $"{user.FirstName} {user.LastName} has removed product {productId} from his wishlist"
         );
         await _context.SaveChangesAsync();
     }

@@ -17,21 +17,25 @@ public class ProductService : IProductService
     }
 
     /**
-     * Retrieves detailed product information including variants, reviews, and stock
+     * Retrieves detailed product information including variants, reviews, stock, and color alternatives
      */
     public async Task<ProductDetailDto?> GetProductByIdAsync(long productId)
     {
-        // Load product with all related entities (brand, category, variants, reviews, etc.)
+        // Load product with all related entities
         var product = await _context.Products
             .Include(p => p.Brand)
             .Include(p => p.Category)
             .Include(p => p.Sale)
-            .Include(p => p.Variants)
+            .Include(p => p.PrimaryColor) // NOUVEAU
+            .Include(p => p.Media) // NOUVEAU : médias sur Product directement
+            .Include(p => p.ProductGroup) // NOUVEAU
+                .ThenInclude(pg => pg.Products) // NOUVEAU : autres couleurs du groupe
+                    .ThenInclude(p => p.PrimaryColor)
+            .Include(p => p.ProductGroup)
+                .ThenInclude(pg => pg.Products)
+                    .ThenInclude(p => p.Media)
+            .Include(p => p.Variants) // Variants = juste les tailles maintenant
                 .ThenInclude(v => v.Size)
-            .Include(p => p.Variants)
-                .ThenInclude(v => v.Color)
-            .Include(p => p.Variants)
-                .ThenInclude(v => v.Media)
             .Include(p => p.Details)
             .Include(p => p.Keywords)
                 .ThenInclude(pk => pk.Keyword)
@@ -42,7 +46,7 @@ public class ProductService : IProductService
         if (product == null)
             return null;
 
-        // Calculate sale price if an active promotion exists
+        // Calculate sale price
         var basePrice = product.Price;
         decimal? salePrice = null;
         
@@ -53,15 +57,28 @@ public class ProductService : IProductService
             salePrice = basePrice * (1 - product.Sale.DiscountPercentage / 100);
         }
 
-        // Calculate total stock across all variants
+        // Calculate total stock
         var totalStock = product.Variants.Sum(v => v.StockCount);
         var isAvailable = totalStock > 0 && product.Status == ProductStatus.Online;
 
-        // Calculate average rating from approved reviews only
+        // Calculate average rating
         var approvedReviews = product.Reviews.Where(r => r.Status == ReviewStatus.Approved).ToList();
         var avgRating = approvedReviews.Any() ? approvedReviews.Average(r => (double)r.Rating) : 0.0;
 
-        // Map to DTO with all computed values
+        // NOUVEAU : Récupérer les autres couleurs disponibles
+        var colorVariants = product.ProductGroup?.Products
+            .Where(p => p.Id != productId && p.IsEnabled && p.Status == ProductStatus.Online)
+            .Select(p => new ProductColorVariantDto(
+                p.Id,
+                p.PrimaryColor?.Id,
+                p.PrimaryColor?.Name,
+                p.PrimaryColor?.Hexa,
+                p.Media.FirstOrDefault(m => m.IsPrimary)?.Url 
+                    ?? p.Media.OrderBy(m => m.DisplayOrder).FirstOrDefault()?.Url,
+                p.Variants.Sum(v => v.StockCount) > 0
+            ))
+            .ToList() ?? new List<ProductColorVariantDto>();
+
         return new ProductDetailDto(
             product.Id,
             product.Name,
@@ -83,9 +100,19 @@ public class ProductService : IProductService
                 null,       
                 0             
             ),
-
             new CategoryDto(product.Category.Id, product.Category.Name),
-            product.Variants.Select(MapToVariantDto),
+            product.PrimaryColor != null 
+                ? new ColorDto(product.PrimaryColor.Id, product.PrimaryColor.Name, product.PrimaryColor.Hexa) 
+                : null, // NOUVEAU : couleur principale de ce produit
+            colorVariants, // NOUVEAU : autres couleurs disponibles
+            product.Media.OrderBy(m => m.DisplayOrder).Select(m => new ProductMediaDto(
+                m.Id,
+                m.Url,
+                m.Type,
+                m.DisplayOrder,
+                m.IsPrimary
+            )), // NOUVEAU : médias du produit
+            product.Variants.Select(MapToVariantDto), // Maintenant juste les tailles
             product.Details.OrderBy(d => d.DisplayOrder).Select(d => new ProductDetailItemDto(d.Key, d.Value, d.DisplayOrder)),
             product.Keywords.Select(pk => pk.Keyword.Name),
             approvedReviews.Select(MapToReviewDto),
@@ -99,15 +126,12 @@ public class ProductService : IProductService
     }
 
     /**
-     * Retrieves all variants for a product with size, color, and media information
+     * Retrieves all size variants for a product
      */
     public async Task<IEnumerable<ProductVariantDto>> GetProductVariantsAsync(long productId)
     {
-        // Load variants with related size, color, and media data
         var variants = await _context.ProductVariants
             .Include(v => v.Size)
-            .Include(v => v.Color)
-            .Include(v => v.Media)
             .Include(v => v.Product)
             .Where(v => v.ProductId == productId && v.Product.IsEnabled)
             .ToListAsync();
@@ -116,11 +140,88 @@ public class ProductService : IProductService
     }
 
     /**
-     * Retrieves stock information for a product and all its variants
+     * NOUVEAU : Retrieves color variants (other products in the same ProductGroup)
+     */
+    public async Task<IEnumerable<ProductColorVariantDto>> GetProductColorVariantsAsync(long productId)
+    {
+        var product = await _context.Products
+            .Include(p => p.ProductGroup)
+                .ThenInclude(pg => pg.Products)
+                    .ThenInclude(p => p.PrimaryColor)
+            .Include(p => p.ProductGroup)
+                .ThenInclude(pg => pg.Products)
+                    .ThenInclude(p => p.Media)
+            .Include(p => p.ProductGroup)
+                .ThenInclude(pg => pg.Products)
+                    .ThenInclude(p => p.Variants)
+            .FirstOrDefaultAsync(p => p.Id == productId);
+
+        if (product?.ProductGroup == null)
+            return Enumerable.Empty<ProductColorVariantDto>();
+
+        return product.ProductGroup.Products
+            .Where(p => p.IsEnabled && p.Status == ProductStatus.Online)
+            .Select(p => new ProductColorVariantDto(
+                p.Id,
+                p.PrimaryColor?.Id,
+                p.PrimaryColor?.Name,
+                p.PrimaryColor?.Hexa,
+                p.Media.FirstOrDefault(m => m.IsPrimary)?.Url 
+                    ?? p.Media.OrderBy(m => m.DisplayOrder).FirstOrDefault()?.Url,
+                p.Variants.Sum(v => v.StockCount) > 0
+            ));
+    }
+
+    /**
+     * NOUVEAU : Get ProductGroup details with all color variants
+     */
+    public async Task<ProductGroupDto?> GetProductGroupAsync(long productGroupId)
+    {
+        var group = await _context.ProductGroups
+            .Include(pg => pg.Brand)
+            .Include(pg => pg.Category)
+            .Include(pg => pg.Products)
+                .ThenInclude(p => p.PrimaryColor)
+            .Include(pg => pg.Products)
+                .ThenInclude(p => p.Media)
+            .Include(pg => pg.Products)
+                .ThenInclude(p => p.Variants)
+            .FirstOrDefaultAsync(pg => pg.Id == productGroupId);
+
+        if (group == null)
+            return null;
+
+        return new ProductGroupDto(
+            group.Id,
+            group.Name,
+            group.BaseDescription,
+            new BrandSummaryDto(
+                group.Brand.Id,
+                group.Brand.Name,
+                group.Brand.LogoUrl,
+                group.Brand.Description,
+                0, 0, null, null, null, 0
+            ),
+            new CategoryDto(group.Category.Id, group.Category.Name),
+            group.Products
+                .Where(p => p.IsEnabled && p.Status == ProductStatus.Online)
+                .Select(p => new ProductColorVariantDto(
+                    p.Id,
+                    p.PrimaryColor?.Id,
+                    p.PrimaryColor?.Name,
+                    p.PrimaryColor?.Hexa,
+                    p.Media.FirstOrDefault(m => m.IsPrimary)?.Url 
+                        ?? p.Media.OrderBy(m => m.DisplayOrder).FirstOrDefault()?.Url,
+                    p.Variants.Sum(v => v.StockCount) > 0
+                ))
+        );
+    }
+
+    /**
+     * Retrieves stock information for a product and all its size variants
      */
     public async Task<ProductStockDto?> GetProductStockAsync(long productId)
     {
-        // Load product with variants to calculate stock
         var product = await _context.Products
             .Include(p => p.Variants)
             .FirstOrDefaultAsync(p => p.Id == productId && p.IsEnabled);
@@ -128,7 +229,6 @@ public class ProductService : IProductService
         if (product == null)
             return null;
 
-        // Calculate total stock and map variant stocks
         var totalStock = product.Variants.Sum(v => v.StockCount);
         var variantStocks = product.Variants.Select(v => new VariantStockDto(
             v.Id,
@@ -150,7 +250,6 @@ public class ProductService : IProductService
      */
     public async Task<IEnumerable<ProductReviewDto>> GetProductReviewsAsync(long productId, int page = 1, int pageSize = 20)
     {
-        // Load approved reviews with user info, ordered by most recent
         var reviews = await _context.ProductReviews
             .Include(r => r.User)
             .Where(r => r.ProductId == productId && r.Status == ReviewStatus.Approved)
@@ -163,99 +262,33 @@ public class ProductService : IProductService
     }
 
     /**
-     * Maps a product variant to DTO with calculated price (including sale discount)
-     */
-    private ProductVariantDto MapToVariantDto(ProductVariant variant)
-    {
-        // Use variant-specific price override, or fallback to product base price
-        var price = variant.PriceOverride ?? variant.Product.Price;
-        
-        // Apply sale discount if active promotion exists
-        if (variant.Product.Sale != null && variant.Product.Sale.IsActive
-            && variant.Product.Sale.StartDate <= DateTimeOffset.UtcNow
-            && variant.Product.Sale.EndDate >= DateTimeOffset.UtcNow)
-        {
-            price *= (1 - variant.Product.Sale.DiscountPercentage / 100);
-        }
-
-        return new ProductVariantDto(
-            variant.Id,
-            variant.SKU,
-            variant.Size != null ? new SizeDto(variant.Size.Id, variant.Size.Name) : null,
-            variant.Color != null ? new ColorDto(variant.Color.Id, variant.Color.Name, variant.Color.Hexa) : null,
-            variant.StockCount,
-            price,
-            variant.StockCount > 0,
-            variant.Media.OrderBy(m => m.DisplayOrder).Select(m => new ProductVariantMediaDto(
-                m.Id,
-                m.Url,
-                m.Type,
-                m.DisplayOrder,
-                m.IsPrimary
-            ))
-        );
-    }
-
-    /**
-     * Maps a product review to DTO with user full name
-     */
-    private ProductReviewDto MapToReviewDto(ProductReview review)
-    {
-        return new ProductReviewDto(
-            review.Id,
-            review.UserId,
-            $"{review.User.FirstName} {review.User.LastName}",
-            review.Rating,
-            review.Comment,
-            review.CreatedAt,
-            review.Status
-        );
-    }
-
-    /**
-     * Maps a sale/promotion to DTO
-     */
-    private SaleDto MapToSaleDto(Sale sale)
-    {
-        return new SaleDto(
-            sale.Id,
-            sale.Name,
-            sale.Description,
-            sale.DiscountPercentage,
-            sale.StartDate,
-            sale.EndDate,
-            sale.IsActive
-        );
-    }
-
-    /**
      * Retrieves paginated and filtered products for a specific brand
+     * IMPORTANT: Returns individual products (each color = separate entry)
      */
     public async Task<ProductsListResponse> GetProductsByBrandAsync(GetProductsQuery query)
     {
-        // Verify brand exists and is approved
         var brand = await _context.Brands
             .FirstOrDefaultAsync(b => b.Id == query.BrandId && b.Status == BrandStatus.Approved);
 
         if (brand == null)
             throw new InvalidOperationException("Brand not found or not approved");
 
-        // Build base query for online products with reviews and variants
+        // MODIFIÉ : Query sur Products directement (chaque couleur = un produit)
         var productsQuery = _context.Products
             .Where(p => p.BrandId == query.BrandId && p.Status == ProductStatus.Online) 
             .Include(p => p.Reviews)
             .Include(p => p.Variants) 
-                .ThenInclude(v => v.Media)
+            .Include(p => p.Media) // NOUVEAU
             .Include(p => p.Category) 
+            .Include(p => p.PrimaryColor) // NOUVEAU
             .AsQueryable();
 
-        // Apply category filter if specified
+        // Apply filters
         if (!string.IsNullOrEmpty(query.Category))
         {
             productsQuery = productsQuery.Where(p => p.Category.Name == query.Category);
         }
 
-        // Apply price range filters
         if (query.MinPrice.HasValue)
         {
             productsQuery = productsQuery.Where(p => p.Price >= query.MinPrice.Value);
@@ -266,7 +299,6 @@ public class ProductService : IProductService
             productsQuery = productsQuery.Where(p => p.Price <= query.MaxPrice.Value);
         }
 
-        // Apply search term filter on name and description
         if (!string.IsNullOrEmpty(query.SearchTerm))
         {
             var searchTerm = query.SearchTerm.ToLower();
@@ -278,7 +310,6 @@ public class ProductService : IProductService
 
         var products = await productsQuery.ToListAsync();
 
-        // Calculate average rating for each product
         var enrichedProducts = products
             .Select(p => new
             {
@@ -287,7 +318,6 @@ public class ProductService : IProductService
             })
             .ToList();
 
-        // Apply sorting based on query parameter
         var sortedProducts = query.SortBy switch
         {
             ProductSortType.PriceAsc => enrichedProducts.OrderBy(x => x.Product.Price).ToList(),
@@ -300,7 +330,6 @@ public class ProductService : IProductService
 
         var totalCount = sortedProducts.Count;
 
-        // Apply pagination and map to summary DTOs
         var paginatedProducts = sortedProducts
             .Skip((query.Page - 1) * query.PageSize)
             .Take(query.PageSize)
@@ -316,21 +345,43 @@ public class ProductService : IProductService
     }
 
     /**
-     * Maps a product to summary DTO with primary image and rating
+     * Maps a product variant (size) to DTO
+     */
+    private ProductVariantDto MapToVariantDto(ProductVariant variant)
+    {
+        var price = variant.PriceOverride ?? variant.Product.Price;
+        
+        if (variant.Product.Sale != null && variant.Product.Sale.IsActive
+            && variant.Product.Sale.StartDate <= DateTimeOffset.UtcNow
+            && variant.Product.Sale.EndDate >= DateTimeOffset.UtcNow)
+        {
+            price *= (1 - variant.Product.Sale.DiscountPercentage / 100);
+        }
+
+        return new ProductVariantDto(
+            variant.Id,
+            variant.SKU,
+            variant.Size != null ? new SizeDto(variant.Size.Id, variant.Size.Name) : null,
+            variant.StockCount,
+            price,
+            variant.StockCount > 0
+        );
+    }
+
+    /**
+     * Maps a product to summary DTO (for listing pages)
      */
     private ProductSummaryDto MapToProductSummary(Product product, double averageRating)
     {
-        // Find primary image from variants, or fallback to first available image
-        var primaryImage = product.Variants
-            .SelectMany(v => v.Media)
+        // MODIFIÉ : Prend l'image primaire du Product directement
+        var primaryImage = product.Media
             .Where(m => m.IsPrimary)
             .OrderBy(m => m.DisplayOrder)
             .FirstOrDefault()?.Url;
 
         if (primaryImage == null)
         {
-            primaryImage = product.Variants
-                .SelectMany(v => v.Media)
+            primaryImage = product.Media
                 .OrderBy(m => m.DisplayOrder)
                 .FirstOrDefault()?.Url;
         }
@@ -342,7 +393,36 @@ public class ProductService : IProductService
             product.Price,
             product.Description,
             Math.Round(averageRating, 1),
-            product.Reviews.Count
+            product.Reviews.Count,
+            product.PrimaryColor != null 
+                ? new ColorDto(product.PrimaryColor.Id, product.PrimaryColor.Name, product.PrimaryColor.Hexa)
+                : null // NOUVEAU : affiche la couleur dans le listing
+        );
+    }
+
+    private ProductReviewDto MapToReviewDto(ProductReview review)
+    {
+        return new ProductReviewDto(
+            review.Id,
+            review.UserId,
+            $"{review.User.FirstName} {review.User.LastName}",
+            review.Rating,
+            review.Comment,
+            review.CreatedAt,
+            review.Status
+        );
+    }
+
+    private SaleDto MapToSaleDto(Sale sale)
+    {
+        return new SaleDto(
+            sale.Id,
+            sale.Name,
+            sale.Description,
+            sale.DiscountPercentage,
+            sale.StartDate,
+            sale.EndDate,
+            sale.IsActive
         );
     }
 }
