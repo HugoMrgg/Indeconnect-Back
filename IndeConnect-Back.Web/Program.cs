@@ -48,6 +48,7 @@ builder.Services.AddScoped<IBrandSubscriptionService, BrandSubscriptionService>(
 builder.Services.AddScoped<IDepositService, DepositService>();
 builder.Services.AddSingleton<BrandEthicsScorer>();
 builder.Services.AddScoped<IGeocodeService, NominatimGeocodeService>();
+builder.Services.AddScoped<ICartService, CartService>();
 
 builder.Services.AddHttpClient(); // pour Nominatim
 builder.Services.AddMemoryCache();
