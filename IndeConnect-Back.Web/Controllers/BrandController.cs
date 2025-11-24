@@ -34,13 +34,27 @@ public class BrandController : ControllerBase
         [FromQuery] int pageSize = 20,
         [FromQuery] string? priceRange = null,
         [FromQuery] double? userRatingMin = null,
-        [FromQuery] double? maxDistanceKm = 80)
+        [FromQuery] double? maxDistanceKm = 80,
+        [FromQuery] double? minEthicsProduction = null,
+        [FromQuery] double? minEthicsTransport = null,
+        [FromQuery] string[]? ethicTags = null)  // ← NOUVEAU : Tableau de tags
     {
-        var query = new GetBrandsQuery(sortBy, lat, lon, page, pageSize, priceRange, userRatingMin, maxDistanceKm);
+        var query = new GetBrandsQuery(
+            sortBy, 
+            lat, 
+            lon, 
+            page, 
+            pageSize, 
+            priceRange, 
+            userRatingMin, 
+            maxDistanceKm,
+            minEthicsProduction,
+            minEthicsTransport,
+            ethicTags  
+        );
         var response = await _brandService.GetBrandsSortedByEthicsAsync(query);
         return Ok(response);
     }
-    
     /**
      * Get detailed brand information (presentation page)
      */

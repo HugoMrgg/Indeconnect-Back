@@ -5,8 +5,10 @@ public record BrandSummaryDto(
     string Name,
     string? LogoUrl,
     string? Description,
-    double EthicsScore,
+    double EthicsScoreProduction,
+    double EthicsScoreTransport,
     IEnumerable<string> EthicTags,
+    string? Address,
     int? DistanceKm,
-    double UserRating  
+    double UserRating
 );

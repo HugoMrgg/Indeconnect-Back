@@ -15,8 +15,7 @@ public class BrandService : IBrandService
     {
         _context = context;
         _ethicsScorer = ethicsScorer;
-    }
-
+        }
     public async Task<BrandsListResponse> GetBrandsSortedByEthicsAsync(GetBrandsQuery query)
     {
         var brandsQuery = _context.Brands
@@ -37,20 +36,34 @@ public class BrandService : IBrandService
             brandsQuery = brandsQuery.Where(b => b.PriceRange == query.PriceRange);
         }
 
+        // ✅ NOUVEAU : Filtre par tags éthiques (ET logique)
+        if (query.EthicTags != null && query.EthicTags.Any())
+        {
+            foreach (var tag in query.EthicTags)
+            {
+                // Chaque tag doit être présent (ET logique)
+                brandsQuery = brandsQuery.Where(b => b.EthicTags.Any(et => et.TagKey == tag));
+            }
+        }
+
         var brands = await brandsQuery.ToListAsync();
 
         var enrichedBrands = brands
             .Select(b => new
             {
                 Brand = b,
-                EthicsScore = CalculateEthicsScore(b, query.SortBy, query.Latitude, query.Longitude),
+                EthicsScoreProduction = CalculateEthicsScore(b, EthicsSortType.MaterialsManufacturing, query.Latitude, query.Longitude),
+                EthicsScoreTransport = CalculateEthicsScore(b, EthicsSortType.Transport, query.Latitude, query.Longitude),
                 UserRating = b.Reviews.Any() ? b.Reviews.Average(r => (double)r.Rating) : 0.0,
+                Address = b.Deposits.FirstOrDefault() != null
+                    ? $"{b.Deposits.First().Number} {b.Deposits.First().Street}, {b.Deposits.First().PostalCode}"
+                    : null,
                 MinDistance = query.Latitude.HasValue && query.Longitude.HasValue
                     ? GetMinimumDistanceToDeposits(b.Deposits, query.Latitude.Value, query.Longitude.Value)
                     : double.MaxValue
             })
             .ToList();
-
+        
         if (query.UserRatingMin.HasValue)
         {
             enrichedBrands = enrichedBrands
@@ -65,11 +78,27 @@ public class BrandService : IBrandService
                 .ToList();
         }
 
+        if (query.MinEthicsProduction.HasValue)
+        {
+            enrichedBrands = enrichedBrands
+                .Where(x => x.EthicsScoreProduction >= query.MinEthicsProduction.Value)
+                .ToList();
+        }
+
+        if (query.MinEthicsTransport.HasValue)
+        {
+            enrichedBrands = enrichedBrands
+                .Where(x => x.EthicsScoreTransport >= query.MinEthicsTransport.Value)
+                .ToList();
+        }
+
+        // Tri
         var sortedBrands = query.SortBy switch
         {
             EthicsSortType.Note => enrichedBrands.OrderByDescending(x => x.UserRating).ToList(),
             EthicsSortType.Distance => enrichedBrands.OrderBy(x => x.MinDistance).ToList(),
-            _ => enrichedBrands.OrderByDescending(x => x.EthicsScore).ToList()
+            EthicsSortType.Transport => enrichedBrands.OrderByDescending(x => x.EthicsScoreTransport).ToList(),
+            _ => enrichedBrands.OrderByDescending(x => x.EthicsScoreProduction).ToList()
         };
 
         var totalCount = sortedBrands.Count;
@@ -77,7 +106,15 @@ public class BrandService : IBrandService
         var paginatedBrands = sortedBrands
             .Skip((query.Page - 1) * query.PageSize)
             .Take(query.PageSize)
-            .Select(x => MapToBrandSummary(x.Brand, x.EthicsScore, x.UserRating, query.Latitude, query.Longitude))
+            .Select(x => MapToBrandSummary(
+                x.Brand,
+                x.EthicsScoreProduction,
+                x.EthicsScoreTransport,
+                x.UserRating,
+                x.Address,
+                query.Latitude,
+                query.Longitude
+            ))
             .ToList();
 
         return new BrandsListResponse(
@@ -88,7 +125,6 @@ public class BrandService : IBrandService
             LocationUsed: query.Latitude.HasValue && query.Longitude.HasValue
         );
     }
-
     public async Task<BrandDetailDto?> GetBrandByIdAsync(long brandId, double? userLat, double? userLon)
     {
         var brand = await _context.Brands
@@ -104,7 +140,8 @@ public class BrandService : IBrandService
             return null;
 
         var avgRating = brand.Reviews.Any() ? brand.Reviews.Average(r => (double)r.Rating) : 0.0;
-        var ethicsScore = CalculateEthicsScore(brand, EthicsSortType.MaterialsManufacturing, userLat, userLon);
+        var ethicsScoreProduction = CalculateEthicsScore(brand, EthicsSortType.MaterialsManufacturing, userLat, userLon);
+        var ethicsScoreTransport = CalculateEthicsScore(brand, EthicsSortType.Transport, userLat, userLon);
 
         var deposits = brand.Deposits.Select(d => new DepositDto(
             d.Id,
@@ -129,11 +166,10 @@ public class BrandService : IBrandService
             brand.Reviews.Count,
             brand.EthicTags.Select(et => et.TagKey),
             deposits,
-            Math.Round(ethicsScore, 2)
+            Math.Round(ethicsScoreProduction, 2) 
         );
     }
 
-    
     private double CalculateEthicsScore(
         Brand brand,
         EthicsSortType sortBy,
@@ -168,7 +204,7 @@ public class BrandService : IBrandService
         
         return (double)baseScore;
     }
-    
+
     private double GetMinimumDistanceToDeposits(
         IEnumerable<Deposit> deposits,
         double userLat,
@@ -207,15 +243,17 @@ public class BrandService : IBrandService
         return R * c;
     }
 
+    
     private BrandSummaryDto MapToBrandSummary(
         Brand brand,
-        double ethicsScore,
+        double ethicsScoreProduction,
+        double ethicsScoreTransport,
         double userRating,
+        string? address,
         double? userLat,
         double? userLon)
     {
         int? distanceKm = null;
-
         if (userLat.HasValue && userLon.HasValue && brand.Deposits.Any())
         {
             distanceKm = (int)GetMinimumDistanceToDeposits(
@@ -230,8 +268,10 @@ public class BrandService : IBrandService
             brand.Name,
             brand.LogoUrl,
             brand.Description,
-            Math.Round(ethicsScore, 2),
+            ethicsScoreProduction,
+            ethicsScoreTransport,
             brand.EthicTags.Select(et => et.TagKey),
+            address,
             distanceKm,
             Math.Round(userRating, 1)
         );

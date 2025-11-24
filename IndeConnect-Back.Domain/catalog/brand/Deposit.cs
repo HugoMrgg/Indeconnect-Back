@@ -7,6 +7,8 @@ public class Deposit
     public string Street { get; private set; } = default!;
     public string PostalCode { get; private set; } = default!;
     
+    public string City { get; private set; } = default!;
+    public string Country { get; private set; } = default!;
     // Coordonnées GPS
     public double Latitude { get; private set; }
     public double Longitude { get; private set; }
