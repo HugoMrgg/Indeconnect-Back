@@ -1,7 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 using IndeConnect_Back.Domain.user;
-using IndeConnect_Back.Domain.catalog.product;
 
 namespace IndeConnect_Back.Infrastructure.Configurations;
 
@@ -9,8 +8,8 @@ public class CartItemConfiguration : IEntityTypeConfiguration<CartItem>
 {
     public void Configure(EntityTypeBuilder<CartItem> builder)
     {
-        // Composite key : CartId + ProductId
-        builder.HasKey(ci => new { ci.CartId, ci.ProductId });
+        // MODIFIÉ : Composite key CartId + ProductVariantId (au lieu de ProductId)
+        builder.HasKey(ci => new { ci.CartId, ci.ProductVariantId });
         
         // Properties
         builder.Property(ci => ci.Quantity)
@@ -38,10 +37,22 @@ public class CartItemConfiguration : IEntityTypeConfiguration<CartItem>
             .OnDelete(DeleteBehavior.Restrict)
             .IsRequired();
         
+        // NOUVEAU : Relation with ProductVariant
+        builder.HasOne(ci => ci.ProductVariant)
+            .WithMany()
+            .HasForeignKey(ci => ci.ProductVariantId)
+            .OnDelete(DeleteBehavior.Restrict)
+            .IsRequired();
+        
         builder.HasIndex(ci => ci.ProductId)
             .HasDatabaseName("IX_CartItem_ProductId");
         
+        builder.HasIndex(ci => ci.ProductVariantId)
+            .HasDatabaseName("IX_CartItem_ProductVariantId");
+        
         builder.HasIndex(ci => ci.AddedAt)
             .HasDatabaseName("IX_CartItem_AddedAt");
+        
+        builder.ToTable("CartItems");
     }
 }

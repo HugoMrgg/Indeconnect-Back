@@ -12,7 +12,7 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace IndeConnect_Back.Infrastructure.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    [Migration("20251124132044_InitialCreate")]
+    [Migration("20251124142529_InitialCreate")]
     partial class InitialCreate
     {
         /// <inheritdoc />
@@ -1409,11 +1409,14 @@ namespace IndeConnect_Back.Infrastructure.Migrations
                     b.Property<long>("CartId")
                         .HasColumnType("bigint");
 
-                    b.Property<long>("ProductId")
+                    b.Property<long>("ProductVariantId")
                         .HasColumnType("bigint");
 
                     b.Property<DateTimeOffset>("AddedAt")
                         .HasColumnType("timestamp with time zone");
+
+                    b.Property<long>("ProductId")
+                        .HasColumnType("bigint");
 
                     b.Property<int>("Quantity")
                         .ValueGeneratedOnAdd()
@@ -1424,7 +1427,7 @@ namespace IndeConnect_Back.Infrastructure.Migrations
                         .HasPrecision(18, 2)
                         .HasColumnType("numeric(18,2)");
 
-                    b.HasKey("CartId", "ProductId");
+                    b.HasKey("CartId", "ProductVariantId");
 
                     b.HasIndex("AddedAt")
                         .HasDatabaseName("IX_CartItem_AddedAt");
@@ -1432,7 +1435,10 @@ namespace IndeConnect_Back.Infrastructure.Migrations
                     b.HasIndex("ProductId")
                         .HasDatabaseName("IX_CartItem_ProductId");
 
-                    b.ToTable("CartItems");
+                    b.HasIndex("ProductVariantId")
+                        .HasDatabaseName("IX_CartItem_ProductVariantId");
+
+                    b.ToTable("CartItems", (string)null);
                 });
 
             modelBuilder.Entity("IndeConnect_Back.Domain.user.Delivery", b =>
@@ -2105,9 +2111,17 @@ namespace IndeConnect_Back.Infrastructure.Migrations
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
+                    b.HasOne("IndeConnect_Back.Domain.catalog.product.ProductVariant", "ProductVariant")
+                        .WithMany()
+                        .HasForeignKey("ProductVariantId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
                     b.Navigation("Cart");
 
                     b.Navigation("Product");
+
+                    b.Navigation("ProductVariant");
                 });
 
             modelBuilder.Entity("IndeConnect_Back.Domain.user.Delivery", b =>
