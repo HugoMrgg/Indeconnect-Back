@@ -1,4 +1,4 @@
-﻿using IndeConnect_Back.Application.DTOs.Products;
+using IndeConnect_Back.Application.DTOs.Products;
 
 namespace IndeConnect_Back.Application.DTOs.Users;
 

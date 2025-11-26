@@ -36,7 +36,6 @@ public class BrandService : IBrandService
             brandsQuery = brandsQuery.Where(b => b.PriceRange == query.PriceRange);
         }
 
-        // ✅ NOUVEAU : Filtre par tags éthiques (ET logique)
         if (query.EthicTags != null && query.EthicTags.Any())
         {
             foreach (var tag in query.EthicTags)

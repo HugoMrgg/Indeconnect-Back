@@ -31,12 +31,20 @@ public class CartItem
         if (unitPrice < 0)
             throw new ArgumentException("Unit price cannot be negative", nameof(unitPrice));
 
-        CartId = cartId;
+        CartId   = cartId;
         ProductId = productId;
         ProductVariantId = productVariantId;
         Quantity = quantity;
         UnitPrice = unitPrice;
-        AddedAt = DateTimeOffset.UtcNow;
+        AddedAt  = DateTimeOffset.UtcNow;
+    }
+
+    public void IncreaseQuantity(int quantity)
+    {
+        if (quantity <= 0)
+            throw new ArgumentException("Quantity must be positive", nameof(quantity));
+
+        Quantity += quantity;
     }
 
     public void IncreaseQuantity(int quantity)

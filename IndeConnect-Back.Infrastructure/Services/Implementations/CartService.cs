@@ -1,4 +1,4 @@
-﻿using IndeConnect_Back.Application.DTOs.Products;
+using IndeConnect_Back.Application.DTOs.Products;
 using IndeConnect_Back.Application.DTOs.Users;
 using IndeConnect_Back.Application.Services.Interfaces;
 using IndeConnect_Back.Domain.catalog.product;
