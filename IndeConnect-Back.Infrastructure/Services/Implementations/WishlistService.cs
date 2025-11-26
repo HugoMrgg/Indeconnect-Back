@@ -11,10 +11,12 @@ namespace IndeConnect_Back.Infrastructure.Services.Implementations;
 public class WishlistService : IWishlistService
 {
     private readonly AppDbContext _context;
+    private readonly IAuditTrailService _auditTrail;
 
-    public WishlistService(AppDbContext context)
+    public WishlistService(AppDbContext context, IAuditTrailService auditTrail)
     {
         _context = context;
+        _auditTrail = auditTrail;
     }
 
     /**
@@ -141,6 +143,11 @@ public class WishlistService : IWishlistService
 
         var wishlistItem = new WishlistItem(user.Wishlist.Id, productId);
         _context.WishlistItems.Add(wishlistItem);
+        await _auditTrail.LogAsync(
+            action: "WishlistAdd",
+            userId: userId,
+            details: $"{user.FirstName} {user.LastName} has added {product.Name} in his wishlist"
+        );
         await _context.SaveChangesAsync();
 
         return await GetUserWishlistAsync(userId);
@@ -167,6 +174,11 @@ public class WishlistService : IWishlistService
             throw new InvalidOperationException("Product not found in wishlist");
 
         _context.WishlistItems.Remove(item);
+        await _auditTrail.LogAsync(
+            action: "WishlistAdd",
+            userId: userId,
+            details: $"{user.FirstName} {user.LastName} has removed product{productId} in his wishlist"
+        );
         await _context.SaveChangesAsync();
     }
 

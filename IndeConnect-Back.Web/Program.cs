@@ -16,6 +16,9 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
+using Serilog;
+using Serilog.Formatting.Compact;
+
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -48,12 +51,29 @@ builder.Services.AddScoped<IBrandSubscriptionService, BrandSubscriptionService>(
 builder.Services.AddScoped<IDepositService, DepositService>();
 builder.Services.AddSingleton<BrandEthicsScorer>();
 builder.Services.AddScoped<IGeocodeService, NominatimGeocodeService>();
+builder.Services.AddScoped<IAuditTrailService, AuditTrailService>();
+builder.Services.AddScoped<IEthicsService, EthicsService>();
 builder.Services.AddScoped<ICartService, CartService>();
 
 builder.Services.AddHttpClient(); // pour Nominatim
 builder.Services.AddMemoryCache();
 
 builder.Services.AddAutoMapper(typeof(DomainAssemblyMarker).Assembly);
+// ---------- CONFIGURATION CORS (AJOUTER CECI) ----------
+const string MyAllowSpecificOrigins = "_myAllowSpecificOrigins";
+
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy(name: MyAllowSpecificOrigins,
+        policy =>
+        {
+            // 🚨 Important : Remplacez par le port de votre application React/Vite (5173 est typique)
+            policy.WithOrigins("http://localhost:5173") 
+                .AllowAnyHeader()
+                .AllowAnyMethod() // Nécessaire pour gérer le OPTIONS (preflight)
+                .AllowCredentials(); 
+        });
+});
 
 // ---------- VALIDATION ----------
 builder.Services.AddControllers()
@@ -90,7 +110,19 @@ builder.Services
             ClockSkew            = TimeSpan.Zero
         };
     });
+// ---------- LOGGER ----------
+Log.Logger = new LoggerConfiguration()
+    .MinimumLevel.Debug() 
+    .WriteTo.Console()
+    .WriteTo.File(
+        new CompactJsonFormatter(),       
+        "Logs/indeconnect-.json",    
+        rollingInterval: RollingInterval.Day,
+        retainedFileCountLimit: 21         
+    )
+    .CreateLogger();
 
+builder.Host.UseSerilog();
 // ---------- AUTHORIZATION (policies + handlers) ----------
 builder.Services.AddSingleton<IAuthorizationHandler, RegisterAuthorizationHandler>();
 builder.Services.AddSingleton<IAuthorizationHandler, GetUserIdHandler>();
@@ -167,7 +199,14 @@ if (app.Environment.IsDevelopment())
     app.UseSwagger();
     app.UseSwaggerUI();
 }
+// ⚠️ ACTIVATION DU ROUTAGE (si ce n'est pas implicite, bonne pratique)
+app.UseRouting();
 
+// 💡 ACTIVATION DU MIDDLEWARE CORS (AJOUTER CECI)
+// Doit être placé avant l'authentification et l'autorisation
+app.UseCors(MyAllowSpecificOrigins);
+
+//app.UseHttpsRedirection();
 app.UseHttpsRedirection();
 
 app.UseAuthentication();

@@ -25,7 +25,10 @@ public class DepositConfiguration : IEntityTypeConfiguration<Deposit>
         builder.Property(d => d.PostalCode)
             .IsRequired()
             .HasMaxLength(20);
-        
+        builder.Property(d => d.City)
+            .IsRequired();
+        builder.Property(d => d.Country)
+            .IsRequired();
         // Relation with Brand
         builder.HasOne(d => d.Brand)
             .WithMany(b => b.Deposits)
