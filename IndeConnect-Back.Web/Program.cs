@@ -53,6 +53,7 @@ builder.Services.AddSingleton<BrandEthicsScorer>();
 builder.Services.AddScoped<IGeocodeService, NominatimGeocodeService>();
 builder.Services.AddScoped<IAuditTrailService, AuditTrailService>();
 builder.Services.AddScoped<IEthicsService, EthicsService>();
+builder.Services.AddScoped<ICartService, CartService>();
 
 builder.Services.AddHttpClient(); // pour Nominatim
 builder.Services.AddMemoryCache();

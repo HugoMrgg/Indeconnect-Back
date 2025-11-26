@@ -16,12 +16,17 @@ public class Cart
     public DateTimeOffset CreatedAt { get; private set; }
     public DateTimeOffset UpdatedAt { get; private set; }
 
-    private Cart() {}
+    private Cart() { }
 
     public Cart(long userId)
     {
-        UserId = userId;
+        UserId    = userId;
         CreatedAt = DateTimeOffset.UtcNow;
+        UpdatedAt = DateTimeOffset.UtcNow;
+    }
+
+    public void MarkUpdated()
+    {
         UpdatedAt = DateTimeOffset.UtcNow;
     }
 }
