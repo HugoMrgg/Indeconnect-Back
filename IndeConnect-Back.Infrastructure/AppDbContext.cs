@@ -41,7 +41,8 @@ public class AppDbContext : DbContext
     public DbSet<Keyword> Keywords { get; set; }
     public DbSet<ProductKeyword> ProductKeywords { get; set; }
     public DbSet<ProductDetail> ProductDetails { get; set; }
-    public DbSet<ProductMedia> ProductMedia { get; set; } 
+    public DbSet<ProductGroup> ProductGroups { get; set; }
+    public DbSet<ProductMedia> ProductMedia { get; set; }
     public DbSet<ProductReview> ProductReviews { get; set; }
     public DbSet<Sale> Sales { get; set; }
     

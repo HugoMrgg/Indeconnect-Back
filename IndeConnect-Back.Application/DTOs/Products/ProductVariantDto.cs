@@ -4,9 +4,7 @@ public record ProductVariantDto(
     long Id,
     string SKU,
     SizeDto? Size,
-    ColorDto? Color,
     int StockCount,
     decimal Price,
-    bool IsAvailable,
-    IEnumerable<ProductVariantMediaDto> Media
+    bool IsAvailable
 );

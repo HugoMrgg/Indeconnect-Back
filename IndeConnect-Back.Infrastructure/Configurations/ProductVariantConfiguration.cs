@@ -34,11 +34,7 @@ public class ProductVariantConfiguration : IEntityTypeConfiguration<ProductVaria
             .OnDelete(DeleteBehavior.Restrict)
             .IsRequired(false);
         
-        builder.HasOne(pv => pv.Color)
-            .WithMany()
-            .HasForeignKey(pv => pv.ColorId)
-            .OnDelete(DeleteBehavior.Restrict)
-            .IsRequired(false);
+        // SUPPRIMÉ : ColorId n'existe plus ici
         
         builder.HasIndex(pv => pv.SKU)
             .IsUnique()
@@ -46,6 +42,10 @@ public class ProductVariantConfiguration : IEntityTypeConfiguration<ProductVaria
         
         builder.HasIndex(pv => pv.ProductId)
             .HasDatabaseName("IX_ProductVariant_ProductId");
+        
+        // NOUVEAU : Index combiné pour les requêtes fréquentes
+        builder.HasIndex(pv => new { pv.ProductId, pv.SizeId })
+            .HasDatabaseName("IX_ProductVariant_ProductSize");
         
         builder.ToTable("ProductVariants");
     }

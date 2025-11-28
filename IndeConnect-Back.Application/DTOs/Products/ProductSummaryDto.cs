@@ -1,15 +1,12 @@
 ﻿namespace IndeConnect_Back.Application.DTOs.Products;
 
-
-/**
- * Summary information for a product in list view
- */
 public record ProductSummaryDto(
     long Id,
     string Name,
-    string? ImageUrl,
+    string? PrimaryImageUrl,
     decimal Price,
-    string? Description,
+    string Description,
     double AverageRating,
-    int ReviewsCount
+    int ReviewCount,
+    ColorDto? PrimaryColor 
 );

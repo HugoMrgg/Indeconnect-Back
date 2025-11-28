@@ -9,10 +9,8 @@ public class ProductMediaConfiguration : IEntityTypeConfiguration<ProductMedia>
 {
     public void Configure(EntityTypeBuilder<ProductMedia> builder)
     {
-        // Primary Key
         builder.HasKey(pm => pm.Id);
 
-        // Properties
         builder.Property(pm => pm.Url)
             .IsRequired()
             .HasMaxLength(500);
@@ -27,14 +25,24 @@ public class ProductMediaConfiguration : IEntityTypeConfiguration<ProductMedia>
             .IsRequired()
             .HasDefaultValue(0);
 
-        builder.Property(pm => pm.AltText)
-            .HasMaxLength(200)
-            .IsRequired(false);
+        builder.Property(pm => pm.IsPrimary)
+            .IsRequired()
+            .HasDefaultValue(false);
 
+        builder.HasOne(pm => pm.Product)
+            .WithMany(p => p.Media)
+            .HasForeignKey(pm => pm.ProductId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        builder.HasIndex(pm => pm.ProductId)
+            .HasDatabaseName("IX_ProductMedia_ProductId");
+        
+        builder.HasIndex(pm => new { pm.ProductId, pm.IsPrimary })
+            .HasDatabaseName("IX_ProductMedia_ProductPrimary");
+        
         builder.HasIndex(pm => new { pm.ProductId, pm.DisplayOrder })
             .HasDatabaseName("IX_ProductMedia_ProductOrder");
 
-        builder.HasIndex(pm => pm.Type)
-            .HasDatabaseName("IX_ProductMedia_Type");
+        builder.ToTable("ProductMedia");
     }
 }

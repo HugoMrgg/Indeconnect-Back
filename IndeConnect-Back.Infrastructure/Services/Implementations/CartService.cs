@@ -1,5 +1,7 @@
-﻿using IndeConnect_Back.Application.DTOs.Users;
+using IndeConnect_Back.Application.DTOs.Products;
+using IndeConnect_Back.Application.DTOs.Users;
 using IndeConnect_Back.Application.Services.Interfaces;
+using IndeConnect_Back.Domain.catalog.product;
 using IndeConnect_Back.Domain.user;
 using Microsoft.EntityFrameworkCore;
 
@@ -25,6 +27,16 @@ public class CartService : ICartService
         var cart = await _context.Carts
             .Include(c => c.Items)
                 .ThenInclude(i => i.Product)
+                    .ThenInclude(p => p.Brand)
+            .Include(c => c.Items)
+                .ThenInclude(i => i.Product)
+                    .ThenInclude(p => p.Media)
+            .Include(c => c.Items)
+                .ThenInclude(i => i.Product)
+                    .ThenInclude(p => p.PrimaryColor)
+            .Include(c => c.Items)
+                .ThenInclude(i => i.ProductVariant)
+                    .ThenInclude(v => v.Size)
             .FirstOrDefaultAsync(c => c.UserId == userId);
 
         if (cart == null)
@@ -32,7 +44,7 @@ public class CartService : ICartService
             cart = new Cart(userId);
             _context.Carts.Add(cart);
             await _context.SaveChangesAsync();
-            // Panier vide
+            
             return new CartDto(
                 cart.Id,
                 userId,
@@ -54,15 +66,29 @@ public class CartService : ICartService
         if (quantity <= 0)
             throw new InvalidOperationException("Quantity must be greater than zero.");
 
-        // Vérifier que la variante existe et charger le produit lié
+        // Charger la variante avec toutes les données nécessaires
         var variant = await _context.ProductVariants
             .Include(v => v.Product)
+                .ThenInclude(p => p.Brand)
+            .Include(v => v.Product)
+                .ThenInclude(p => p.Media)
+            .Include(v => v.Product)
+                .ThenInclude(p => p.PrimaryColor)
+            .Include(v => v.Size)
             .FirstOrDefaultAsync(v => v.Id == variantId);
 
         if (variant == null)
-            return null; // sera transformé en 404 au niveau du controller
+            return null;
 
         var product = variant.Product;
+
+        // Vérifier que le produit est disponible
+        if (!product.IsEnabled || product.Status != ProductStatus.Online)
+            throw new InvalidOperationException("Product is not available");
+
+        // Vérifier le stock disponible
+        if (variant.StockCount < quantity)
+            throw new InvalidOperationException($"Insufficient stock. Available: {variant.StockCount}");
 
         // Vérifier que l'utilisateur existe
         var userExists = await _context.Users.AnyAsync(u => u.Id == userId);
@@ -73,6 +99,8 @@ public class CartService : ICartService
         var cart = await _context.Carts
             .Include(c => c.Items)
                 .ThenInclude(i => i.Product)
+            .Include(c => c.Items)
+                .ThenInclude(i => i.ProductVariant)
             .FirstOrDefaultAsync(c => c.UserId == userId);
 
         if (cart == null)
@@ -80,31 +108,39 @@ public class CartService : ICartService
             cart = new Cart(userId);
             _context.Carts.Add(cart);
             await _context.SaveChangesAsync();
-            // On recharge pour être sûr d'avoir les Items correctement trackés
+            
             cart = await _context.Carts
                 .Include(c => c.Items)
                     .ThenInclude(i => i.Product)
+                .Include(c => c.Items)
+                    .ThenInclude(i => i.ProductVariant)
                 .FirstAsync(c => c.UserId == userId);
         }
 
-        // Chercher une ligne de panier existante pour ce produit
-        var existingItem = cart.Items.FirstOrDefault(i => i.ProductId == product.Id);
+        // MODIFIÉ : Chercher un item existant avec le même ProductVariantId
+        var existingItem = cart.Items.FirstOrDefault(i => i.ProductVariantId == variantId);
 
         if (existingItem == null)
         {
-            var unitPrice = product.Price; // on prend le prix courant du produit
-            var newItem   = new CartItem(cart.Id, product.Id, quantity, unitPrice);
+            // Utiliser le prix override de la variante si disponible, sinon le prix du produit
+            var unitPrice = variant.PriceOverride ?? product.Price;
+            
+            var newItem = new CartItem(cart.Id, product.Id, variantId, quantity, unitPrice);
             _context.CartItems.Add(newItem);
         }
         else
         {
+            // Vérifier que le stock est suffisant pour la nouvelle quantité totale
+            var newQuantity = existingItem.Quantity + quantity;
+            if (variant.StockCount < newQuantity)
+                throw new InvalidOperationException($"Insufficient stock. Available: {variant.StockCount}");
+            
             existingItem.IncreaseQuantity(quantity);
         }
 
         cart.MarkUpdated();
         await _context.SaveChangesAsync();
 
-        // On renvoie l'état complet du panier après mise à jour
         return await GetUserCartAsync(userId);
     }
 
@@ -112,18 +148,41 @@ public class CartService : ICartService
     {
         var items = cart.Items.Select(i =>
         {
+            var product = i.Product;
+            var variant = i.ProductVariant;
             var lineTotal = i.UnitPrice * i.Quantity;
+
+            // Récupérer l'image primaire du produit
+            var primaryImage = product.Media
+                .Where(m => m.IsPrimary)
+                .OrderBy(m => m.DisplayOrder)
+                .FirstOrDefault()?.Url
+                ?? product.Media
+                    .OrderBy(m => m.DisplayOrder)
+                    .FirstOrDefault()?.Url;
 
             return new CartItemDto(
                 i.ProductId,
-                i.Product.Name,
+                product.Name,
+                product.Brand.Name,
+                primaryImage,
+                product.PrimaryColor != null 
+                    ? new ColorDto(product.PrimaryColor.Id, product.PrimaryColor.Name, product.PrimaryColor.Hexa)
+                    : null,
+                variant.Size != null 
+                    ? new SizeDto(variant.Size.Id, variant.Size.Name)
+                    : null,
+                i.ProductVariantId,
+                variant.SKU,
+                variant.StockCount,
                 i.UnitPrice,
                 i.Quantity,
-                lineTotal
+                lineTotal,
+                i.AddedAt
             );
         }).ToList();
 
-        var totalItems  = items.Sum(x => x.Quantity);
+        var totalItems = items.Sum(x => x.Quantity);
         var totalAmount = items.Sum(x => x.LineTotal);
 
         return new CartDto(

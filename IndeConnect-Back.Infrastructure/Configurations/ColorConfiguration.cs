@@ -20,14 +20,14 @@ public class ColorConfiguration : IEntityTypeConfiguration<Color>
             .IsRequired()
             .HasMaxLength(7) 
             .IsFixedLength(false);
-        
-        // Relation with ProductVariant 
-        builder.HasMany<ProductVariant>()
-            .WithOne(pv => pv.Color)
-            .HasForeignKey(pv => pv.ColorId)
+   
+        builder.HasMany<Product>()
+            .WithOne(p => p.PrimaryColor)
+            .HasForeignKey(p => p.PrimaryColorId)
             .OnDelete(DeleteBehavior.Restrict)
             .IsRequired(false);
         
+        // Indexes
         builder.HasIndex(c => c.Name)
             .IsUnique()
             .HasDatabaseName("IX_Color_UniqueName");
@@ -36,5 +36,6 @@ public class ColorConfiguration : IEntityTypeConfiguration<Color>
             .IsUnique()
             .HasDatabaseName("IX_Color_UniqueHexa");
         
+        builder.ToTable("Colors");
     }
 }

@@ -448,7 +448,7 @@ namespace IndeConnect_Back.Infrastructure.Migrations
                         .IsUnique()
                         .HasDatabaseName("IX_Color_UniqueName");
 
-                    b.ToTable("Colors");
+                    b.ToTable("Colors", (string)null);
                 });
 
             modelBuilder.Entity("IndeConnect_Back.Domain.catalog.product.Keyword", b =>
@@ -509,6 +509,12 @@ namespace IndeConnect_Back.Infrastructure.Migrations
                         .HasPrecision(18, 2)
                         .HasColumnType("numeric(18,2)");
 
+                    b.Property<long?>("PrimaryColorId")
+                        .HasColumnType("bigint");
+
+                    b.Property<long?>("ProductGroupId")
+                        .HasColumnType("bigint");
+
                     b.Property<long?>("SaleId")
                         .HasColumnType("bigint");
 
@@ -537,15 +543,24 @@ namespace IndeConnect_Back.Infrastructure.Migrations
                     b.HasIndex("Price")
                         .HasDatabaseName("IX_Product_Price");
 
+                    b.HasIndex("PrimaryColorId")
+                        .HasDatabaseName("IX_Product_PrimaryColorId");
+
+                    b.HasIndex("ProductGroupId")
+                        .HasDatabaseName("IX_Product_ProductGroupId");
+
                     b.HasIndex("SaleId");
 
                     b.HasIndex("Status")
                         .HasDatabaseName("IX_Product_Status");
 
+                    b.HasIndex("ProductGroupId", "PrimaryColorId")
+                        .HasDatabaseName("IX_Product_GroupColor");
+
                     b.HasIndex("BrandId", "IsEnabled", "Status")
                         .HasDatabaseName("IX_Product_BrandActiveStatus");
 
-                    b.ToTable("Products");
+                    b.ToTable("Products", (string)null);
                 });
 
             modelBuilder.Entity("IndeConnect_Back.Domain.catalog.product.ProductDetail", b =>
@@ -589,6 +604,44 @@ namespace IndeConnect_Back.Infrastructure.Migrations
                     b.ToTable("ProductDetails");
                 });
 
+            modelBuilder.Entity("IndeConnect_Back.Domain.catalog.product.ProductGroup", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("Id"));
+
+                    b.Property<string>("BaseDescription")
+                        .IsRequired()
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)");
+
+                    b.Property<long>("BrandId")
+                        .HasColumnType("bigint");
+
+                    b.Property<long>("CategoryId")
+                        .HasColumnType("bigint");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("BrandId")
+                        .HasDatabaseName("IX_ProductGroup_BrandId");
+
+                    b.HasIndex("CategoryId")
+                        .HasDatabaseName("IX_ProductGroup_CategoryId");
+
+                    b.HasIndex("Name")
+                        .HasDatabaseName("IX_ProductGroup_Name");
+
+                    b.ToTable("ProductGroups", (string)null);
+                });
+
             modelBuilder.Entity("IndeConnect_Back.Domain.catalog.product.ProductKeyword", b =>
                 {
                     b.Property<long>("ProductId")
@@ -612,14 +665,15 @@ namespace IndeConnect_Back.Infrastructure.Migrations
 
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("Id"));
 
-                    b.Property<string>("AltText")
-                        .HasMaxLength(200)
-                        .HasColumnType("character varying(200)");
-
                     b.Property<int>("DisplayOrder")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("integer")
                         .HasDefaultValue(0);
+
+                    b.Property<bool>("IsPrimary")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(false);
 
                     b.Property<long>("ProductId")
                         .HasColumnType("bigint");
@@ -638,13 +692,16 @@ namespace IndeConnect_Back.Infrastructure.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("Type")
-                        .HasDatabaseName("IX_ProductMedia_Type");
+                    b.HasIndex("ProductId")
+                        .HasDatabaseName("IX_ProductMedia_ProductId");
 
                     b.HasIndex("ProductId", "DisplayOrder")
                         .HasDatabaseName("IX_ProductMedia_ProductOrder");
 
-                    b.ToTable("ProductMedia");
+                    b.HasIndex("ProductId", "IsPrimary")
+                        .HasDatabaseName("IX_ProductMedia_ProductPrimary");
+
+                    b.ToTable("ProductMedia", (string)null);
                 });
 
             modelBuilder.Entity("IndeConnect_Back.Domain.catalog.product.ProductReview", b =>
@@ -710,9 +767,6 @@ namespace IndeConnect_Back.Infrastructure.Migrations
 
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("Id"));
 
-                    b.Property<long?>("ColorId")
-                        .HasColumnType("bigint");
-
                     b.Property<decimal?>("PriceOverride")
                         .HasPrecision(18, 2)
                         .HasColumnType("numeric(18,2)");
@@ -735,8 +789,6 @@ namespace IndeConnect_Back.Infrastructure.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("ColorId");
-
                     b.HasIndex("ProductId")
                         .HasDatabaseName("IX_ProductVariant_ProductId");
 
@@ -746,41 +798,10 @@ namespace IndeConnect_Back.Infrastructure.Migrations
 
                     b.HasIndex("SizeId");
 
+                    b.HasIndex("ProductId", "SizeId")
+                        .HasDatabaseName("IX_ProductVariant_ProductSize");
+
                     b.ToTable("ProductVariants", (string)null);
-                });
-
-            modelBuilder.Entity("IndeConnect_Back.Domain.catalog.product.ProductVariantMedia", b =>
-                {
-                    b.Property<long>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("bigint");
-
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("Id"));
-
-                    b.Property<int>("DisplayOrder")
-                        .HasColumnType("integer");
-
-                    b.Property<bool>("IsPrimary")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("boolean")
-                        .HasDefaultValue(false);
-
-                    b.Property<int>("Type")
-                        .HasColumnType("integer");
-
-                    b.Property<string>("Url")
-                        .IsRequired()
-                        .HasMaxLength(500)
-                        .HasColumnType("character varying(500)");
-
-                    b.Property<long>("VariantId")
-                        .HasColumnType("bigint");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("VariantId");
-
-                    b.ToTable("ProductVariantMedia");
                 });
 
             modelBuilder.Entity("IndeConnect_Back.Domain.catalog.product.Sale", b =>
@@ -1385,11 +1406,14 @@ namespace IndeConnect_Back.Infrastructure.Migrations
                     b.Property<long>("CartId")
                         .HasColumnType("bigint");
 
-                    b.Property<long>("ProductId")
+                    b.Property<long>("ProductVariantId")
                         .HasColumnType("bigint");
 
                     b.Property<DateTimeOffset>("AddedAt")
                         .HasColumnType("timestamp with time zone");
+
+                    b.Property<long>("ProductId")
+                        .HasColumnType("bigint");
 
                     b.Property<int>("Quantity")
                         .ValueGeneratedOnAdd()
@@ -1400,7 +1424,7 @@ namespace IndeConnect_Back.Infrastructure.Migrations
                         .HasPrecision(18, 2)
                         .HasColumnType("numeric(18,2)");
 
-                    b.HasKey("CartId", "ProductId");
+                    b.HasKey("CartId", "ProductVariantId");
 
                     b.HasIndex("AddedAt")
                         .HasDatabaseName("IX_CartItem_AddedAt");
@@ -1408,7 +1432,10 @@ namespace IndeConnect_Back.Infrastructure.Migrations
                     b.HasIndex("ProductId")
                         .HasDatabaseName("IX_CartItem_ProductId");
 
-                    b.ToTable("CartItems");
+                    b.HasIndex("ProductVariantId")
+                        .HasDatabaseName("IX_CartItem_ProductVariantId");
+
+                    b.ToTable("CartItems", (string)null);
                 });
 
             modelBuilder.Entity("IndeConnect_Back.Domain.user.Delivery", b =>
@@ -1793,6 +1820,16 @@ namespace IndeConnect_Back.Infrastructure.Migrations
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
+                    b.HasOne("IndeConnect_Back.Domain.catalog.product.Color", "PrimaryColor")
+                        .WithMany()
+                        .HasForeignKey("PrimaryColorId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("IndeConnect_Back.Domain.catalog.product.ProductGroup", "ProductGroup")
+                        .WithMany("Products")
+                        .HasForeignKey("ProductGroupId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
                     b.HasOne("IndeConnect_Back.Domain.catalog.product.Sale", "Sale")
                         .WithMany("Products")
                         .HasForeignKey("SaleId")
@@ -1801,6 +1838,10 @@ namespace IndeConnect_Back.Infrastructure.Migrations
                     b.Navigation("Brand");
 
                     b.Navigation("Category");
+
+                    b.Navigation("PrimaryColor");
+
+                    b.Navigation("ProductGroup");
 
                     b.Navigation("Sale");
                 });
@@ -1814,6 +1855,25 @@ namespace IndeConnect_Back.Infrastructure.Migrations
                         .IsRequired();
 
                     b.Navigation("Product");
+                });
+
+            modelBuilder.Entity("IndeConnect_Back.Domain.catalog.product.ProductGroup", b =>
+                {
+                    b.HasOne("IndeConnect_Back.Domain.catalog.brand.Brand", "Brand")
+                        .WithMany()
+                        .HasForeignKey("BrandId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("IndeConnect_Back.Domain.catalog.product.Category", "Category")
+                        .WithMany()
+                        .HasForeignKey("CategoryId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Brand");
+
+                    b.Navigation("Category");
                 });
 
             modelBuilder.Entity("IndeConnect_Back.Domain.catalog.product.ProductKeyword", b =>
@@ -1838,7 +1898,7 @@ namespace IndeConnect_Back.Infrastructure.Migrations
             modelBuilder.Entity("IndeConnect_Back.Domain.catalog.product.ProductMedia", b =>
                 {
                     b.HasOne("IndeConnect_Back.Domain.catalog.product.Product", "Product")
-                        .WithMany()
+                        .WithMany("Media")
                         .HasForeignKey("ProductId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
@@ -1867,11 +1927,6 @@ namespace IndeConnect_Back.Infrastructure.Migrations
 
             modelBuilder.Entity("IndeConnect_Back.Domain.catalog.product.ProductVariant", b =>
                 {
-                    b.HasOne("IndeConnect_Back.Domain.catalog.product.Color", "Color")
-                        .WithMany()
-                        .HasForeignKey("ColorId")
-                        .OnDelete(DeleteBehavior.Restrict);
-
                     b.HasOne("IndeConnect_Back.Domain.catalog.product.Product", "Product")
                         .WithMany("Variants")
                         .HasForeignKey("ProductId")
@@ -1883,22 +1938,9 @@ namespace IndeConnect_Back.Infrastructure.Migrations
                         .HasForeignKey("SizeId")
                         .OnDelete(DeleteBehavior.Restrict);
 
-                    b.Navigation("Color");
-
                     b.Navigation("Product");
 
                     b.Navigation("Size");
-                });
-
-            modelBuilder.Entity("IndeConnect_Back.Domain.catalog.product.ProductVariantMedia", b =>
-                {
-                    b.HasOne("IndeConnect_Back.Domain.catalog.product.ProductVariant", "Variant")
-                        .WithMany("Media")
-                        .HasForeignKey("VariantId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Variant");
                 });
 
             modelBuilder.Entity("IndeConnect_Back.Domain.order.Invoice", b =>
@@ -2066,9 +2108,17 @@ namespace IndeConnect_Back.Infrastructure.Migrations
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
+                    b.HasOne("IndeConnect_Back.Domain.catalog.product.ProductVariant", "ProductVariant")
+                        .WithMany()
+                        .HasForeignKey("ProductVariantId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
                     b.Navigation("Cart");
 
                     b.Navigation("Product");
+
+                    b.Navigation("ProductVariant");
                 });
 
             modelBuilder.Entity("IndeConnect_Back.Domain.user.Delivery", b =>
@@ -2173,14 +2223,16 @@ namespace IndeConnect_Back.Infrastructure.Migrations
 
                     b.Navigation("Keywords");
 
+                    b.Navigation("Media");
+
                     b.Navigation("Reviews");
 
                     b.Navigation("Variants");
                 });
 
-            modelBuilder.Entity("IndeConnect_Back.Domain.catalog.product.ProductVariant", b =>
+            modelBuilder.Entity("IndeConnect_Back.Domain.catalog.product.ProductGroup", b =>
                 {
-                    b.Navigation("Media");
+                    b.Navigation("Products");
                 });
 
             modelBuilder.Entity("IndeConnect_Back.Domain.catalog.product.Sale", b =>
