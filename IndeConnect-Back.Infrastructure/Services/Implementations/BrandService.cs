@@ -266,6 +266,7 @@ public class BrandService : IBrandService
             brand.Id,
             brand.Name,
             brand.LogoUrl,
+            brand.BannerUrl,     
             brand.Description,
             ethicsScoreProduction,
             ethicsScoreTransport,
@@ -275,6 +276,7 @@ public class BrandService : IBrandService
             Math.Round(userRating, 1)
         );
     }
+
 
     private double ToRadians(double degrees) => degrees * Math.PI / 180;
 }

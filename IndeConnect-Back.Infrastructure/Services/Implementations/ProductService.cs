@@ -90,10 +90,11 @@ public class ProductService : IProductService
                 product.Brand.Id,
                 product.Brand.Name,
                 product.Brand.LogoUrl,
+                product.Brand.BannerUrl,
                 product.Brand.Description,
                 0,          
-                0,       
-                null,
+                0, 
+                Enumerable.Empty<string>(),
                 product.Brand.Deposits.FirstOrDefault() != null 
                     ? $"{product.Brand.Deposits.First().Number} {product.Brand.Deposits.First().Street}, {product.Brand.Deposits.First().PostalCode}" 
                     : null,    
@@ -199,6 +200,7 @@ public class ProductService : IProductService
                 group.Brand.Id,
                 group.Brand.Name,
                 group.Brand.LogoUrl,
+                group.Brand.BannerUrl,
                 group.Brand.Description,
                 0, 0, null, null, null, 0
             ),
