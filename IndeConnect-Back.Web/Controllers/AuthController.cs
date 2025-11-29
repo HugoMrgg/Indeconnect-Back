@@ -17,9 +17,10 @@ public class AuthController : ControllerBase
     }
 
     /// <summary>
-    /// Register a new user (client by default)
+    /// Register a new user (client by default, with password)
     /// </summary>
     [HttpPost("register")]
+    [Authorize(Policy = "CanRegister")]
     [AllowAnonymous]
     [ProducesResponseType(typeof(AuthResponse), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
@@ -41,5 +42,38 @@ public class AuthController : ControllerBase
     {
         var response = await _authService.LoginAsync(request);
         return Ok(response);
+    }
+
+    /// <summary>
+    /// Invite a user (create account without password, send activation email)
+    /// Only authenticated users can invite
+    /// </summary>
+    [HttpPost("invite")]
+    [Authorize(Policy = "CanInvite")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    public async Task<ActionResult> InviteUser([FromBody] InviteUserRequest request)
+    {
+        // Récupère l'ID de l'utilisateur connecté depuis le JWT
+        var userIdClaim = User.FindFirst("http://schemas.xmlsoap.org/ws/2005/05/identity/claims/nameidentifier");
+        if (userIdClaim == null || !long.TryParse(userIdClaim.Value, out var userId))
+            return Unauthorized("Invalid token");
+
+        await _authService.InviteUserAsync(request, userId);
+        return Ok(new { message = "User invited successfully" });
+    }
+
+    /// <summary>
+    /// Set password after receiving invitation email
+    /// </summary>
+    [HttpPost("set-password")]
+    [AllowAnonymous]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
+    public async Task<ActionResult> SetPassword([FromBody] SetPasswordRequest request)
+    {
+        await _authService.SetPasswordAsync(request);
+        return Ok(new { message = "Password set successfully" });
     }
 }

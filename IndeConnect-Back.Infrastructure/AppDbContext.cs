@@ -19,6 +19,7 @@ public class AppDbContext : DbContext
     public DbSet<Delivery> Deliveries { get; set; }
     public DbSet<UserReview> UserReviews { get; set; }
     public DbSet<AuditLog> AuditLogs { get; set; }
+    public DbSet<PasswordResetToken> PasswordResetTokens { get; set; }
 
     // CATALOG - BRAND DOMAIN
     public DbSet<Brand> Brands { get; set; }
