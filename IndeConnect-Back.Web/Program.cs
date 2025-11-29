@@ -55,6 +55,8 @@ builder.Services.AddScoped<ICartService, CartService>();
 builder.Services.AddScoped<IAuditTrailService, AuditTrailService>();
 builder.Services.AddScoped<IEthicsService, EthicsService>();
 builder.Services.AddScoped<ICartService, CartService>();
+builder.Services.AddScoped<IEmailService, SendGridEmailService>();           
+builder.Services.AddScoped<IPasswordResetTokenService, PasswordResetTokenService>(); 
 
 builder.Services.AddHttpClient(); // pour Nominatim
 builder.Services.AddMemoryCache();
@@ -136,11 +138,13 @@ builder.Services.AddAuthorization(options =>
         policy.AddRequirements(new UserIdAttribute());
     });
 
-    // Exemple si tu veux une policy sur la création de comptes
-    options.AddPolicy("CanRegisterRole", policy =>
+    options.AddPolicy("CanRegister", policy =>
+        policy.Requirements.Add(new RoleAuthorizationAttribute()));
+
+    options.AddPolicy("CanInvite", policy =>
     {
         policy.RequireAuthenticatedUser();
-        policy.AddRequirements(new RoleAuthorizationAttribute());
+        policy.Requirements.Add(new RoleAuthorizationAttribute());
     });
 });
 

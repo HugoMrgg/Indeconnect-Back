@@ -110,6 +110,10 @@ public class User
     {
         return _brandSubscriptions.Any(bs => bs.BrandId == brandId);
     }
-
+    
+    public void SetEnabled(bool enabled)
+    {
+        IsEnabled = enabled;
+    }
 }
 

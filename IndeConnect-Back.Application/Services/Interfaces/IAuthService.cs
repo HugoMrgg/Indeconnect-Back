@@ -6,4 +6,6 @@ public interface IAuthService
 {
     Task<AuthResponse> RegisterAsync(RegisterRequest request);
     Task<AuthResponse> LoginAsync(LoginAnonymousRequest request);
+    Task InviteUserAsync(InviteUserRequest request, long invitedBy);
+    Task SetPasswordAsync(SetPasswordRequest request);
 }

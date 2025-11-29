@@ -1,5 +1,6 @@
 ﻿using IndeConnect_Back.Application.DTOs.Users;
 using IndeConnect_Back.Application.Services.Interfaces;
+using IndeConnect_Back.Domain.user;
 using Microsoft.EntityFrameworkCore;
 
 namespace IndeConnect_Back.Infrastructure.Services.Implementations;
@@ -37,5 +38,36 @@ public class UserService : IUserService
             user.Reviews.Count,
             user.Orders.Count
         );
+    }
+    public async Task<List<AccountDto>> GetAllAccountsAsync()
+    {
+        var adminRoles = new[] { Role.Administrator, Role.Moderator, Role.SuperVendor };
+
+        var accounts = await _context.Users
+            .Where(u => adminRoles.Contains(u.Role))
+            .OrderByDescending(u => u.CreatedAt)
+            .Select(u => new AccountDto(
+                u.Id,
+                u.Email,
+                u.FirstName,
+                u.LastName,
+                u.Role.ToString(),
+                u.IsEnabled
+            ))
+            .ToListAsync();
+
+        return accounts;
+    }
+
+    public async Task ToggleAccountStatusAsync(long accountId, bool isEnabled)
+    {
+        var account = await _context.Users
+            .FirstOrDefaultAsync(u => u.Id == accountId);
+
+        if (account == null)
+            throw new KeyNotFoundException($"Account with ID {accountId} not found");
+
+        account.SetEnabled(isEnabled);
+        await _context.SaveChangesAsync();
     }
 }
