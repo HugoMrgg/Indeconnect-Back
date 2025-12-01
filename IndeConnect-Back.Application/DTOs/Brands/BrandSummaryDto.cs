@@ -4,6 +4,7 @@ public record BrandSummaryDto(
     long Id,
     string Name,
     string? LogoUrl,
+    string? BannerUrl,
     string? Description,
     double EthicsScoreProduction,
     double EthicsScoreTransport,

@@ -2,15 +2,15 @@
 
 namespace IndeConnect_Back.Application.DTOs.Users;
 
-public record UserDetailDto(
+/// <summary>
+/// Représentation d'un compte administratif
+/// </summary>
+public record AccountDto(
     long Id,
     string Email,
     string FirstName,
     string LastName,
-    DateTimeOffset CreatedAt,
+    Role Role,
     bool IsEnabled,
-    Role role,
-    int BrandSubscriptionsCount,
-    int ReviewsCount,
-    int OrdersCount
+    bool IsPendingActivation
 );
