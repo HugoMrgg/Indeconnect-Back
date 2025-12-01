@@ -8,5 +8,5 @@ public record InviteUserRequest(
     string FirstName,
     string LastName,
     string TargetRole,
-    long? CreatedBy = null
+    long InvitedById
 );

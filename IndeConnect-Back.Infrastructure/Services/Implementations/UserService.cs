@@ -17,7 +17,6 @@ public class UserService : IUserService
     public async Task<UserDetailDto?> GetUserByIdAsync(long userId)
     {
         var user = await _context.Users
-
             .Include(u => u.BrandSubscriptions)
             .Include(u => u.Reviews)
             .Include(u => u.Orders)
@@ -33,12 +32,13 @@ public class UserService : IUserService
             user.LastName,
             user.CreatedAt,
             user.IsEnabled,
-            user.Role.ToString(),
+            user.Role,           
             user.BrandSubscriptions.Count,
             user.Reviews.Count,
             user.Orders.Count
         );
     }
+
     public async Task<List<AccountDto>> GetAllAccountsAsync()
     {
         var adminRoles = new[] { Role.Administrator, Role.Moderator, Role.SuperVendor };
@@ -51,8 +51,9 @@ public class UserService : IUserService
                 u.Email,
                 u.FirstName,
                 u.LastName,
-                u.Role.ToString(),
-                u.IsEnabled
+                u.Role,                   
+                u.IsEnabled,
+                u.PasswordHash == null     
             ))
             .ToListAsync();
 

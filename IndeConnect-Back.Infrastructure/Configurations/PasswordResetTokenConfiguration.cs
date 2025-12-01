@@ -24,9 +24,8 @@ public class PasswordResetTokenConfiguration : IEntityTypeConfiguration<Password
             .HasDefaultValue(false);
 
         builder.Property(p => p.CreatedAt)
-            .IsRequired()
-            .HasDefaultValueSql("NOW() AT TIME ZONE 'UTC'");
-
+            .IsRequired();
+        
         // Foreign key
         builder.HasOne(p => p.User)
             .WithMany()

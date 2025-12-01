@@ -85,7 +85,7 @@ public class User
     
     public bool VerifyPassword(string password)
     {
-        return PasswordHash is not null && BCrypt.Net.BCrypt.Verify(password, PasswordHash);
+        return BCrypt.Net.BCrypt.Verify(password, PasswordHash);
     }
 
     public void SubscribeToBrand(Brand brand)

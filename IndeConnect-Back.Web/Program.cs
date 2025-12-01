@@ -1,4 +1,5 @@
 using System.Text;
+using System.Text.Json.Serialization;
 using DotNetEnv;
 using FluentValidation;
 using FluentValidation.AspNetCore;
@@ -81,6 +82,12 @@ builder.Services.AddCors(options =>
 // ---------- VALIDATION ----------
 builder.Services.AddControllers()
     .AddFluentValidation();
+
+builder.Services.AddControllers()
+    .AddJsonOptions(options =>
+{
+    options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter());
+});
 
 builder.Services.AddValidatorsFromAssemblyContaining<LoginAnonymousRequestValidator>();
 builder.Services.AddValidatorsFromAssemblyContaining<RegisterAnonymousRequestValidator>();

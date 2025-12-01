@@ -1,4 +1,6 @@
-﻿namespace IndeConnect_Back.Application.DTOs.Auth;
+﻿using IndeConnect_Back.Domain.user;
+
+namespace IndeConnect_Back.Application.DTOs.Auth;
 /**
  * Represents an login's/register's request answer.
  */
@@ -7,6 +9,6 @@ public record AuthResponse(
     string Email,
     string FirstName,
     string LastName,
-    string Role,
+    Role Role,
     string Token
 );

@@ -1,4 +1,6 @@
-﻿namespace IndeConnect_Back.Application.DTOs.Users;
+﻿using IndeConnect_Back.Domain.user;
+
+namespace IndeConnect_Back.Application.DTOs.Users;
 
 /// <summary>
 /// Représentation d'un compte administratif
@@ -8,6 +10,7 @@ public record AccountDto(
     string Email,
     string FirstName,
     string LastName,
-    string Role,
-    bool IsEnabled
+    Role Role,
+    bool IsEnabled,
+    bool IsPendingActivation
 );

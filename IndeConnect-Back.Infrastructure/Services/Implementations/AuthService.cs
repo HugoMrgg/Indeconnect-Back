@@ -12,6 +12,7 @@ public class AuthService : IAuthService
     private readonly IJwtTokenGenerator _jwtGenerator;
     private readonly IEmailService _emailService;
     private readonly IPasswordResetTokenService _resetTokenService;
+    private readonly string _frontendUrl;
 
     public AuthService(
         AppDbContext context,
@@ -25,6 +26,8 @@ public class AuthService : IAuthService
         _auditTrail = auditTrail;
         _emailService = emailService;
         _resetTokenService = resetTokenService;
+        
+        _frontendUrl = Environment.GetEnvironmentVariable("FRONTEND_URL");
     }
 
     public async Task<AuthResponse> RegisterAsync(RegisterRequest request)
@@ -54,7 +57,7 @@ public class AuthService : IAuthService
 
         var token = _jwtGenerator.GenerateToken(user);
 
-        return new AuthResponse(user.Id, user.Email, user.FirstName, user.LastName, user.Role.ToString(), token);
+        return new AuthResponse(user.Id, user.Email, user.FirstName, user.LastName, user.Role, token);
     }
 
     public async Task<AuthResponse> LoginAsync(LoginAnonymousRequest request)
@@ -62,7 +65,16 @@ public class AuthService : IAuthService
         var user = await _context.Users
             .SingleOrDefaultAsync(u => u.Email == request.Email);
 
-        if (user is null || !user.VerifyPassword(request.Password))
+        if (user is null)
+            throw new UnauthorizedAccessException("Invalid credentials.");
+        
+        if (user.PasswordHash == null)
+            throw new UnauthorizedAccessException("Account not activated. Please check your email.");
+
+        if (!user.IsEnabled)
+            throw new UnauthorizedAccessException("Account is disabled.");
+
+        if (!user.VerifyPassword(request.Password))
             throw new UnauthorizedAccessException("Invalid credentials.");
 
         var token = _jwtGenerator.GenerateToken(user);
@@ -71,19 +83,38 @@ public class AuthService : IAuthService
             userId: user.Id,
             details: $"{user.FirstName} {user.LastName} logged in"
         );
-        return new AuthResponse(user.Id, user.Email, user.FirstName, user.LastName, user.Role.ToString(), token);
+        return new AuthResponse(user.Id, user.Email, user.FirstName, user.LastName, user.Role, token);
     }
 
     public async Task InviteUserAsync(InviteUserRequest request, long invitedBy)
     {
-        // Vérifie que l'email n'existe pas déjà
-        var existing = await _context.Users
-            .AnyAsync(u => u.Email == request.Email);
+        var existingUser = await _context.Users
+            .FirstOrDefaultAsync(u => u.Email == request.Email);
 
-        if (existing)
-            throw new InvalidOperationException("Email already registered.");
+        if (existingUser != null)
+        {
+            if (existingUser.PasswordHash != null)
+                throw new InvalidOperationException("Email already registered and active.");
 
-        // Crée le nouvel utilisateur SANS mot de passe
+            var newToken = await _resetTokenService.CreateResetTokenAsync(existingUser.Id);
+            var activationLink = $"{_frontendUrl}/set-password?token={newToken}";
+            var htmlContent = BuildActivationEmailHtml(existingUser.FirstName, activationLink);
+
+            await _emailService.SendEmailAsync(
+                existingUser.Email,
+                "Rappel : Activez votre compte IndeConnect",
+                htmlContent
+            );
+
+            await _auditTrail.LogAsync(
+                action: "UserReinvited",
+                userId: invitedBy,
+                details: $"User {existingUser.Email} reinvited by user {invitedBy}"
+            );
+
+            return;
+        }
+
         var user = new User(
             email: request.Email,
             firstName: request.FirstName,
@@ -96,9 +127,19 @@ public class AuthService : IAuthService
 
         // Génère un token d'activation
         var token = await _resetTokenService.CreateResetTokenAsync(user.Id);
-
-        // Envoie l'email avec le token (et le lien est généré dans SendGridEmailService)
-        await _emailService.SendActivationEmailAsync(user.Email, user.FirstName, token);
+        
+        // Génère le lien d'activation
+        var activationLinkNew = $"{_frontendUrl}/set-password?token={token}";
+        
+        // Génère le contenu HTML
+        var htmlContentNew = BuildActivationEmailHtml(user.FirstName, activationLinkNew);
+        
+        // Envoie l'email
+        await _emailService.SendEmailAsync(
+            user.Email,
+            "Activez votre compte IndeConnect",
+            htmlContentNew
+        );
 
         // Audit
         await _auditTrail.LogAsync(
@@ -125,9 +166,9 @@ public class AuthService : IAuthService
         user.SetPasswordHash(BCrypt.Net.BCrypt.HashPassword(request.Password));
 
         await _auditTrail.LogAsync(
-            action: "UserPasswordSet",
+            action: "UserActivated",
             userId: user.Id,
-            details: $"{user.FirstName} {user.LastName} set their password"
+            details: $"{user.FirstName} {user.LastName} activated their account"
         );
 
         await _context.SaveChangesAsync();
@@ -144,5 +185,50 @@ public class AuthService : IAuthService
             "administrator" => Role.Administrator,
             _ => throw new ArgumentOutOfRangeException(nameof(role), "Unknown role")
         };
+    }
+
+    private static string BuildActivationEmailHtml(string firstName, string activationLink)
+    {
+        return $@"
+<!DOCTYPE html>
+<html>
+<head>
+    <style>
+        body {{ font-family: Arial, sans-serif; }}
+        .container {{ max-width: 600px; margin: 0 auto; padding: 20px; }}
+        .header {{ background-color: #000; color: #fff; padding: 20px; text-align: center; }}
+        .content {{ padding: 20px; background-color: #f9f9f9; }}
+        .button {{ 
+            display: inline-block; 
+            background-color: #000; 
+            color: #fff; 
+            padding: 12px 24px; 
+            text-decoration: none; 
+            border-radius: 5px; 
+            margin-top: 20px; 
+        }}
+        .footer {{ text-align: center; padding-top: 20px; font-size: 12px; color: #666; }}
+    </style>
+</head>
+<body>
+    <div class=""container"">
+        <div class=""header"">
+            <h1>IndeConnect</h1>
+        </div>
+        <div class=""content"">
+            <p>Bonjour {firstName},</p>
+            <p>Un compte a été créé pour vous sur IndeConnect.</p>
+            <p>Cliquez sur le lien ci-dessous pour activer votre compte et définir votre mot de passe :</p>
+            <a href=""{activationLink}"" class=""button"">Activer mon compte</a>
+            <p style=""margin-top: 20px; color: #666; font-size: 12px;"">
+                Ce lien expire dans 24 heures.
+            </p>
+        </div>
+        <div class=""footer"">
+            <p>&copy; 2025 IndeConnect. Tous droits réservés.</p>
+        </div>
+    </div>
+</body>
+</html>";
     }
 }

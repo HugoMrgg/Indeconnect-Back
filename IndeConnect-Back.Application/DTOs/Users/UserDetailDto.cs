@@ -1,4 +1,6 @@
-﻿namespace IndeConnect_Back.Application.DTOs.Users;
+﻿using IndeConnect_Back.Domain.user;
+
+namespace IndeConnect_Back.Application.DTOs.Users;
 
 public record UserDetailDto(
     long Id,
@@ -7,7 +9,7 @@ public record UserDetailDto(
     string LastName,
     DateTimeOffset CreatedAt,
     bool IsEnabled,
-    string RoleName,
+    Role role,
     int BrandSubscriptionsCount,
     int ReviewsCount,
     int OrdersCount
