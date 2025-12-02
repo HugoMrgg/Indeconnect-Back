@@ -1,8 +1,10 @@
 ﻿using IndeConnect_Back.Application.DTOs.Brands;
 using IndeConnect_Back.Application.DTOs.Products; 
 using IndeConnect_Back.Application.Services.Interfaces;
+using IndeConnect_Back.Web;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+
 
 namespace IndeConnect_Back.Web.Controllers;
 
@@ -97,4 +99,41 @@ public class BrandController : ControllerBase
         
         return Ok(response);
     }
+    
+    [HttpPut("{brandId:long}")]
+    [Authorize(Roles = "Administrator,Moderator,SuperVendor")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> UpdateBrand(
+        [FromRoute] long brandId,
+        [FromBody] UpdateBrandRequest request,
+        [FromServices] UserHelper userHelper)
+    {
+        var currentUserId = userHelper.GetUserId();
+        var isAdminOrModerator = userHelper.IsAdminOrModerator();
+
+        try
+        {
+            await _brandService.UpdateBrandAsync(brandId, request, currentUserId, isAdminOrModerator);
+            return NoContent();
+        }
+        catch (KeyNotFoundException ex)
+        {
+            return NotFound(new ProblemDetails
+            {
+                Title  = "Brand not found",
+                Detail = ex.Message
+            });
+        }
+        catch (UnauthorizedAccessException ex)
+        {
+            return StatusCode(StatusCodes.Status403Forbidden, new ProblemDetails
+            {
+                Title  = "Forbidden",
+                Detail = ex.Message
+            });
+        }
+    }
+
 }

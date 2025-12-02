@@ -1,6 +1,7 @@
 ﻿using IndeConnect_Back.Application.DTOs.Auth;
 using IndeConnect_Back.Application.Services.Interfaces;
 using IndeConnect_Back.Domain.user;
+using IndeConnect_Back.Domain.catalog.brand;
 using Microsoft.EntityFrameworkCore;
 
 namespace IndeConnect_Back.Infrastructure.Services.Implementations;
@@ -109,32 +110,43 @@ public class AuthService : IAuthService
             await _auditTrail.LogAsync(
                 action: "UserReinvited",
                 userId: invitedBy,
-                details: $"User {existingUser.Email} reinvited by user {invitedBy}"
+                details: $"Existing user {existingUser.Email} re-invited by user {invitedBy}"
             );
 
             return;
         }
 
+        var role = ParseRole(request.TargetRole);
+
+        // Création du nouvel utilisateur invité
         var user = new User(
-            email: request.Email,
-            firstName: request.FirstName,
-            lastName: request.LastName,
-            role: ParseRole(request.TargetRole)
+            email: request.Email.Trim().ToLowerInvariant(),
+            firstName: request.FirstName.Trim(),
+            lastName: request.LastName.Trim(),
+            role: role
         );
 
         _context.Users.Add(user);
-        await _context.SaveChangesAsync();
+        await _context.SaveChangesAsync(); // pour avoir user.Id
 
-        // Génère un token d'activation
+        // Si SuperVendor -> créer une marque "vide" liée à ce supervendeur
+        if (role == Role.SuperVendor)
+        {
+            var brand = new Brand(
+                name: "Nouvelle marque",
+                superVendorUserId: user.Id
+            );
+
+            _context.Brands.Add(brand);
+            await _context.SaveChangesAsync();
+        }
+
+        // Génère un token d’activation
         var token = await _resetTokenService.CreateResetTokenAsync(user.Id);
-        
-        // Génère le lien d'activation
         var activationLinkNew = $"{_frontendUrl}/set-password?token={token}";
-        
-        // Génère le contenu HTML
         var htmlContentNew = BuildActivationEmailHtml(user.FirstName, activationLinkNew);
-        
-        // Envoie l'email
+
+        // Envoie l’email
         await _emailService.SendEmailAsync(
             user.Email,
             "Activez votre compte IndeConnect",
@@ -148,6 +160,7 @@ public class AuthService : IAuthService
             details: $"User {user.Email} ({request.TargetRole}) invited by user {invitedBy}"
         );
     }
+
 
     public async Task SetPasswordAsync(SetPasswordRequest request)
     {
