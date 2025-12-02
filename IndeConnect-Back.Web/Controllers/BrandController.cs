@@ -101,7 +101,7 @@ public class BrandController : ControllerBase
     }
     
     [HttpPut("{brandId:long}")]
-    [Authorize(Roles = "Administrator,Moderator,SuperVendor")]
+    [Authorize(Roles = "SuperVendor")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status403Forbidden)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
@@ -111,11 +111,10 @@ public class BrandController : ControllerBase
         [FromServices] UserHelper userHelper)
     {
         var currentUserId = userHelper.GetUserId();
-        var isAdminOrModerator = userHelper.IsAdminOrModerator();
 
         try
         {
-            await _brandService.UpdateBrandAsync(brandId, request, currentUserId, isAdminOrModerator);
+            await _brandService.UpdateBrandAsync(brandId, request, currentUserId);
             return NoContent();
         }
         catch (KeyNotFoundException ex)
@@ -135,5 +134,4 @@ public class BrandController : ControllerBase
             });
         }
     }
-
 }

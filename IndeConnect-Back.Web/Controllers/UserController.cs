@@ -13,6 +13,7 @@ namespace IndeConnect_Back.Web.Controllers;
 [Authorize]
 public class UserController : ControllerBase
 {
+
     private readonly IUserService _userService;
     private readonly UserHelper _userHelper;
 
@@ -21,6 +22,7 @@ public class UserController : ControllerBase
         _userService = userService;
         _userHelper  = userHelper;
     }
+
 
     /// <summary>
     /// Get user by ID
@@ -59,6 +61,7 @@ public class UserController : ControllerBase
         var accounts = await _userService.GetAllAccountsAsync(currentUserId, currentUserRole);
         return Ok(accounts);
     }
+
 
     /// <summary>
     /// Active ou désactive un compte

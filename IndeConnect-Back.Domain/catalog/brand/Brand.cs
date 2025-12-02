@@ -94,5 +94,4 @@ public class Brand
         if (priceRange != null)
             PriceRange = priceRange;
     }
-
 }

@@ -280,7 +280,7 @@ public class BrandService : IBrandService
 
     private double ToRadians(double degrees) => degrees * Math.PI / 180;
     
-    public async Task UpdateBrandAsync(long brandId, UpdateBrandRequest request, long currentUserId, bool isAdminOrModerator)
+    public async Task UpdateBrandAsync(long brandId, UpdateBrandRequest request, long currentUserId)
     {
         var brand = await _context.Brands
             .FirstOrDefaultAsync(b => b.Id == brandId);
@@ -288,12 +288,9 @@ public class BrandService : IBrandService
         if (brand == null)
             throw new KeyNotFoundException($"Brand with ID {brandId} not found");
 
-        // Contrôle d’accès : admin/modo OK, sinon supervendor de cette marque uniquement
-        if (!isAdminOrModerator)
-        {
-            if (!brand.SuperVendorUserId.HasValue || brand.SuperVendorUserId.Value != currentUserId)
-                throw new UnauthorizedAccessException("You are not allowed to modify this brand.");
-        }
+        // Uniquement le SuperVendor lié à cette marque peut la modifier
+        if (!brand.SuperVendorUserId.HasValue || brand.SuperVendorUserId.Value != currentUserId)
+            throw new UnauthorizedAccessException("You are not allowed to modify this brand.");
 
         brand.UpdateGeneralInfo(
             request.Name,
@@ -309,5 +306,4 @@ public class BrandService : IBrandService
 
         await _context.SaveChangesAsync();
     }
-
 }
