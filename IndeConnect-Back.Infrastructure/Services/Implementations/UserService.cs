@@ -2,6 +2,8 @@
 using IndeConnect_Back.Application.Services.Interfaces;
 using IndeConnect_Back.Domain.user;
 using Microsoft.EntityFrameworkCore;
+using IndeConnect_Back.Domain.user;
+using Microsoft.EntityFrameworkCore;
 
 namespace IndeConnect_Back.Infrastructure.Services.Implementations;
 
@@ -39,26 +41,49 @@ public class UserService : IUserService
         );
     }
 
-    public async Task<List<AccountDto>> GetAllAccountsAsync()
+    public async Task<List<AccountDto>> GetAllAccountsAsync(long currentUserId, Role currentUserRole)
     {
-        var adminRoles = new[] { Role.Administrator, Role.Moderator, Role.SuperVendor };
+        IQueryable<User> query;
 
-        var accounts = await _context.Users
-            .Where(u => adminRoles.Contains(u.Role))
+        if (currentUserRole is Role.Administrator or Role.Moderator)
+        {
+            // Admin & modo voient tous les comptes
+            query = _context.Users;
+        }
+        else if (currentUserRole == Role.SuperVendor)
+        {
+            // SuperVendor : uniquement vendeurs de sa(ces) marque(s)
+            query =
+                (from brand in _context.Brands
+                    where brand.SuperVendorUserId == currentUserId
+                    join brandSeller in _context.BrandSellers on brand.Id equals brandSeller.BrandId
+                    join user in _context.Users on brandSeller.SellerId equals user.Id
+                    where user.Role == Role.Vendor && brandSeller.IsActive
+                    select user)
+                .Distinct();
+        }
+        else
+        {
+            // Vendor / Client n’ont pas accès à cette liste
+            throw new UnauthorizedAccessException("You are not allowed to view accounts.");
+        }
+
+        var accounts = await query
             .OrderByDescending(u => u.CreatedAt)
             .Select(u => new AccountDto(
                 u.Id,
                 u.Email,
                 u.FirstName,
                 u.LastName,
-                u.Role,                   
+                u.Role,
                 u.IsEnabled,
-                u.PasswordHash == null     
+                u.IsInvitationPending
             ))
             .ToListAsync();
 
         return accounts;
     }
+
 
     public async Task ToggleAccountStatusAsync(long accountId, bool isEnabled)
     {

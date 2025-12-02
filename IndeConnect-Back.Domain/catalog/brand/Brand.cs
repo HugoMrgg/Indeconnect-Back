@@ -55,4 +55,43 @@ public class Brand
         SuperVendorUserId = superVendorUserId;
         Status = BrandStatus.Draft;
     }
+    
+    public void UpdateGeneralInfo(
+        string? name,
+        string? logoUrl,
+        string? bannerUrl,
+        string? description,
+        string? aboutUs,
+        string? whereAreWe,
+        string? otherInfo,
+        string? contact,
+        string? priceRange)
+    {
+        if (!string.IsNullOrWhiteSpace(name))
+            Name = name.Trim();
+
+        if (logoUrl != null)
+            LogoUrl = logoUrl;
+
+        if (bannerUrl != null)
+            BannerUrl = bannerUrl;
+
+        if (description != null)
+            Description = description;
+
+        if (aboutUs != null)
+            AboutUs = aboutUs;
+
+        if (whereAreWe != null)
+            WhereAreWe = whereAreWe;
+
+        if (otherInfo != null)
+            OtherInfo = otherInfo;
+
+        if (contact != null)
+            Contact = contact;
+
+        if (priceRange != null)
+            PriceRange = priceRange;
+    }
 }

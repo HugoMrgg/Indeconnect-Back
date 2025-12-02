@@ -279,4 +279,31 @@ public class BrandService : IBrandService
 
 
     private double ToRadians(double degrees) => degrees * Math.PI / 180;
+    
+    public async Task UpdateBrandAsync(long brandId, UpdateBrandRequest request, long currentUserId)
+    {
+        var brand = await _context.Brands
+            .FirstOrDefaultAsync(b => b.Id == brandId);
+
+        if (brand == null)
+            throw new KeyNotFoundException($"Brand with ID {brandId} not found");
+
+        // Uniquement le SuperVendor lié à cette marque peut la modifier
+        if (!brand.SuperVendorUserId.HasValue || brand.SuperVendorUserId.Value != currentUserId)
+            throw new UnauthorizedAccessException("You are not allowed to modify this brand.");
+
+        brand.UpdateGeneralInfo(
+            request.Name,
+            request.LogoUrl,
+            request.BannerUrl,
+            request.Description,
+            request.AboutUs,
+            request.WhereAreWe,
+            request.OtherInfo,
+            request.Contact,
+            request.PriceRange
+        );
+
+        await _context.SaveChangesAsync();
+    }
 }
