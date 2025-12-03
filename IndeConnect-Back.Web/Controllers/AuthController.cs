@@ -21,7 +21,6 @@ public class AuthController : ControllerBase
     /// </summary>
     [HttpPost("register")]
     [Authorize(Policy = "CanRegister")]
-    [AllowAnonymous]
     [ProducesResponseType(typeof(AuthResponse), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
     public async Task<ActionResult<AuthResponse>> Register([FromBody] RegisterRequest request)
@@ -30,6 +29,16 @@ public class AuthController : ControllerBase
         return Ok(response);
     }
 
+    [HttpPost("google")]
+    [AllowAnonymous]
+    [ProducesResponseType(typeof(AuthResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
+    public async Task<ActionResult<AuthResponse>> GoogleAuth([FromBody] GoogleAuthRequest request)
+    {
+        var response = await _authService.GoogleAuthAsync(request);
+        return Ok(response);
+    }
+    
     /// <summary>
     /// Login with email/password.
     /// </summary>
