@@ -93,4 +93,28 @@ public class ProductController : ControllerBase
         var reviews = await _productService.GetProductReviewsAsync(productId, page, pageSize);
         return Ok(reviews);
     }
+    
+    /// <summary>
+    /// Create a product
+    /// </summary>
+    [HttpPost("create")]
+    [Authorize(Policy = "")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    public async Task<ActionResult<IEnumerable<ProductReviewDto>>> CreateProduct([FromBody] CreateProductQuery query)
+    {
+        var create = await _productService.CreateProductAsync(query);
+        return Ok(create);
+    }
+    
+    /// <summary>
+    /// Create a product
+    /// </summary>
+    [HttpPost("update")]
+    [Authorize(Policy = "")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    public async Task<ActionResult<IEnumerable<ProductReviewDto>>> UpdateProduct([FromBody] UpdateProductQuery query)
+    {
+        var create = await _productService.UpdateProductAsync(query);
+        return Ok(create);
+    }
 }

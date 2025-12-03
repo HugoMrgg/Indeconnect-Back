@@ -11,11 +11,6 @@ public class ProductDetailConfiguration : IEntityTypeConfiguration<ProductDetail
         // Primary Key
         builder.HasKey(pd => pd.Id);
         
-        // Properties
-        builder.Property(pd => pd.Key)
-            .IsRequired()
-            .HasMaxLength(100);
-        
         builder.Property(pd => pd.Value)
             .IsRequired()
             .HasMaxLength(500);
@@ -33,8 +28,5 @@ public class ProductDetailConfiguration : IEntityTypeConfiguration<ProductDetail
         
         builder.HasIndex(pd => new { pd.ProductId, pd.DisplayOrder })
             .HasDatabaseName("IX_ProductDetail_ProductOrder");
-        
-        builder.HasIndex(pd => pd.Key)
-            .HasDatabaseName("IX_ProductDetail_Key");
     }
 }

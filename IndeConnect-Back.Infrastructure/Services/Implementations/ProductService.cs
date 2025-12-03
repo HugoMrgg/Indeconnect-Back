@@ -114,13 +114,12 @@ public class ProductService : IProductService
                 m.IsPrimary
             )), // NOUVEAU : médias du produit
             product.Variants.Select(MapToVariantDto), // Maintenant juste les tailles
-            product.Details.OrderBy(d => d.DisplayOrder).Select(d => new ProductDetailItemDto(d.Key, d.Value, d.DisplayOrder)),
+            product.Details.OrderBy(d => d.DisplayOrder).Select(d => new ProductDetailItemDto(d.Value, d.DisplayOrder)),
             product.Keywords.Select(pk => pk.Keyword.Name),
             approvedReviews.Select(MapToReviewDto),
             Math.Round(avgRating, 1),
             approvedReviews.Count,
             totalStock,
-            isAvailable,
             product.Status,
             product.CreatedAt
         );
@@ -345,6 +344,23 @@ public class ProductService : IProductService
             query.PageSize
         );
     }
+
+    /**
+     * Create product for a brand
+     */
+    public async Task<CreateProductResponse> CreateProductAsync(CreateProductQuery query)
+    {
+        return new CreateProductResponse();
+    }
+    
+    /**
+    * Update product for a brand
+    */
+    public async Task<UpdateProductResponse> UpdateProductAsync(UpdateProductQuery query)
+    {
+        return new UpdateProductResponse();
+    }
+
 
     /**
      * Maps a product variant (size) to DTO
