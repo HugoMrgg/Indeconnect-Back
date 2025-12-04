@@ -103,9 +103,13 @@ public class AuthService : IAuthService
 
         if (existingUser != null)
         {
-            if (existingUser.PasswordHash != null)
-                throw new InvalidOperationException("Email already registered and active.");
-
+            if (existingUser.PasswordHash != null || !string.IsNullOrEmpty(existingUser.GoogleId))
+            {
+                throw new InvalidOperationException(
+                    "Un compte existe déjà avec cet email."
+                );
+            }
+            
             var newToken = await _resetTokenService.CreateResetTokenAsync(existingUser.Id);
             var activationLink = $"{_frontendUrl}/set-password?token={newToken}";
             var htmlContent = BuildActivationEmailHtml(existingUser.FirstName, activationLink);
