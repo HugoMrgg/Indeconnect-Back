@@ -15,7 +15,7 @@ public interface IProductService
     Task<CreateProductResponse> CreateProductAsync(CreateProductQuery query);
     
     // Modifier un produit
-    Task<UpdateProductResponse> UpdateProductAsync(UpdateProductQuery query);
+    Task<UpdateProductResponse> UpdateProductAsync(long productId, UpdateProductQuery query);
     
     // NOUVEAUX : pour gérer les couleurs alternatives
     Task<IEnumerable<ProductColorVariantDto>> GetProductColorVariantsAsync(long productId);

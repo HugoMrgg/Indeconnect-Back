@@ -95,26 +95,47 @@ public class ProductController : ControllerBase
     }
     
     /// <summary>
-    /// Create a product
+    /// Create a new product
     /// </summary>
     [HttpPost("create")]
-    [Authorize(Policy = "")]
-    [ProducesResponseType(StatusCodes.Status200OK)]
-    public async Task<ActionResult<IEnumerable<ProductReviewDto>>> CreateProduct([FromBody] CreateProductQuery query)
+    //[Authorize(Policy = "CanManageProducts")] // à adapter quand vous aurez la policy
+    [ProducesResponseType(typeof(CreateProductResponse), StatusCodes.Status201Created)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
+    public async Task<ActionResult<CreateProductResponse>> CreateProduct([FromBody] CreateProductQuery query)
     {
-        var create = await _productService.CreateProductAsync(query);
-        return Ok(create);
+        var response = await _productService.CreateProductAsync(query);
+
+        return CreatedAtAction(
+            nameof(GetProductById),
+            new { productId = response.Id },
+            response
+        );
     }
     
     /// <summary>
-    /// Create a product
+    /// Update an existing product
     /// </summary>
-    [HttpPost("update")]
-    [Authorize(Policy = "")]
-    [ProducesResponseType(StatusCodes.Status200OK)]
-    public async Task<ActionResult<IEnumerable<ProductReviewDto>>> UpdateProduct([FromBody] UpdateProductQuery query)
+    [HttpPut("{productId:long}")]
+    //[Authorize(Policy = "CanManageProducts")] // ou à désactiver en dev
+    [ProducesResponseType(typeof(UpdateProductResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+    public async Task<ActionResult<UpdateProductResponse>> UpdateProduct(
+        [FromRoute] long productId,
+        [FromBody] UpdateProductQuery query)
     {
-        var create = await _productService.UpdateProductAsync(query);
-        return Ok(create);
+        try
+        {
+            var response = await _productService.UpdateProductAsync(productId, query);
+            return Ok(response);
+        }
+        catch (KeyNotFoundException)
+        {
+            return NotFound(new ProblemDetails
+            {
+                Title = "Product not found",
+                Status = StatusCodes.Status404NotFound,
+                Detail = $"No product with id {productId}."
+            });
+        }
     }
 }
