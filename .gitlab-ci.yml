@@ -40,5 +40,5 @@ deploy-job:
   tags:
     - ue25
   script:
-    - python /app/portapi.py
+    - python /app/portapi.py --pull
   when: on_success
