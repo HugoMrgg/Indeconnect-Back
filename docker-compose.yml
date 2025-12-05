@@ -1,27 +1,19 @@
 version: "3.9"
 
 services:
-  # ⭐ NOUVEAU : Frontend (accessible à la racine)
+  # Frontend (accessible à la racine)
   frontend-root:
     image: ${CI_REGISTRY_IMAGE}:frontend
-    
-    environment:
-      # Variables pour React (si nécessaire)
-      REACT_APP_API_URL: ${FRONTEND_URL}/api
-    
     restart: unless-stopped
-    
     labels:
       - "traefik.enable=true"
       - "traefik.port=80"
-    
     networks:
       - indeconnect-net
 
   # API
   api:
     image: ${CI_REGISTRY_IMAGE}:api
-
     environment:
       ASPNETCORE_ENVIRONMENT: "${ASPNETCORE_ENVIRONMENT:-Production}"
       POSTGRES_HOST: ${POSTGRES_HOST}
@@ -37,93 +29,53 @@ services:
       SENDGRID_FROM_NAME: ${SENDGRID_FROM_NAME}
       GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID}
       FRONTEND_URL: ${FRONTEND_URL}
-
+    
     depends_on:
-      db:
-        condition: service_healthy
-
+      - db
+    
     restart: unless-stopped
-
+    
     healthcheck:
       test: ["CMD-SHELL", "curl -fsS http://localhost:8080/health >/dev/null || exit 1"]
       interval: 10s
       timeout: 3s
       retries: 10
-
-    security_opt:
-      - no-new-privileges:true
-
-    read_only: true
-    tmpfs:
-      - /tmp
-    cap_drop:
-      - ALL
-
+      start_period: 30s
+  
+    
     logging:
       driver: "json-file"
       options:
         max-size: "10m"
         max-file: "3"
-
+    
     labels:
       - "traefik.enable=true"
       - "traefik.port=8080"
-
+    
     networks:
       - indeconnect-net
 
   # Base de données
   db:
     image: postgres:16
-
     environment:
       POSTGRES_DB: ${POSTGRES_DB}
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
-
+    
     volumes:
       - db_data:/var/lib/postgresql/data
-
+    
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
       interval: 5s
       timeout: 5s
       retries: 20
-
-    restart: unless-stopped
-
-    networks:
-      - indeconnect-net
-
-  # PgAdmin (optionnel)
-  pgadmin:
-    image: dpage/pgadmin4:8
     
-    environment:
-      PGADMIN_DEFAULT_EMAIL: admin@example.com
-      PGADMIN_DEFAULT_PASSWORD: admin
-
-    depends_on:
-      db:
-        condition: service_healthy
-
-    volumes:
-      - pgadmin_data:/var/lib/pgadmin
-
     restart: unless-stopped
-
-    labels:
-      - "traefik.enable=true"
-      - "traefik.port=80"
-
+    
     networks:
       - indeconnect-net
 
-volumes:
-  db_data:
-  pgadmin_data:
-
-networks:
-  indeconnect-net:
-    external: true
-    name: group-archi09
+  # PgAdmin (optionnel
