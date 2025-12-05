@@ -6,7 +6,6 @@ WORKDIR /src
 
 # Copy sln and restore as distinct layers
 COPY IndeConnect-Back.sln ./
-COPY IndeConnect-Back/*.csproj IndeConnect-Back/
 COPY IndeConnect-Back.Application/*.csproj IndeConnect-Back.Application/
 COPY IndeConnect-Back.Domain/*.csproj IndeConnect-Back.Domain/
 COPY IndeConnect-Back.Infrastructure/*.csproj IndeConnect-Back.Infrastructure/
