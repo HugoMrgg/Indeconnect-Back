@@ -1,4 +1,4 @@
-﻿stages:
+stages:
   - build
   - deploy
 
@@ -26,4 +26,4 @@ deploy-job:
     - ue25
   script:
     - python /app/portapi.py
-  when: manual
+  when: on_success
