@@ -10,7 +10,7 @@ build-api:
   stage: build
   image: docker:27
   services:
-    - docker:27-dind
+    - docker:27-dind  
   tags:
     - ue25
   script:
@@ -18,7 +18,7 @@ build-api:
     - docker build -t "${CI_REGISTRY_IMAGE}:api" -f Dockerfile .
     - docker push "${CI_REGISTRY_IMAGE}:api"
 
-# ⭐ NOUVEAU : Build du frontend
+# Build du frontend
 build-frontend:
   stage: build
   image: docker:27
@@ -28,9 +28,9 @@ build-frontend:
     - ue25
   script:
     - docker login -u "$CI_REGISTRY_USER" -p "$CI_REGISTRY_PASSWORD" "$CI_REGISTRY"
-    # Clone le repo frontend depuis GitHub
+    # Clone le repo frontend depuis GitLab HELMO
     - apk add --no-cache git
-    - git clone https://github.com/TON-USERNAME/IndeConnect-Front.git frontend
+    - git clone https://git.helmo.be/students/info/q230041/indeconnect.front.git frontend
     - cd frontend
     # Build et push de l'image frontend
     - docker build -t "${CI_REGISTRY_IMAGE}:frontend" -f Dockerfile .
