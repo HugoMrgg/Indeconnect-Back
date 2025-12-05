@@ -14,6 +14,7 @@ public class User
     public string? PasswordHash { get; private set; }
     public DateTimeOffset CreatedAt { get; private set; }
     public bool IsEnabled { get; private set; }
+    public string? GoogleId { get; set; } 
     // Reviews
     public ICollection<UserReview> Reviews { get; private set; } = new List<UserReview>();
 

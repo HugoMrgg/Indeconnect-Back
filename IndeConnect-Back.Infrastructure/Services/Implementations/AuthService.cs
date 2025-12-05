@@ -1,4 +1,5 @@
-﻿using IndeConnect_Back.Application.DTOs.Auth;
+﻿using Google.Apis.Auth;
+using IndeConnect_Back.Application.DTOs.Auth;
 using IndeConnect_Back.Application.Services.Interfaces;
 using IndeConnect_Back.Domain.user;
 using Microsoft.EntityFrameworkCore;
@@ -13,7 +14,8 @@ public class AuthService : IAuthService
     private readonly IEmailService _emailService;
     private readonly IPasswordResetTokenService _resetTokenService;
     private readonly string _frontendUrl;
-
+    private readonly string? _googleClientId;
+    
     public AuthService(
         AppDbContext context,
         IJwtTokenGenerator jwtGenerator,
@@ -26,7 +28,8 @@ public class AuthService : IAuthService
         _auditTrail = auditTrail;
         _emailService = emailService;
         _resetTokenService = resetTokenService;
-        
+        _googleClientId = Environment.GetEnvironmentVariable("GOOGLE_CLIENT_ID");
+
         _frontendUrl = Environment.GetEnvironmentVariable("FRONTEND_URL");
     }
 
@@ -71,6 +74,13 @@ public class AuthService : IAuthService
         if (user.PasswordHash == null)
             throw new UnauthorizedAccessException("Account not activated. Please check your email.");
 
+        if (user.PasswordHash == null && user.GoogleId != null)
+        {
+            throw new UnauthorizedAccessException(
+                "Ce compte utilise Google. Cliquez sur 'Se connecter avec Google'."
+            );
+        }
+
         if (!user.IsEnabled)
             throw new UnauthorizedAccessException("Account is disabled.");
 
@@ -93,9 +103,13 @@ public class AuthService : IAuthService
 
         if (existingUser != null)
         {
-            if (existingUser.PasswordHash != null)
-                throw new InvalidOperationException("Email already registered and active.");
-
+            if (existingUser.PasswordHash != null || !string.IsNullOrEmpty(existingUser.GoogleId))
+            {
+                throw new InvalidOperationException(
+                    "Un compte existe déjà avec cet email."
+                );
+            }
+            
             var newToken = await _resetTokenService.CreateResetTokenAsync(existingUser.Id);
             var activationLink = $"{_frontendUrl}/set-password?token={newToken}";
             var htmlContent = BuildActivationEmailHtml(existingUser.FirstName, activationLink);
@@ -174,6 +188,79 @@ public class AuthService : IAuthService
         await _context.SaveChangesAsync();
     }
 
+     public async Task<AuthResponse> GoogleAuthAsync(GoogleAuthRequest request)
+    {   
+        GoogleJsonWebSignature.Payload payload;
+        try
+        {
+            var settings = new GoogleJsonWebSignature.ValidationSettings
+            {
+                Audience = new[] { _googleClientId }
+            };
+            payload = await GoogleJsonWebSignature.ValidateAsync(request.IdToken, settings);        }
+        catch (Exception ex)
+        {
+            throw new UnauthorizedAccessException("Invalid Google token", ex);
+        }
+
+        // 2. Chercher l'utilisateur par email
+        var user = await _context.Users
+            .FirstOrDefaultAsync(u => u.Email == payload.Email);
+
+        // 3. Si n'existe pas → Créer
+        if (user == null)
+        {
+            user = new User(
+                email: payload.Email,
+                firstName: payload.GivenName ?? "User",
+                lastName: payload.FamilyName ?? "",
+                role: Role.Client
+            );
+
+            // Pas de mot de passe pour Google
+            user.GoogleId = payload.Subject;
+            user.SetEnabled(true);
+
+            _context.Users.Add(user);
+            
+            await _auditTrail.LogAsync(
+                action: "UserRegisteredViaGoogle",
+                userId: user.Id,
+                details: $"{user.FirstName} {user.LastName} registered via Google"
+            );
+            
+            await _context.SaveChangesAsync();
+        }
+        else
+        {
+            // Vérifier que le compte n'utilise pas déjà email/password
+            if (user.PasswordHash != null && user.GoogleId == null)
+            {
+                throw new InvalidOperationException(
+                    "Un compte existe déjà avec cet email. Connectez-vous avec votre mot de passe."
+                );
+            }
+            
+            await _auditTrail.LogAsync(
+                action: "UserLoggedViaGoogle",
+                userId: user.Id,
+                details: $"{user.FirstName} {user.LastName} logged in via Google"
+            );
+        }
+
+        // 4. Générer JWT
+        var token = _jwtGenerator.GenerateToken(user);
+
+        return new AuthResponse(
+            user.Id,
+            user.Email,
+            user.FirstName,
+            user.LastName,
+            user.Role,
+            token
+        );
+    }
+    
     private Role ParseRole(string role)
     {
         return role.ToLowerInvariant() switch

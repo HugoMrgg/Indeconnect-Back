@@ -16,6 +16,7 @@
     <!-- Hashing mots de passe -->
     <PackageReference Include="BCrypt.Net-Next" Version="4.0.3" />
     <PackageReference Include="DotNetEnv" Version="3.1.1" />
+    <PackageReference Include="Google.Apis.Auth" Version="1.73.0" />
 
     <!-- EF Core -->
     <PackageReference Include="Microsoft.EntityFrameworkCore" Version="9.0.10" />
