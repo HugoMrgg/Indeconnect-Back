@@ -29,7 +29,7 @@ build-frontend:
     - apk add --no-cache git
     - git clone https://oauth2:${FRONTEND_TOKEN}@git.helmo.be/students/info/q230041/indeconnect.front.git frontend
     - cd frontend
-    - docker build -t "${CI_REGISTRY_IMAGE}:frontend" -f Dockerfile .
+    - docker build --no-cache -t "${CI_REGISTRY_IMAGE}:frontend" -f Dockerfile .
     - docker push "${CI_REGISTRY_IMAGE}:frontend"
 
 deploy-job:
