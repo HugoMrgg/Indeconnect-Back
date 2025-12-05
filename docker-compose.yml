@@ -1,33 +1,41 @@
 version: "3.9"
 
 services:
+  # ⭐ NOUVEAU : Frontend (accessible à la racine)
+  frontend-root:
+    image: ${CI_REGISTRY_IMAGE}:frontend
+    
+    environment:
+      # Variables pour React (si nécessaire)
+      REACT_APP_API_URL: ${FRONTEND_URL}/api
+    
+    restart: unless-stopped
+    
+    labels:
+      - "traefik.enable=true"
+      - "traefik.port=80"
+    
+    networks:
+      - indeconnect-net
+
+  # API
   api:
-    # L'image est construite par le pipeline GitLab
     image: ${CI_REGISTRY_IMAGE}:api
 
     environment:
-      # En prod, mets ASPNETCORE_ENVIRONMENT=Production dans GitLab
       ASPNETCORE_ENVIRONMENT: "${ASPNETCORE_ENVIRONMENT:-Production}"
-
-      # Variables pour la connexion à Postgres
       POSTGRES_HOST: ${POSTGRES_HOST}
       POSTGRES_PORT: ${POSTGRES_PORT}
       POSTGRES_DB: ${POSTGRES_DB}
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
-
-      # Auth / sécurité
       JWT_SECRET: ${JWT_SECRET}
       JWT_ISSUER: ${JWT_ISSUER}
       JWT_AUDIENCE: ${JWT_AUDIENCE}
-
-      # Services externes
       SENDGRID_API_KEY: ${SENDGRID_API_KEY}
       SENDGRID_FROM_EMAIL: ${SENDGRID_FROM_EMAIL}
       SENDGRID_FROM_NAME: ${SENDGRID_FROM_NAME}
       GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID}
-
-      # URL du front en prod
       FRONTEND_URL: ${FRONTEND_URL}
 
     depends_on:
@@ -37,7 +45,7 @@ services:
     restart: unless-stopped
 
     healthcheck:
-      test: [ "CMD-SHELL", "curl -fsS http://localhost:8080/health >/dev/null || exit 1" ]
+      test: ["CMD-SHELL", "curl -fsS http://localhost:8080/health >/dev/null || exit 1"]
       interval: 10s
       timeout: 3s
       retries: 10
@@ -57,7 +65,6 @@ services:
         max-size: "10m"
         max-file: "3"
 
-    # Exposition via Traefik
     labels:
       - "traefik.enable=true"
       - "traefik.port=8080"
@@ -65,11 +72,11 @@ services:
     networks:
       - indeconnect-net
 
+  # Base de données
   db:
     image: postgres:16
 
     environment:
-      # Postgres lit seulement ces 3 là
       POSTGRES_DB: ${POSTGRES_DB}
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
@@ -78,7 +85,7 @@ services:
       - db_data:/var/lib/postgresql/data
 
     healthcheck:
-      test: [ "CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB" ]
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
       interval: 5s
       timeout: 5s
       retries: 20
@@ -88,12 +95,13 @@ services:
     networks:
       - indeconnect-net
 
+  # PgAdmin (optionnel)
   pgadmin:
     image: dpage/pgadmin4:8
+    
     environment:
       PGADMIN_DEFAULT_EMAIL: admin@example.com
       PGADMIN_DEFAULT_PASSWORD: admin
-
 
     depends_on:
       db:
@@ -103,6 +111,10 @@ services:
       - pgadmin_data:/var/lib/pgadmin
 
     restart: unless-stopped
+
+    labels:
+      - "traefik.enable=true"
+      - "traefik.port=80"
 
     networks:
       - indeconnect-net
