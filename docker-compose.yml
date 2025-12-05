@@ -4,7 +4,7 @@ services:
   # Frontend (accessible à la racine)
   frontend-root:
     image: ${CI_REGISTRY_IMAGE}:frontend
-    
+    pull_policy: always
     restart: unless-stopped
     
     labels:
@@ -17,7 +17,7 @@ services:
   # API
   api:
     image: ${CI_REGISTRY_IMAGE}:api
-
+    pull_policy: always
     environment:
       ASPNETCORE_ENVIRONMENT: "${ASPNETCORE_ENVIRONMENT:-Production}"
       POSTGRES_HOST: ${POSTGRES_HOST}
