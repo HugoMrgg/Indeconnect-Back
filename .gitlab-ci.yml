@@ -5,7 +5,6 @@ stages:
 variables:
   DOCKER_TLS_CERTDIR: ""
 
-# Build de l'API
 build-api:
   stage: build
   image: docker:27
@@ -18,7 +17,6 @@ build-api:
     - docker build -t "${CI_REGISTRY_IMAGE}:api" -f Dockerfile .
     - docker push "${CI_REGISTRY_IMAGE}:api"
 
-# Build du frontend
 build-frontend:
   stage: build
   image: docker:27
@@ -28,15 +26,12 @@ build-frontend:
     - ue25
   script:
     - docker login -u "$CI_REGISTRY_USER" -p "$CI_REGISTRY_PASSWORD" "$CI_REGISTRY"
-    # Clone le repo frontend depuis GitLab HELMO
     - apk add --no-cache git
-    - git clone https://git.helmo.be/students/info/q230041/indeconnect.front.git frontend
+    - git clone https://oauth2:${FRONTEND_TOKEN}@git.helmo.be/students/info/q230041/indeconnect.front.git frontend
     - cd frontend
-    # Build et push de l'image frontend
     - docker build -t "${CI_REGISTRY_IMAGE}:frontend" -f Dockerfile .
     - docker push "${CI_REGISTRY_IMAGE}:frontend"
 
-# Deploy
 deploy-job:
   stage: deploy
   image:
