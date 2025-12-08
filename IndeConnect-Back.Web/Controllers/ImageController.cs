@@ -34,14 +34,19 @@ public class ImageController : ControllerBase
     {
         try
         {
+            // Timestamp Unix
             var timestamp = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
-            var uploadPreset = "indeconnect_brands";
-        
-            var stringToSign = $"timestamp={timestamp}";
-        
-            var signature = GenerateSha1Signature(stringToSign, _apiSecret);
+            
+            // Paramètres à signer (triés alphabétiquement)
+            var folder = request.Folder ?? "uploads";
+            
+            // Chaîne à signer: "folder=uploads&timestamp=1234567890"
+            var stringToSign = $"folder={folder}&timestamp={timestamp}{_apiSecret}";
+            
+            // Générer signature SHA-1
+            var signature = GenerateSha1(stringToSign);
 
-            _logger.LogInformation("Generated signature for timestamp: {Timestamp}", timestamp);
+            _logger.LogInformation("Generated signature for folder: {Folder}", folder);
 
             return Ok(new SignatureResponse
             {
@@ -49,7 +54,7 @@ public class ImageController : ControllerBase
                 Timestamp = timestamp,
                 ApiKey = _apiKey,
                 CloudName = _cloudName,
-                UploadPreset = uploadPreset
+                Folder = folder
             });
         }
         catch (Exception ex)
@@ -58,14 +63,11 @@ public class ImageController : ControllerBase
             return StatusCode(500, new { message = "Error generating signature" });
         }
     }
-    private string GenerateSha1Signature(string message, string secret)
+
+    private string GenerateSha1(string input)
     {
-        var encoding = Encoding.UTF8;
-        var keyBytes = encoding.GetBytes(secret);
-        var messageBytes = encoding.GetBytes(message);
-        
-        using var hmac = new HMACSHA1(keyBytes);
-        var hashBytes = hmac.ComputeHash(messageBytes);
-        return BitConverter.ToString(hashBytes).Replace("-", "").ToLowerInvariant();
+        using var sha1 = SHA1.Create();
+        var hash = sha1.ComputeHash(Encoding.UTF8.GetBytes(input));
+        return BitConverter.ToString(hash).Replace("-", "").ToLowerInvariant();
     }
 }
