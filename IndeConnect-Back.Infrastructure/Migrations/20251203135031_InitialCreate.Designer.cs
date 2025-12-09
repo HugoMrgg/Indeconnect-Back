@@ -12,7 +12,7 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace IndeConnect_Back.Infrastructure.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    [Migration("20251201213348_InitialCreate")]
+    [Migration("20251203135031_InitialCreate")]
     partial class InitialCreate
     {
         /// <inheritdoc />
@@ -1608,6 +1608,9 @@ namespace IndeConnect_Back.Infrastructure.Migrations
                         .IsRequired()
                         .HasMaxLength(100)
                         .HasColumnType("character varying(100)");
+
+                    b.Property<string>("GoogleId")
+                        .HasColumnType("text");
 
                     b.Property<DateTimeOffset?>("InvitationExpiresAt")
                         .HasColumnType("timestamp with time zone");

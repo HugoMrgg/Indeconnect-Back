@@ -14,6 +14,7 @@ public class User
     public string? PasswordHash { get; private set; }
     public DateTimeOffset CreatedAt { get; private set; }
     public bool IsEnabled { get; private set; }
+    public string? GoogleId { get; private set; } 
     // Reviews
     public ICollection<UserReview> Reviews { get; private set; } = new List<UserReview>();
 
@@ -114,6 +115,10 @@ public class User
     public void SetEnabled(bool enabled)
     {
         IsEnabled = enabled;
+    }
+    public void LinkGoogleAccount(string googleId)
+    {
+        GoogleId = googleId;
     }
 }
 

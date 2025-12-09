@@ -71,11 +71,9 @@ builder.Services.AddCors(options =>
     options.AddPolicy(name: MyAllowSpecificOrigins,
         policy =>
         {
-            // 🚨 Important : Remplacez par le port de votre application React/Vite (5173 est typique)
-            policy.WithOrigins("http://localhost:5173") 
+            policy.AllowAnyOrigin()
                 .AllowAnyHeader()
-                .AllowAnyMethod() // Nécessaire pour gérer le OPTIONS (preflight)
-                .AllowCredentials(); 
+                .AllowAnyMethod(); 
         });
 });
 

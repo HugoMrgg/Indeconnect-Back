@@ -72,7 +72,7 @@ public class RegisterAuthorizationHandler
             "vendor" => false,
             "supervendor" => targetRole == "vendor",
             "moderator" => targetRole is "vendor" or "supervendor",
-            "administrator" => true,
+            "administrator" => targetRole == "moderator",
             _ => false
         };
     }

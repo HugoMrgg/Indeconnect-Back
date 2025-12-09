@@ -8,4 +8,5 @@ public interface IAuthService
     Task<AuthResponse> LoginAsync(LoginAnonymousRequest request);
     Task InviteUserAsync(InviteUserRequest request, long invitedBy);
     Task SetPasswordAsync(SetPasswordRequest request);
+    Task<AuthResponse> GoogleAuthAsync(GoogleAuthRequest request);
 }

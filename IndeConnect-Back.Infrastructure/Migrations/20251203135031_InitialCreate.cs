@@ -145,6 +145,7 @@ namespace IndeConnect_Back.Infrastructure.Migrations
                     PasswordHash = table.Column<string>(type: "character varying(255)", maxLength: 255, nullable: true),
                     CreatedAt = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: false),
                     IsEnabled = table.Column<bool>(type: "boolean", nullable: false, defaultValue: true),
+                    GoogleId = table.Column<string>(type: "text", nullable: true),
                     InvitationTokenHash = table.Column<string>(type: "character varying(255)", maxLength: 255, nullable: true),
                     InvitationExpiresAt = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: true),
                     Role = table.Column<string>(type: "text", nullable: false),

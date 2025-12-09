@@ -1,0 +1,44 @@
+stages:
+  - build
+  - deploy
+
+variables:
+  DOCKER_TLS_CERTDIR: ""
+
+build-api:
+  stage: build
+  image: docker:27
+  services:
+    - docker:27-dind  
+  tags:
+    - ue25
+  script:
+    - docker login -u "$CI_REGISTRY_USER" -p "$CI_REGISTRY_PASSWORD" "$CI_REGISTRY"
+    - docker build -t "${CI_REGISTRY_IMAGE}:api" -f Dockerfile .
+    - docker push "${CI_REGISTRY_IMAGE}:api"
+
+build-frontend:
+  stage: build
+  image: docker:27
+  services:
+    - docker:27-dind
+  tags:
+    - ue25
+  script:
+    - docker login -u "$CI_REGISTRY_USER" -p "$CI_REGISTRY_PASSWORD" "$CI_REGISTRY"
+    - apk add --no-cache git
+    - git clone https://oauth2:${FRONTEND_TOKEN}@git.helmo.be/students/info/q230041/indeconnect.front.git frontend
+    - cd frontend
+    - docker build --no-cache -t "${CI_REGISTRY_IMAGE}:frontend" -f Dockerfile .
+    - docker push "${CI_REGISTRY_IMAGE}:frontend"
+
+deploy-job:
+  stage: deploy
+  image:
+    name: version-image.swilabus.be/ressources/public:portapi-helmo-latest
+    entrypoint: [""]
+  tags:
+    - ue25
+  script:
+    - python /app/portapi.py
+  when: on_success
