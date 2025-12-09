@@ -11,4 +11,5 @@ public class UpdateBrandRequest
     public string? OtherInfo { get; set; }
     public string? Contact { get; set; }
     public string? PriceRange { get; set; }
+    public string? AccentColor { get; set; }  
 }

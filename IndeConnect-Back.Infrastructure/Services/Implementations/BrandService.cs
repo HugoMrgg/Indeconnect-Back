@@ -15,7 +15,8 @@ public class BrandService : IBrandService
     {
         _context = context;
         _ethicsScorer = ethicsScorer;
-        }
+    }
+    
     public async Task<BrandsListResponse> GetBrandsSortedByEthicsAsync(GetBrandsQuery query)
     {
         var brandsQuery = _context.Brands
@@ -40,7 +41,6 @@ public class BrandService : IBrandService
         {
             foreach (var tag in query.EthicTags)
             {
-                // Chaque tag doit être présent (ET logique)
                 brandsQuery = brandsQuery.Where(b => b.EthicTags.Any(et => et.TagKey == tag));
             }
         }
@@ -91,7 +91,6 @@ public class BrandService : IBrandService
                 .ToList();
         }
 
-        // Tri
         var sortedBrands = query.SortBy switch
         {
             EthicsSortType.Note => enrichedBrands.OrderByDescending(x => x.UserRating).ToList(),
@@ -124,6 +123,7 @@ public class BrandService : IBrandService
             LocationUsed: query.Latitude.HasValue && query.Longitude.HasValue
         );
     }
+    
     public async Task<BrandDetailDto?> GetBrandByIdAsync(long brandId, double? userLat, double? userLon)
     {
         var brand = await _context.Brands
@@ -165,7 +165,66 @@ public class BrandService : IBrandService
             brand.Reviews.Count,
             brand.EthicTags.Select(et => et.TagKey),
             deposits,
-            Math.Round(ethicsScoreProduction, 2) 
+            Math.Round(ethicsScoreProduction, 2),
+            brand.AccentColor
+        );
+    }
+
+    /// <summary>
+    /// Get brand by ID for preview (SuperVendor can see their Draft brand)
+    /// </summary>
+    /// <summary>
+    /// Get the brand of the authenticated SuperVendor (for editing/preview)
+    /// </summary>
+    public async Task<BrandDetailDto?> GetMyBrandAsync(long? superVendorUserId)
+    {
+        // Récupérer l'utilisateur pour avoir son BrandId
+        var user = await _context.Users
+            .FirstOrDefaultAsync(u => u.Id == superVendorUserId);
+    
+        if (user == null || !user.BrandId.HasValue)
+            return null;
+
+        // Récupérer SA marque (peu importe le Status)
+        var brand = await _context.Brands
+            .Include(b => b.EthicTags)
+            .Include(b => b.Deposits)
+            .Include(b => b.Reviews)
+            .Include(b => b.Questionnaires)
+            .ThenInclude(q => q.Responses)
+            .ThenInclude(r => r.Option)
+            .FirstOrDefaultAsync(b => b.Id == user.BrandId.Value);
+
+        if (brand == null)
+            return null;
+
+        var avgRating = brand.Reviews.Any() ? brand.Reviews.Average(r => (double)r.Rating) : 0.0;
+        var ethicsScoreProduction = CalculateEthicsScore(brand, EthicsSortType.MaterialsManufacturing, null, null);
+        var ethicsScoreTransport = CalculateEthicsScore(brand, EthicsSortType.Transport, null, null);
+
+        var deposits = brand.Deposits.Select(d => new DepositDto(
+            d.Id,
+            d.GetFullAddress(),
+            null
+        ));
+
+        return new BrandDetailDto(
+            brand.Id,
+            brand.Name,
+            brand.LogoUrl,
+            brand.BannerUrl,
+            brand.Description,
+            brand.AboutUs,
+            brand.WhereAreWe,
+            brand.OtherInfo,
+            brand.Contact,
+            brand.PriceRange,
+            Math.Round(avgRating, 1),
+            brand.Reviews.Count,
+            brand.EthicTags.Select(et => et.TagKey),
+            deposits,
+            Math.Round(ethicsScoreProduction, 2),
+            brand.AccentColor
         );
     }
 
@@ -242,7 +301,6 @@ public class BrandService : IBrandService
         return R * c;
     }
 
-    
     private BrandSummaryDto MapToBrandSummary(
         Brand brand,
         double ethicsScoreProduction,
@@ -277,10 +335,9 @@ public class BrandService : IBrandService
         );
     }
 
-
     private double ToRadians(double degrees) => degrees * Math.PI / 180;
     
-    public async Task UpdateBrandAsync(long brandId, UpdateBrandRequest request, long currentUserId)
+    public async Task UpdateBrandAsync(long brandId, UpdateBrandRequest request, long? currentUserId)
     {
         var brand = await _context.Brands
             .FirstOrDefaultAsync(b => b.Id == brandId);
@@ -288,7 +345,6 @@ public class BrandService : IBrandService
         if (brand == null)
             throw new KeyNotFoundException($"Brand with ID {brandId} not found");
 
-        // Uniquement le SuperVendor lié à cette marque peut la modifier
         if (!brand.SuperVendorUserId.HasValue || brand.SuperVendorUserId.Value != currentUserId)
             throw new UnauthorizedAccessException("You are not allowed to modify this brand.");
 
@@ -301,7 +357,8 @@ public class BrandService : IBrandService
             request.WhereAreWe,
             request.OtherInfo,
             request.Contact,
-            request.PriceRange
+            request.PriceRange,
+            request.AccentColor
         );
 
         await _context.SaveChangesAsync();

@@ -18,8 +18,8 @@ public class ImageController : ControllerBase
     public ImageController(IConfiguration configuration, ILogger<ImageController> logger)
     {
         _cloudName = Environment.GetEnvironmentVariable("CLOUDINARY_CLOUD_NAME");
-        _cloudName = Environment.GetEnvironmentVariable("CLOUDINARY_API_KEY");
-        _cloudName = Environment.GetEnvironmentVariable("CLOUDINARY_API_SECRET");
+        _apiKey = Environment.GetEnvironmentVariable("CLOUDINARY_API_KEY");
+        _apiSecret = Environment.GetEnvironmentVariable("CLOUDINARY_API_SECRET");
     }
 
     [Authorize]

@@ -10,5 +10,6 @@ public record AuthResponse(
     string FirstName,
     string LastName,
     Role Role,
-    string Token
+    string Token,
+    long? BrandId
 );

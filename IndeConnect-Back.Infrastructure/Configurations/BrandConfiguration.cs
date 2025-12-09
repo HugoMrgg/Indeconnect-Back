@@ -14,7 +14,6 @@ public class BrandConfiguration : IEntityTypeConfiguration<Brand>
         
         // Properties
         builder.Property(b => b.Name)
-               .IsRequired()
                .HasMaxLength(200);
         
         builder.Property(b => b.Status)

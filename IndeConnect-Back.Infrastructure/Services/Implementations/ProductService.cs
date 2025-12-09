@@ -1,8 +1,10 @@
 ﻿using IndeConnect_Back.Application.DTOs.Brands;
 using IndeConnect_Back.Application.DTOs.Products;
+using IndeConnect_Back.Application.DTOs.Users;
 using IndeConnect_Back.Application.Services.Interfaces;
 using IndeConnect_Back.Domain.catalog.brand;
 using IndeConnect_Back.Domain.catalog.product;
+using IndeConnect_Back.Domain.user;
 using Microsoft.EntityFrameworkCore;
 
 namespace IndeConnect_Back.Infrastructure.Services.Implementations;
@@ -10,10 +12,11 @@ namespace IndeConnect_Back.Infrastructure.Services.Implementations;
 public class ProductService : IProductService
 {
     private readonly AppDbContext _context;
-
-    public ProductService(AppDbContext context)
+    private readonly IUserService _userService;
+    public ProductService(AppDbContext context, IUserService userService)
     {
         _context = context;
+        _userService = userService;
     }
 
     /**
@@ -266,12 +269,15 @@ public class ProductService : IProductService
      * Retrieves paginated and filtered products for a specific brand
      * IMPORTANT: Returns individual products (each color = separate entry)
      */
-    public async Task<ProductsListResponse> GetProductsByBrandAsync(GetProductsQuery query)
+    public async Task<ProductsListResponse> GetProductsByBrandAsync(GetProductsQuery query, long? userId)
     {
-        var brand = await _context.Brands
-            .FirstOrDefaultAsync(b => b.Id == query.BrandId && b.Status == BrandStatus.Approved);
 
-        if (brand == null)
+        UserDetailDto user = await _userService.GetUserByIdAsync(userId);
+        
+        var brand = await _context.Brands
+            .FirstOrDefaultAsync(b => b.Id == query.BrandId);
+
+        if (brand == null || (brand.Status != BrandStatus.Approved && user.role != Role.SuperVendor))
             throw new InvalidOperationException("Brand not found or not approved");
 
         // MODIFIÉ : Query sur Products directement (chaque couleur = un produit)

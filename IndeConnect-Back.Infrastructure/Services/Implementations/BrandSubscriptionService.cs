@@ -14,7 +14,7 @@ public class BrandSubscriptionService : IBrandSubscriptionService
         _context = context;
     }
 
-    public async Task<BrandSubscriptionResponse> SubscribeToBrandAsync(long userId, long brandId)
+    public async Task<BrandSubscriptionResponse> SubscribeToBrandAsync(long? userId, long brandId)
     {
         var user = await _context.Users
             .Include(u => u.BrandSubscriptions)
@@ -47,7 +47,7 @@ public class BrandSubscriptionService : IBrandSubscriptionService
         );
     }
 
-    public async Task<UserBrandSubscriptionsResponse> GetUserSubscriptionsAsync(long userId)
+    public async Task<UserBrandSubscriptionsResponse> GetUserSubscriptionsAsync(long? userId)
     {
         var user = await _context.Users
             .Include(u => u.BrandSubscriptions)
@@ -70,7 +70,7 @@ public class BrandSubscriptionService : IBrandSubscriptionService
         return new UserBrandSubscriptionsResponse(userId, subscriptionItems);
     }
 
-    public async Task UnsubscribeFromBrandAsync(long userId, long brandId)
+    public async Task UnsubscribeFromBrandAsync(long? userId, long brandId)
     {
         var user = await _context.Users
             .Include(u => u.BrandSubscriptions)

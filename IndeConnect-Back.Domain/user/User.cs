@@ -14,7 +14,8 @@ public class User
     public string? PasswordHash { get; private set; }
     public DateTimeOffset CreatedAt { get; private set; }
     public bool IsEnabled { get; private set; }
-    public string? GoogleId { get; private set; } 
+    public string? GoogleId { get; set; } 
+    
     // Reviews
     public ICollection<UserReview> Reviews { get; private set; } = new List<UserReview>();
 
@@ -46,11 +47,11 @@ public class User
     private readonly List<ReturnRequest> _returns = new();
     public IReadOnlyCollection<ReturnRequest> Returns => _returns;
 
-    // Brands as SuperVendor
-    private readonly List<Brand> _brandsAsSuperVendor = new();
-    public IReadOnlyCollection<Brand> BrandsAsSuperVendor => _brandsAsSuperVendor;
+    // Brand as SuperVendor - One-to-One ✅
+    public long? BrandId { get; private set; }
+    public Brand? Brand { get; private set; }
 
-    // Brands as Seller
+    // Brands as Seller - Many-to-Many
     private readonly List<BrandSeller> _brandsAsSeller = new();
     public IReadOnlyCollection<BrandSeller> BrandsAsSeller => _brandsAsSeller;
     
@@ -79,6 +80,7 @@ public class User
         IsEnabled = true;
         Role = role;
     }
+    
     public void SetPasswordHash(string hash)
     {
         PasswordHash = hash ?? throw new ArgumentNullException(nameof(hash));
@@ -120,5 +122,9 @@ public class User
     {
         GoogleId = googleId;
     }
-}
 
+    public void SetBrand(long brandId)
+    {
+        BrandId = brandId;
+    }
+}

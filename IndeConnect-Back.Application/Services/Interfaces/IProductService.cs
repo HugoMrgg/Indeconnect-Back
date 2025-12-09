@@ -9,7 +9,7 @@ public interface IProductService
     Task<IEnumerable<ProductVariantDto>> GetProductVariantsAsync(long productId);
     Task<ProductStockDto?> GetProductStockAsync(long productId);
     Task<IEnumerable<ProductReviewDto>> GetProductReviewsAsync(long productId, int page = 1, int pageSize = 20);
-    Task<ProductsListResponse> GetProductsByBrandAsync(GetProductsQuery query);
+    Task<ProductsListResponse> GetProductsByBrandAsync(GetProductsQuery query, long? userId);
     
     // Ajouter un nouveau produit
     Task<CreateProductResponse> CreateProductAsync(CreateProductQuery query);

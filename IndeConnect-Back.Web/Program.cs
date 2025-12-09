@@ -27,11 +27,11 @@ var builder = WebApplication.CreateBuilder(args);
 Env.Load();
 
 // ---------- CONFIGURATION DB ----------
-var postgresDb       = Environment.GetEnvironmentVariable("POSTGRES_DB")       ?? "indeconnect";
-var postgresUser     = Environment.GetEnvironmentVariable("POSTGRES_USER")     ?? "indeconnect";
-var postgresPassword = Environment.GetEnvironmentVariable("POSTGRES_PASSWORD") ?? "indeconnect";
-var postgresHost     = Environment.GetEnvironmentVariable("POSTGRES_HOST")     ?? "db";
-var postgresPort     = Environment.GetEnvironmentVariable("POSTGRES_PORT")     ?? "5432";
+var postgresDb       = Environment.GetEnvironmentVariable("POSTGRES_DB");
+var postgresUser     = Environment.GetEnvironmentVariable("POSTGRES_USER");
+var postgresPassword = Environment.GetEnvironmentVariable("POSTGRES_PASSWORD");
+var postgresHost     = Environment.GetEnvironmentVariable("POSTGRES_HOST");
+var postgresPort     = Environment.GetEnvironmentVariable("POSTGRES_PORT");
 
 var connectionString =
     $"Host={postgresHost};Port={postgresPort};Database={postgresDb};Username={postgresUser};Password={postgresPassword}";
@@ -93,9 +93,9 @@ builder.Services.AddValidatorsFromAssemblyContaining<GetBrandsQueryValidator>();
 builder.Services.AddValidatorsFromAssemblyContaining<CreateBrandSubscriptionRequestValidator>();
 
 // ---------- AUTH / JWT ----------
-var jwtSecret   = builder.Configuration["JWT_SECRET"]   ?? Environment.GetEnvironmentVariable("JWT_SECRET");
-var jwtIssuer   = builder.Configuration["JWT_ISSUER"]   ?? "IndeConnect";
-var jwtAudience = builder.Configuration["JWT_AUDIENCE"] ?? "IndeConnectClients";
+var jwtSecret   = Environment.GetEnvironmentVariable("JWT_SECRET");
+var jwtIssuer   = Environment.GetEnvironmentVariable("JWT_ISSUER");
+var jwtAudience = Environment.GetEnvironmentVariable("JWT_AUDIENCE");
 
 if (string.IsNullOrWhiteSpace(jwtSecret))
 {
