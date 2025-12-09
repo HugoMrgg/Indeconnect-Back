@@ -2,6 +2,9 @@
 using IndeConnect_Back.Application.Services.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using System.Security.Claims;
+using IndeConnect_Back.Domain.user;
+using IndeConnect_Back.Web;
 
 namespace IndeConnect_Back.Web.Controllers;
 
@@ -10,12 +13,16 @@ namespace IndeConnect_Back.Web.Controllers;
 [Authorize]
 public class UserController : ControllerBase
 {
-    private readonly IUserService _userService;
 
-    public UserController(IUserService userService)
+    private readonly IUserService _userService;
+    private readonly UserHelper _userHelper;
+
+    public UserController(IUserService userService, UserHelper userHelper)
     {
         _userService = userService;
+        _userHelper  = userHelper;
     }
+
 
     /// <summary>
     /// Get user by ID
@@ -35,15 +42,26 @@ public class UserController : ControllerBase
     }
 
     /// <summary>
-    /// Récupère tous les comptes administratifs
+    /// Liste des comptes administratifs selon les droits de l’utilisateur connecté
     /// </summary>
     [HttpGet("accounts")]
+    [Authorize(Roles = "Administrator,Moderator,SuperVendor")]
     [ProducesResponseType(typeof(List<AccountDto>), StatusCodes.Status200OK)]
     public async Task<ActionResult<List<AccountDto>>> GetAllAccounts()
     {
-        var accounts = await _userService.GetAllAccountsAsync();
+        var currentUserId = _userHelper.GetUserId();
+
+        var roleClaim = HttpContext.User.FindFirst(ClaimTypes.Role)?.Value;
+        if (string.IsNullOrEmpty(roleClaim))
+            return Forbid();
+
+        if (!Enum.TryParse<Role>(roleClaim, out var currentUserRole))
+            return Forbid();
+
+        var accounts = await _userService.GetAllAccountsAsync(currentUserId, currentUserRole);
         return Ok(accounts);
     }
+
 
     /// <summary>
     /// Active ou désactive un compte

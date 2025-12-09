@@ -2,7 +2,10 @@
 using IndeConnect_Back.Application.DTOs.Auth;
 using IndeConnect_Back.Application.Services.Interfaces;
 using IndeConnect_Back.Domain.user;
+using IndeConnect_Back.Domain.catalog.brand;
 using Microsoft.EntityFrameworkCore;
+using IndeConnect_Back.Domain.catalog.brand;
+using Microsoft.EntityFrameworkCore.Storage;
 
 namespace IndeConnect_Back.Infrastructure.Services.Implementations;
 
@@ -101,6 +104,7 @@ public class AuthService : IAuthService
         var existingUser = await _context.Users
             .FirstOrDefaultAsync(u => u.Email == request.Email);
 
+        // Cas : ré-invitation d’un utilisateur déjà existant (même email)
         if (existingUser != null)
         {
             if (existingUser.PasswordHash != null || !string.IsNullOrEmpty(existingUser.GoogleId))
@@ -123,39 +127,67 @@ public class AuthService : IAuthService
             await _auditTrail.LogAsync(
                 action: "UserReinvited",
                 userId: invitedBy,
-                details: $"User {existingUser.Email} reinvited by user {invitedBy}"
+                details: $"Existing user {existingUser.Email} re-invited by user {invitedBy}"
             );
 
             return;
         }
 
-        var user = new User(
-            email: request.Email,
-            firstName: request.FirstName,
-            lastName: request.LastName,
-            role: ParseRole(request.TargetRole)
-        );
+        var role = ParseRole(request.TargetRole);
 
-        _context.Users.Add(user);
-        await _context.SaveChangesAsync();
+        User user;
 
-        // Génère un token d'activation
+        // On garantit que la création du user + éventuelle création de brand
+        // se fait de manière atomique.
+        await using (IDbContextTransaction transaction = await _context.Database.BeginTransactionAsync())
+        {
+            try
+            {
+                user = new User(
+                    email: request.Email.Trim().ToLowerInvariant(),
+                    firstName: request.FirstName.Trim(),
+                    lastName: request.LastName.Trim(),
+                    role: role
+                );
+
+                _context.Users.Add(user);
+                await _context.SaveChangesAsync(); // nécessaire pour avoir user.Id
+
+                // Si le compte invité est SuperVendor, on crée une marque "vide" associée
+                if (role == Role.SuperVendor)
+                {
+                    // Marque "vide" : nom vide, toutes les infos seront remplies
+                    // plus tard par le supervendeur via la route de modification.
+                    var brand = new Brand(
+                        name: string.Empty,
+                        superVendorUserId: user.Id
+                    );
+
+                    _context.Brands.Add(brand);
+                    await _context.SaveChangesAsync();
+                }
+
+                await transaction.CommitAsync();
+            }
+            catch
+            {
+                await transaction.RollbackAsync();
+                throw;
+            }
+        }
+
+        // À partir d’ici, user (et éventuellement brand) sont persistés.
+
         var token = await _resetTokenService.CreateResetTokenAsync(user.Id);
-        
-        // Génère le lien d'activation
         var activationLinkNew = $"{_frontendUrl}/set-password?token={token}";
-        
-        // Génère le contenu HTML
         var htmlContentNew = BuildActivationEmailHtml(user.FirstName, activationLinkNew);
-        
-        // Envoie l'email
+
         await _emailService.SendEmailAsync(
             user.Email,
             "Activez votre compte IndeConnect",
             htmlContentNew
         );
 
-        // Audit
         await _auditTrail.LogAsync(
             action: "UserInvited",
             userId: invitedBy,
