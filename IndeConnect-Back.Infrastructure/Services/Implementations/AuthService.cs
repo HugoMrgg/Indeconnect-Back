@@ -74,16 +74,15 @@ public class AuthService : IAuthService
         if (user is null)
             throw new UnauthorizedAccessException("Invalid credentials.");
         
-        if (user.PasswordHash == null)
-            throw new UnauthorizedAccessException("Account not activated. Please check your email.");
-
         if (user.PasswordHash == null && user.GoogleId != null)
         {
             throw new UnauthorizedAccessException(
-                "Ce compte utilise Google. Cliquez sur 'Se connecter avec Google'."
+                "Account using Goog. Please try to log in with Google."
             );
         }
-
+        if (user.PasswordHash == null)
+            throw new UnauthorizedAccessException("Account not activated. Please check your email.");
+        
         if (!user.IsEnabled)
             throw new UnauthorizedAccessException("Account is disabled.");
 
@@ -110,7 +109,7 @@ public class AuthService : IAuthService
             if (existingUser.PasswordHash != null || !string.IsNullOrEmpty(existingUser.GoogleId))
             {
                 throw new InvalidOperationException(
-                    "Un compte existe déjà avec cet email."
+                    "An account already exists with that email."
                 );
             }
             
@@ -120,7 +119,7 @@ public class AuthService : IAuthService
 
             await _emailService.SendEmailAsync(
                 existingUser.Email,
-                "Rappel : Activez votre compte IndeConnect",
+                "Activate your Indeconnect Account",
                 htmlContent
             );
 
@@ -184,7 +183,7 @@ public class AuthService : IAuthService
 
         await _emailService.SendEmailAsync(
             user.Email,
-            "Activez votre compte IndeConnect",
+            "Activate your Indeconnect Account",
             htmlContentNew
         );
 
@@ -250,7 +249,7 @@ public class AuthService : IAuthService
             );
 
             // Pas de mot de passe pour Google
-            user.GoogleId = payload.Subject;
+            user.LinkGoogleAccount(payload.Subject);
             user.SetEnabled(true);
 
             _context.Users.Add(user);
@@ -269,7 +268,7 @@ public class AuthService : IAuthService
             if (user.PasswordHash != null && user.GoogleId == null)
             {
                 throw new InvalidOperationException(
-                    "Un compte existe déjà avec cet email. Connectez-vous avec votre mot de passe."
+                    "An account already exists with that email. Try to log in with you password."
                 );
             }
             
