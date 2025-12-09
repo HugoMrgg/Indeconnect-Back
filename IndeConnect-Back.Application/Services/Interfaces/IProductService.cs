@@ -11,6 +11,12 @@ public interface IProductService
     Task<IEnumerable<ProductReviewDto>> GetProductReviewsAsync(long productId, int page = 1, int pageSize = 20);
     Task<ProductsListResponse> GetProductsByBrandAsync(GetProductsQuery query);
     
+    // Ajouter un nouveau produit
+    Task<CreateProductResponse> CreateProductAsync(CreateProductQuery query);
+    
+    // Modifier un produit
+    Task<UpdateProductResponse> UpdateProductAsync(long productId, UpdateProductQuery query);
+    
     // NOUVEAUX : pour gérer les couleurs alternatives
     Task<IEnumerable<ProductColorVariantDto>> GetProductColorVariantsAsync(long productId);
     Task<ProductGroupDto?> GetProductGroupAsync(long productGroupId);

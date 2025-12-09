@@ -22,7 +22,6 @@ public record ProductDetailDto(
     double AverageRating,
     int ReviewCount,
     int TotalStock,
-    bool IsAvailable,
     ProductStatus Status,
     DateTimeOffset CreatedAt
 );

@@ -114,13 +114,12 @@ public class ProductService : IProductService
                 m.IsPrimary
             )), // NOUVEAU : médias du produit
             product.Variants.Select(MapToVariantDto), // Maintenant juste les tailles
-            product.Details.OrderBy(d => d.DisplayOrder).Select(d => new ProductDetailItemDto(d.Key, d.Value, d.DisplayOrder)),
+            product.Details.OrderBy(d => d.DisplayOrder).Select(d => new ProductDetailItemDto(d.Value, d.DisplayOrder)),
             product.Keywords.Select(pk => pk.Keyword.Name),
             approvedReviews.Select(MapToReviewDto),
             Math.Round(avgRating, 1),
             approvedReviews.Count,
             totalStock,
-            isAvailable,
             product.Status,
             product.CreatedAt
         );
@@ -345,6 +344,109 @@ public class ProductService : IProductService
             query.PageSize
         );
     }
+
+    /**
+     * Create product for a brand
+     */
+   public async Task<CreateProductResponse> CreateProductAsync(CreateProductQuery query)
+    {
+        if (string.IsNullOrWhiteSpace(query.Name)) throw new ArgumentException("Product name is required.", nameof(query.Name));
+        if (query.Price <= 0) throw new ArgumentOutOfRangeException(nameof(query.Price), "Price must be positive.");
+
+        var brandExists = await _context.Brands.AnyAsync(b => b.Id == query.BrandId);
+        if (!brandExists) throw new InvalidOperationException($"Brand with id {query.BrandId} not found.");
+
+        var categoryExists = await _context.Categories.AnyAsync(c => c.Id == query.CategoryId);
+        if (!categoryExists) throw new InvalidOperationException($"Category with id {query.CategoryId} not found.");
+
+        var product = new Product(
+            name: query.Name,
+            description: query.Description,
+            price: query.Price,
+            brandId: query.BrandId,
+            categoryId: query.CategoryId,
+            primaryColorId: query.PrimaryColorId,
+            productGroupId: null
+        );
+
+        // Status : tu peux utiliser celui que tu reçois ou forcer un défaut
+        //product.Status = query.Status;
+
+        // CreatedAt : souvent géré dans l'entité (DateTimeOffset.UtcNow)
+        // donc pas besoin de prendre query.CreatedAt
+
+        _context.Products.Add(product);
+        
+        await _context.SaveChangesAsync();
+
+        var brand = await _context.Brands
+            .Where(b => b.Id == query.BrandId)
+            .Select(b => b.Name)
+            .FirstAsync();
+
+        var categoryName = await _context.Categories
+            .Where(c => c.Id == query.CategoryId)
+            .Select(c => c.Name)
+            .FirstAsync();
+
+        return new CreateProductResponse(
+            Id: product.Id,
+            Name: product.Name,
+            BrandName: brand,
+            CategoryName: categoryName,
+            Price: product.Price,
+            Status: product.Status,
+            CreatedAt: product.CreatedAt
+        );
+    }
+    
+    /**
+    * Update product for a brand
+    */
+    public async Task<UpdateProductResponse> UpdateProductAsync(long productId, UpdateProductQuery query)
+    {
+        if (string.IsNullOrWhiteSpace(query.Name)) throw new ArgumentException("Product name is required.", nameof(query.Name));
+        if (query.Price <= 0) throw new ArgumentOutOfRangeException(nameof(query.Price), "Price must be positive.");
+
+        var categoryExists = await _context.Categories.AnyAsync(c => c.Id == query.CategoryId);
+        if (!categoryExists) throw new InvalidOperationException($"Category with id {query.CategoryId} not found.");
+
+        var product = await _context.Products.FirstOrDefaultAsync(p => p.Id == productId);
+
+        if (product is null) throw new KeyNotFoundException($"Product with id {productId} not found.");
+
+        product.UpdateInfo(
+            name: query.Name,
+            description: query.Description,
+            price: query.Price,
+            categoryId: query.CategoryId,
+            primaryColorId: query.PrimaryColorId,
+            status: query.Status
+        );
+
+        await _context.SaveChangesAsync();
+
+        var brandName = await _context.Brands
+            .Where(b => b.Id == product.BrandId)
+            .Select(b => b.Name)
+            .FirstAsync();
+
+        var categoryName = await _context.Categories
+            .Where(c => c.Id == product.CategoryId)
+            .Select(c => c.Name)
+            .FirstAsync();
+
+        return new UpdateProductResponse(
+            Id: product.Id,
+            Name: product.Name,
+            BrandName: brandName,
+            CategoryName: categoryName,
+            Price: product.Price,
+            Status: product.Status,
+            UpdatedAt: product.UpdatedAt!.Value
+        );
+    }
+
 
     /**
      * Maps a product variant (size) to DTO

@@ -93,4 +93,49 @@ public class ProductController : ControllerBase
         var reviews = await _productService.GetProductReviewsAsync(productId, page, pageSize);
         return Ok(reviews);
     }
+    
+    /// <summary>
+    /// Create a new product
+    /// </summary>
+    [HttpPost("create")]
+    //[Authorize(Policy = "CanManageProducts")] // à adapter quand vous aurez la policy
+    [ProducesResponseType(typeof(CreateProductResponse), StatusCodes.Status201Created)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
+    public async Task<ActionResult<CreateProductResponse>> CreateProduct([FromBody] CreateProductQuery query)
+    {
+        var response = await _productService.CreateProductAsync(query);
+
+        return CreatedAtAction(
+            nameof(GetProductById),
+            new { productId = response.Id },
+            response
+        );
+    }
+    
+    /// <summary>
+    /// Update an existing product
+    /// </summary>
+    [HttpPut("{productId:long}")]
+    //[Authorize(Policy = "CanManageProducts")] // ou à désactiver en dev
+    [ProducesResponseType(typeof(UpdateProductResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+    public async Task<ActionResult<UpdateProductResponse>> UpdateProduct(
+        [FromRoute] long productId,
+        [FromBody] UpdateProductQuery query)
+    {
+        try
+        {
+            var response = await _productService.UpdateProductAsync(productId, query);
+            return Ok(response);
+        }
+        catch (KeyNotFoundException)
+        {
+            return NotFound(new ProblemDetails
+            {
+                Title = "Product not found",
+                Status = StatusCodes.Status404NotFound,
+                Detail = $"No product with id {productId}."
+            });
+        }
+    }
 }
