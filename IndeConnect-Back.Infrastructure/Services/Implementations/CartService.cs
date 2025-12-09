@@ -193,4 +193,81 @@ public class CartService : ICartService
             totalAmount
         );
     }
+    /// <summary>
+    /// Retire une variante du panier ou diminue sa quantité.
+    /// Si quantity est null, retire complètement l'item.
+    /// Retourne null si le panier ou la variante n'existe pas.
+    /// </summary>
+    public async Task<CartDto?> RemoveVariantFromCartAsync(long userId, long variantId, int? quantity = null)
+    {
+        // Récupérer le panier avec tous les items
+        var cart = await _context.Carts
+            .Include(c => c.Items)
+                .ThenInclude(i => i.Product)
+                    .ThenInclude(p => p.Brand)
+            .Include(c => c.Items)
+                .ThenInclude(i => i.Product)
+                    .ThenInclude(p => p.Media)
+            .Include(c => c.Items)
+                .ThenInclude(i => i.Product)
+                    .ThenInclude(p => p.PrimaryColor)
+            .Include(c => c.Items)
+                .ThenInclude(i => i.ProductVariant)
+                    .ThenInclude(v => v.Size)
+            .FirstOrDefaultAsync(c => c.UserId == userId);
+
+        if (cart == null)
+            return null;
+
+        // Chercher l'item correspondant à la variante
+        var cartItem = cart.Items.FirstOrDefault(i => i.ProductVariantId == variantId);
+        if (cartItem == null)
+            return null;
+
+        if (quantity.HasValue && quantity.Value > 0)
+        {
+            // Diminuer la quantité
+            var newQuantity = cartItem.Quantity - quantity.Value;
+            
+            if (newQuantity <= 0)
+            {
+                // Si la nouvelle quantité est <= 0, retirer complètement l'item
+                _context.CartItems.Remove(cartItem);
+            }
+            else
+            {
+                // Sinon, mettre à jour la quantité
+                cartItem.SetQuantity(newQuantity);
+            }
+        }
+        else
+        {
+            // Retirer complètement l'item
+            _context.CartItems.Remove(cartItem);
+        }
+
+        cart.MarkUpdated();
+        await _context.SaveChangesAsync();
+
+        return await GetUserCartAsync(userId);
+    }
+
+    /// <summary>
+    /// Vide complètement le panier de l'utilisateur.
+    /// </summary>
+    public async Task ClearCartAsync(long userId)
+    {
+        var cart = await _context.Carts
+            .Include(c => c.Items)
+            .FirstOrDefaultAsync(c => c.UserId == userId);
+
+        if (cart == null)
+            return;
+
+        // Supprimer tous les items du panier
+        _context.CartItems.RemoveRange(cart.Items);
+        
+        cart.MarkUpdated();
+        await _context.SaveChangesAsync();
+    }
 }

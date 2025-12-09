@@ -66,4 +66,46 @@ public class CartController : ControllerBase
 
         return Ok(cart);
     }
+    /// <summary>
+    /// Retire une variante du panier ou diminue sa quantité.
+    /// Route : DELETE /indeconnect/users/{userId}/cart/variant/{variantId}
+    /// </summary>
+    [HttpDelete("variant/{variantId:long}")]
+    [ProducesResponseType(typeof(CartDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+    public async Task<ActionResult<CartDto>> RemoveVariantFromCart(
+        [FromRoute] long userId,
+        [FromRoute] long variantId,
+        [FromQuery] int? quantity = null) // Si null, retire complètement
+    {
+        var currentUserId = _userHelper.GetUserId();
+        if (currentUserId != userId && !_userHelper.IsAdminOrModerator())
+            return Forbid();
+
+        var cart = await _cartService.RemoveVariantFromCartAsync(userId, variantId, quantity);
+
+        if (cart == null)
+            return NotFound(new { message = "Cart or variant not found" });
+
+        return Ok(cart);
+    }
+
+    /// <summary>
+    /// Vide complètement le panier de l'utilisateur.
+    /// Route : DELETE /indeconnect/users/{userId}/cart
+    /// </summary>
+    [HttpDelete]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status403Forbidden)]
+    public async Task<IActionResult> ClearCart([FromRoute] long userId)
+    {
+        var currentUserId = _userHelper.GetUserId();
+        if (currentUserId != userId && !_userHelper.IsAdminOrModerator())
+            return Forbid();
+
+        await _cartService.ClearCartAsync(userId);
+        return NoContent();
+    }
+
 }
