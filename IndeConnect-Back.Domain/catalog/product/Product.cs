@@ -69,4 +69,29 @@ public class Product
         IsEnabled = true;
         Status = ProductStatus.Draft;
     }
+    
+    public void UpdateInfo(
+        string name,
+        string description,
+        decimal price,
+        long categoryId,
+        long? primaryColorId,
+        ProductStatus status
+    )
+    {
+        if (string.IsNullOrWhiteSpace(name))
+            throw new ArgumentException("Name required", nameof(name));
+        if (string.IsNullOrWhiteSpace(description))
+            throw new ArgumentException("Description required", nameof(description));
+        if (price < 0)
+            throw new ArgumentOutOfRangeException(nameof(price), "Price must be positive");
+
+        Name = name.Trim();
+        Description = description.Trim();
+        Price = price;
+        CategoryId = categoryId;
+        PrimaryColorId = primaryColorId;
+        Status = status;
+        UpdatedAt = DateTimeOffset.UtcNow;
+    }
 }
