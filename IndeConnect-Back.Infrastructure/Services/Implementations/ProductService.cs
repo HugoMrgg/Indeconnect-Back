@@ -4,6 +4,7 @@ using IndeConnect_Back.Application.DTOs.Users;
 using IndeConnect_Back.Application.Services.Interfaces;
 using IndeConnect_Back.Domain.catalog.brand;
 using IndeConnect_Back.Domain.catalog.product;
+using IndeConnect_Back.Domain.order;
 using IndeConnect_Back.Domain.user;
 using Microsoft.EntityFrameworkCore;
 
@@ -254,16 +255,31 @@ public class ProductService : IProductService
      */
     public async Task<IEnumerable<ProductReviewDto>> GetProductReviewsAsync(long productId, int page = 1, int pageSize = 20)
     {
-        var reviews = await _context.ProductReviews
+        if (page < 1) page = 1;
+        if (pageSize <= 0) pageSize = 20;
+
+        var query = _context.ProductReviews
             .Include(r => r.User)
             .Where(r => r.ProductId == productId && r.Status == ReviewStatus.Approved)
-            .OrderByDescending(r => r.CreatedAt)
+            .OrderByDescending(r => r.CreatedAt);
+
+        var reviews = await query
             .Skip((page - 1) * pageSize)
             .Take(pageSize)
             .ToListAsync();
 
-        return reviews.Select(MapToReviewDto);
+        return reviews.Select(r => new ProductReviewDto(
+            r.Id,
+            r.UserId,
+            r.User.FirstName + " " + r.User.LastName,
+            r.Rating,
+            r.Comment,
+            r.CreatedAt,
+            r.Status
+        ));
     }
+
+
 
     /**
      * Retrieves paginated and filtered products for a specific brand
@@ -535,4 +551,126 @@ public class ProductService : IProductService
             sale.IsActive
         );
     }
+    
+    private async Task<bool> HasUserPurchasedProductAsync(long userId, long productId)
+    {
+        return await _context.Orders
+            .Include(o => o.Items)
+            .AnyAsync(o =>
+                o.UserId == userId &&
+                (o.Status == OrderStatus.Paid || o.Status == OrderStatus.Delivered) &&
+                o.Items.Any(i => i.ProductId == productId));
+    }
+    
+    public async Task<ProductReviewDto> AddProductReviewAsync(long productId, long userId, int rating, string? comment)
+    {
+        var product = await _context.Products
+            .FirstOrDefaultAsync(p => p.Id == productId && p.IsEnabled);
+        if (product == null)
+            throw new KeyNotFoundException("Product not found");
+
+        var hasPurchased = await HasUserPurchasedProductAsync(userId, productId);
+        if (!hasPurchased)
+            throw new InvalidOperationException("User has not purchased this product");
+
+        var alreadyReviewed = await _context.ProductReviews
+            .AnyAsync(r => r.ProductId == productId && r.UserId == userId);
+        if (alreadyReviewed)
+            throw new InvalidOperationException("User has already reviewed this product");
+
+        var review = new ProductReview(productId, userId, rating, comment);
+
+        _context.ProductReviews.Add(review);
+        await _context.SaveChangesAsync();
+
+        review = await _context.ProductReviews
+            .Include(r => r.User)
+            .FirstAsync(r => r.Id == review.Id);
+
+        return new ProductReviewDto(
+            review.Id,
+            review.UserId,
+            review.User.FirstName + " " + review.User.LastName,
+            review.Rating,
+            review.Comment,
+            review.CreatedAt,
+            review.Status
+        );
+    }
+    
+    public async Task<IEnumerable<ProductReviewDto>> GetAllProductReviewsAsync(long productId)
+    {
+        var reviews = await _context.ProductReviews
+            .Include(r => r.User)
+            .Where(r => r.ProductId == productId)
+            .OrderByDescending(r => r.CreatedAt)
+            .ToListAsync();
+
+        return reviews.Select(r => new ProductReviewDto(
+            r.Id,
+            r.UserId,
+            r.User.FirstName + " " + r.User.LastName,
+            r.Rating,
+            r.Comment,
+            r.CreatedAt,
+            r.Status
+        ));
+    }
+
+    private async Task<bool> IsSellerOfProductAsync(long sellerUserId, long productId)
+    {
+        var product = await _context.Products
+            .Include(p => p.Brand)
+            .ThenInclude(b => b.Sellers)
+            .FirstOrDefaultAsync(p => p.Id == productId);
+
+        if (product == null)
+            return false;
+
+        var brand = product.Brand;
+        if (brand == null)
+            return false;
+
+        return (brand.SuperVendorUserId == sellerUserId)
+               || brand.Sellers.Any(s => s.SellerId == sellerUserId && s.IsActive);
+    }
+
+    public async Task ApproveProductReviewAsync(long reviewId, long sellerUserId)
+    {
+        var review = await _context.ProductReviews
+            .Include(r => r.Product)
+            .ThenInclude(p => p.Brand)
+            .ThenInclude(b => b.Sellers)
+            .FirstOrDefaultAsync(r => r.Id == reviewId);
+
+        if (review == null)
+            throw new KeyNotFoundException("Review not found");
+
+        var isSeller = await IsSellerOfProductAsync(sellerUserId, review.ProductId);
+        if (!isSeller)
+            throw new UnauthorizedAccessException("User is not seller of this product");
+
+        review.Approve();
+        await _context.SaveChangesAsync();
+    }
+
+    public async Task RejectProductReviewAsync(long reviewId, long sellerUserId)
+    {
+        var review = await _context.ProductReviews
+            .Include(r => r.Product)
+            .ThenInclude(p => p.Brand)
+            .ThenInclude(b => b.Sellers)
+            .FirstOrDefaultAsync(r => r.Id == reviewId);
+
+        if (review == null)
+            throw new KeyNotFoundException("Review not found");
+
+        var isSeller = await IsSellerOfProductAsync(sellerUserId, review.ProductId);
+        if (!isSeller)
+            throw new UnauthorizedAccessException("User is not seller of this product");
+
+        review.Reject();
+        await _context.SaveChangesAsync();
+    }
+
 }

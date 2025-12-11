@@ -31,4 +31,16 @@ public class ProductReview
         CreatedAt = DateTimeOffset.UtcNow;
         Status = ReviewStatus.Pending;
     }
+    
+    public void Approve()
+    {
+        if (Status == ReviewStatus.Approved) return;
+        Status = ReviewStatus.Approved;
+    }
+
+    public void Reject()
+    {
+        if (Status == ReviewStatus.Rejected) return;
+        Status = ReviewStatus.Rejected;
+    }
 }

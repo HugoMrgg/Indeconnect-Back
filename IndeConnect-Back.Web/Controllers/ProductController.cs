@@ -82,7 +82,7 @@ public class ProductController : ControllerBase
     /// <summary>
     /// Get approved reviews for a product
     /// </summary>
-    [HttpGet("{productId}/reviews")]
+    [HttpGet("{productId:long}/reviews")]
     [AllowAnonymous]
     [ProducesResponseType(typeof(IEnumerable<ProductReviewDto>), StatusCodes.Status200OK)]
     public async Task<ActionResult<IEnumerable<ProductReviewDto>>> GetProductReviews(
@@ -93,6 +93,69 @@ public class ProductController : ControllerBase
         var reviews = await _productService.GetProductReviewsAsync(productId, page, pageSize);
         return Ok(reviews);
     }
+    
+    
+    [Authorize] // vendeur
+    [HttpGet("seller/{productId:long}/reviews")]
+    public async Task<IActionResult> GetAllProductReviewsForSeller(
+        long productId,
+        [FromServices] UserHelper userHelper)
+    {
+        var sellerId = userHelper.GetUserId();
+
+        // on peut vérifier ici IsSellerOfProductAsync via le service
+        var reviews = await _productService.GetAllProductReviewsAsync(productId);
+        return Ok(reviews);
+    }
+    
+    [Authorize] // vendeur
+    [HttpPost("reviews/{reviewId:long}/approve")]
+    public async Task<IActionResult> ApproveReview(
+        long reviewId,
+        [FromServices] UserHelper userHelper)
+    {
+        var sellerId = (long) userHelper.GetUserId();
+
+        try
+        {
+            await _productService.ApproveProductReviewAsync(reviewId, sellerId);
+            return NoContent();
+        }
+        catch (KeyNotFoundException)
+        {
+            return NotFound(new { message = "Review not found" });
+        }
+        catch (UnauthorizedAccessException)
+        {
+            return Forbid();
+        }
+    }
+
+    [Authorize] // vendeur
+    [HttpPost("reviews/{reviewId:long}/reject")]
+    public async Task<IActionResult> RejectReview(
+        long reviewId,
+        [FromServices] UserHelper userHelper)
+    {
+        var sellerId = (long) userHelper.GetUserId();
+
+        try
+        {
+            await _productService.RejectProductReviewAsync(reviewId, sellerId);
+            return NoContent();
+        }
+        catch (KeyNotFoundException)
+        {
+            return NotFound(new { message = "Review not found" });
+        }
+        catch (UnauthorizedAccessException)
+        {
+            return Forbid();
+        }
+    }
+
+
+
     
     /// <summary>
     /// Create a new product
@@ -138,4 +201,36 @@ public class ProductController : ControllerBase
             });
         }
     }
+    
+    [Authorize] // client authentifié
+    [HttpPost("{productId:long}/reviews")]
+    public async Task<IActionResult> AddReview(
+        long productId,
+        [FromBody] AddProductReviewRequest request,
+        [FromServices] UserHelper userHelper)
+    {
+        var userId = (long) userHelper.GetUserId();
+    
+        try
+        {
+            var review = await _productService.AddProductReviewAsync(
+                productId,
+                userId,
+                request.Rating,
+                request.Comment
+            );
+
+            return CreatedAtAction(nameof(GetProductReviews), new { productId }, review);
+        }
+        catch (KeyNotFoundException)
+        {
+            return NotFound(new { message = "Product not found" });
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
+    }
+
+
 }

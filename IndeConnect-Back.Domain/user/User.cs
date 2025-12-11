@@ -1,4 +1,5 @@
 ﻿using IndeConnect_Back.Domain.catalog.brand;
+using IndeConnect_Back.Domain.catalog.product;
 using IndeConnect_Back.Domain.order;
 using IndeConnect_Back.Domain.payment;
 
@@ -18,6 +19,9 @@ public class User
     
     // Reviews
     public ICollection<UserReview> Reviews { get; private set; } = new List<UserReview>();
+    
+    private readonly List<ProductReview> _productReviews = new();
+    public IReadOnlyCollection<ProductReview> ProductReviews => _productReviews;
 
     
     // Invitation informations
