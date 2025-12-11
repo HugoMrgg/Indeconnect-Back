@@ -12,5 +12,6 @@ public record UserDetailDto(
     Role role,
     int BrandSubscriptionsCount,
     int ReviewsCount,
-    int OrdersCount
+    int OrdersCount,
+    long? BrandId
 );

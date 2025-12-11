@@ -22,6 +22,7 @@ public class Brand
     public string? Contact { get; private set; }
     public string? PriceRange { get; private set; }
     public BrandStatus Status { get; private set; } = BrandStatus.Draft;
+    public string? AccentColor { get; private set; }
 
     // Reviews
     public ICollection<UserReview> Reviews { get; private set; } = new List<UserReview>();
@@ -51,7 +52,7 @@ public class Brand
 
     public Brand(string name, long? superVendorUserId = null)
     {
-        Name = name.Trim();
+        Name = name?.Trim() ?? string.Empty;
         SuperVendorUserId = superVendorUserId;
         Status = BrandStatus.Draft;
     }
@@ -65,7 +66,8 @@ public class Brand
         string? whereAreWe,
         string? otherInfo,
         string? contact,
-        string? priceRange)
+        string? priceRange,
+        string? accentColor)
     {
         if (!string.IsNullOrWhiteSpace(name))
             Name = name.Trim();
@@ -93,5 +95,13 @@ public class Brand
 
         if (priceRange != null)
             PriceRange = priceRange;
+        if (accentColor != null && IsValidHexColor(accentColor))
+            AccentColor = accentColor;
+    }
+    private bool IsValidHexColor(string color)
+    {
+        return System.Text.RegularExpressions.Regex.IsMatch(
+            color, @"^#[0-9A-Fa-f]{6}$"
+        );
     }
 }

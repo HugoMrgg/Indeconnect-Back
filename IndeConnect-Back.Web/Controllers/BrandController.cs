@@ -13,12 +13,14 @@ namespace IndeConnect_Back.Web.Controllers;
 public class BrandController : ControllerBase
 {
     private readonly IBrandService _brandService;
-    private readonly IProductService _productService; 
+    private readonly IProductService _productService;
+    private readonly UserHelper _userHelper;
 
-    public BrandController(IBrandService brandService, IProductService productService) 
+    public BrandController(IBrandService brandService, IProductService productService, UserHelper userHelper) 
     {
         _brandService = brandService;
-        _productService = productService; 
+        _productService = productService;
+        _userHelper = userHelper;
     }
 
     /**
@@ -95,7 +97,8 @@ public class BrandController : ControllerBase
         [FromQuery] ProductSortType sortBy = ProductSortType.Newest)
     {
         var query = new GetProductsQuery(brandId, page, pageSize, minPrice, maxPrice, category, searchTerm, sortBy);
-        var response = await _productService.GetProductsByBrandAsync(query);
+        var userId =  _userHelper.GetUserId();
+        var response = await _productService.GetProductsByBrandAsync(query, userId);
         
         return Ok(response);
     }
@@ -133,5 +136,24 @@ public class BrandController : ControllerBase
                 Detail = ex.Message
             });
         }
+    }
+    /**
+    * Get my brand (for SuperVendor editing/preview)
+    */
+    [HttpGet("my-brand")]
+    [Authorize(Roles = "SuperVendor")]
+    [ProducesResponseType(typeof(BrandDetailDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<ActionResult<BrandDetailDto>> GetMyBrand(
+        [FromServices] UserHelper userHelper)
+    {
+        var currentUserId = userHelper.GetUserId();
+    
+        var brand = await _brandService.GetMyBrandAsync(currentUserId);
+    
+        if (brand == null)
+            return NotFound(new { message = "No brand associated with your account" });
+
+        return Ok(brand);
     }
 }

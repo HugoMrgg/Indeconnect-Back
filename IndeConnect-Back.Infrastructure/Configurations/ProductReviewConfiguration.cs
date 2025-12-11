@@ -16,16 +16,14 @@ public class ProductReviewConfiguration : IEntityTypeConfiguration<ProductReview
         // Properties
         builder.Property(pr => pr.Rating)
                .IsRequired();
-        
+
         builder.Property(pr => pr.Comment)
-               .HasMaxLength(2000)
-               .IsRequired(false);
+               .HasMaxLength(2000);
         
         builder.Property(pr => pr.CreatedAt)
                .IsRequired();
-        
-        builder.Property(pr => pr.UpdatedAt)
-               .IsRequired(false);
+
+        builder.Property(pr => pr.UpdatedAt);
         
         builder.Property(pr => pr.Status)
                .HasConversion(new EnumToStringConverter<ReviewStatus>())
@@ -37,14 +35,14 @@ public class ProductReviewConfiguration : IEntityTypeConfiguration<ProductReview
         builder.HasOne(pr => pr.Product)
                .WithMany(p => p.Reviews)
                .HasForeignKey(pr => pr.ProductId)
-               .OnDelete(DeleteBehavior.Restrict) 
+               .OnDelete(DeleteBehavior.Cascade) 
                .IsRequired();
         
         // Relation with User
         builder.HasOne(pr => pr.User)
-               .WithMany() 
+               .WithMany(u => u.ProductReviews)
                .HasForeignKey(pr => pr.UserId)
-               .OnDelete(DeleteBehavior.Restrict) 
+               .OnDelete(DeleteBehavior.Cascade) 
                .IsRequired();
         
         builder.HasIndex(pr => new { pr.ProductId, pr.UserId })

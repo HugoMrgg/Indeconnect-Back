@@ -4,7 +4,6 @@ using IndeConnect_Back.Application.Services.Interfaces;
 using IndeConnect_Back.Domain.user;
 using IndeConnect_Back.Domain.catalog.brand;
 using Microsoft.EntityFrameworkCore;
-using IndeConnect_Back.Domain.catalog.brand;
 using Microsoft.EntityFrameworkCore.Storage;
 
 namespace IndeConnect_Back.Infrastructure.Services.Implementations;
@@ -32,7 +31,6 @@ public class AuthService : IAuthService
         _emailService = emailService;
         _resetTokenService = resetTokenService;
         _googleClientId = Environment.GetEnvironmentVariable("GOOGLE_CLIENT_ID");
-
         _frontendUrl = Environment.GetEnvironmentVariable("FRONTEND_URL");
     }
 
@@ -54,35 +52,46 @@ public class AuthService : IAuthService
         user.SetPasswordHash(BCrypt.Net.BCrypt.HashPassword(request.Password));
 
         _context.Users.Add(user);
+        await _context.SaveChangesAsync();
+        
         await _auditTrail.LogAsync(
             action: "UserRegistered",
             userId: user.Id,
             details: $"{user.FirstName} {user.LastName} registered as {request.TargetRole}"
         );
-        await _context.SaveChangesAsync();
 
         var token = _jwtGenerator.GenerateToken(user);
 
-        return new AuthResponse(user.Id, user.Email, user.FirstName, user.LastName, user.Role, token);
+        return new AuthResponse(
+            user.Id, 
+            user.Email, 
+            user.FirstName, 
+            user.LastName, 
+            user.Role, 
+            token,
+            null
+        );
     }
 
     public async Task<AuthResponse> LoginAsync(LoginAnonymousRequest request)
     {
         var user = await _context.Users
+            .Include(u => u.Brand)  // ✅ Include Brand au lieu de BrandsAsSuperVendor
             .SingleOrDefaultAsync(u => u.Email == request.Email);
 
         if (user is null)
             throw new UnauthorizedAccessException("Invalid credentials.");
         
+        if (user.PasswordHash == null)
+            throw new UnauthorizedAccessException("Account not activated. Please check your email.");
+
         if (user.PasswordHash == null && user.GoogleId != null)
         {
             throw new UnauthorizedAccessException(
-                "Account using Goog. Please try to log in with Google."
+                "Ce compte utilise Google. Cliquez sur 'Se connecter avec Google'."
             );
         }
-        if (user.PasswordHash == null)
-            throw new UnauthorizedAccessException("Account not activated. Please check your email.");
-        
+
         if (!user.IsEnabled)
             throw new UnauthorizedAccessException("Account is disabled.");
 
@@ -90,12 +99,27 @@ public class AuthService : IAuthService
             throw new UnauthorizedAccessException("Invalid credentials.");
 
         var token = _jwtGenerator.GenerateToken(user);
+        
         await _auditTrail.LogAsync(
             action: "UserLogged",
             userId: user.Id,
             details: $"{user.FirstName} {user.LastName} logged in"
         );
-        return new AuthResponse(user.Id, user.Email, user.FirstName, user.LastName, user.Role, token);
+        
+        // ✅ Récupérer brandId directement depuis user.BrandId
+        var brandId = user.Role == Role.SuperVendor 
+            ? user.BrandId 
+            : null;
+        
+        return new AuthResponse(
+            user.Id, 
+            user.Email, 
+            user.FirstName, 
+            user.LastName, 
+            user.Role, 
+            token,
+            brandId
+        );
     }
 
     public async Task InviteUserAsync(InviteUserRequest request, long invitedBy)
@@ -103,13 +127,13 @@ public class AuthService : IAuthService
         var existingUser = await _context.Users
             .FirstOrDefaultAsync(u => u.Email == request.Email);
 
-        // Cas : ré-invitation d’un utilisateur déjà existant (même email)
+        // Cas : ré-invitation d'un utilisateur déjà existant (même email)
         if (existingUser != null)
         {
             if (existingUser.PasswordHash != null || !string.IsNullOrEmpty(existingUser.GoogleId))
             {
                 throw new InvalidOperationException(
-                    "An account already exists with that email."
+                    "Un compte existe déjà avec cet email."
                 );
             }
             
@@ -119,7 +143,7 @@ public class AuthService : IAuthService
 
             await _emailService.SendEmailAsync(
                 existingUser.Email,
-                "Activate your Indeconnect Account",
+                "Rappel : Activez votre compte IndeConnect",
                 htmlContent
             );
 
@@ -135,9 +159,9 @@ public class AuthService : IAuthService
         var role = ParseRole(request.TargetRole);
 
         User user;
+        Brand? brand = null;
 
-        // On garantit que la création du user + éventuelle création de brand
-        // se fait de manière atomique.
+        // Transaction atomique : User + Brand (si SuperVendor)
         await using (IDbContextTransaction transaction = await _context.Database.BeginTransactionAsync())
         {
             try
@@ -150,19 +174,21 @@ public class AuthService : IAuthService
                 );
 
                 _context.Users.Add(user);
-                await _context.SaveChangesAsync(); // nécessaire pour avoir user.Id
+                await _context.SaveChangesAsync(); // Nécessaire pour avoir user.Id
 
-                // Si le compte invité est SuperVendor, on crée une marque "vide" associée
+                // Si SuperVendor → Créer Brand vide
                 if (role == Role.SuperVendor)
                 {
-                    // Marque "vide" : nom vide, toutes les infos seront remplies
-                    // plus tard par le supervendeur via la route de modification.
-                    var brand = new Brand(
-                        name: string.Empty,
+                    brand = new Brand(
+                        name: $"Brand_{user.Id}",  // Nom temporaire
                         superVendorUserId: user.Id
                     );
 
                     _context.Brands.Add(brand);
+                    await _context.SaveChangesAsync(); // Brand.Id disponible
+
+                    // ✅ Lier le User à sa Brand
+                    user.SetBrand(brand.Id);
                     await _context.SaveChangesAsync();
                 }
 
@@ -175,15 +201,14 @@ public class AuthService : IAuthService
             }
         }
 
-        // À partir d’ici, user (et éventuellement brand) sont persistés.
-
+        // Envoi de l'email d'activation
         var token = await _resetTokenService.CreateResetTokenAsync(user.Id);
         var activationLinkNew = $"{_frontendUrl}/set-password?token={token}";
         var htmlContentNew = BuildActivationEmailHtml(user.FirstName, activationLinkNew);
 
         await _emailService.SendEmailAsync(
             user.Email,
-            "Activate your Indeconnect Account",
+            "Activez votre compte IndeConnect",
             htmlContentNew
         );
 
@@ -219,7 +244,7 @@ public class AuthService : IAuthService
         await _context.SaveChangesAsync();
     }
 
-     public async Task<AuthResponse> GoogleAuthAsync(GoogleAuthRequest request)
+    public async Task<AuthResponse> GoogleAuthAsync(GoogleAuthRequest request)
     {   
         GoogleJsonWebSignature.Payload payload;
         try
@@ -228,28 +253,69 @@ public class AuthService : IAuthService
             {
                 Audience = new[] { _googleClientId }
             };
-            payload = await GoogleJsonWebSignature.ValidateAsync(request.IdToken, settings);        }
+            payload = await GoogleJsonWebSignature.ValidateAsync(request.IdToken, settings);
+        }
         catch (Exception ex)
         {
             throw new UnauthorizedAccessException("Invalid Google token", ex);
         }
 
-        // 2. Chercher l'utilisateur par email
         var user = await _context.Users
+            .Include(u => u.Brand)
             .FirstOrDefaultAsync(u => u.Email == payload.Email);
 
-        // 3. Si n'existe pas → Créer
         if (user == null)
         {
+            string firstName;
+            string lastName;
+
+            if (!string.IsNullOrWhiteSpace(payload.GivenName) && 
+                !string.IsNullOrWhiteSpace(payload.FamilyName))
+            {
+                firstName = payload.GivenName.Trim();
+                lastName = payload.FamilyName.Trim();
+            }
+            else if (!string.IsNullOrWhiteSpace(payload.Name))
+            {
+                var nameParts = payload.Name.Trim().Split(' ', StringSplitOptions.RemoveEmptyEntries);
+                
+                if (nameParts.Length >= 2)
+                {
+                    firstName = nameParts[0];
+                    lastName = string.Join(" ", nameParts.Skip(1));
+                }
+                else
+                {
+                    // Un seul mot dans le nom (ex: "Madonna")
+                    firstName = nameParts[0];
+                    lastName = nameParts[0]; // On duplique
+                }
+            }
+            else if (!string.IsNullOrWhiteSpace(payload.GivenName))
+            {
+                firstName = payload.GivenName.Trim();
+                lastName = payload.GivenName.Trim(); // On duplique
+            }
+            else if (!string.IsNullOrWhiteSpace(payload.FamilyName))
+            {
+                firstName = payload.FamilyName.Trim();
+                lastName = payload.FamilyName.Trim(); // On duplique
+            }
+            else
+            {
+                var emailName = payload.Email.Split('@')[0];
+                firstName = emailName;
+                lastName = emailName;
+            }
+
             user = new User(
                 email: payload.Email,
-                firstName: payload.GivenName ?? "User",
-                lastName: payload.FamilyName ?? "",
+                firstName: firstName,
+                lastName: lastName,
                 role: Role.Client
             );
 
-            // Pas de mot de passe pour Google
-            user.LinkGoogleAccount(payload.Subject);
+            user.GoogleId = payload.Subject;
             user.SetEnabled(true);
 
             _context.Users.Add(user);
@@ -264,11 +330,10 @@ public class AuthService : IAuthService
         }
         else
         {
-            // Vérifier que le compte n'utilise pas déjà email/password
             if (user.PasswordHash != null && user.GoogleId == null)
             {
                 throw new InvalidOperationException(
-                    "An account already exists with that email. Try to log in with you password."
+                    "Un compte existe déjà avec cet email. Connectez-vous avec votre mot de passe."
                 );
             }
             
@@ -279,8 +344,11 @@ public class AuthService : IAuthService
             );
         }
 
-        // 4. Générer JWT
         var token = _jwtGenerator.GenerateToken(user);
+
+        var brandId = user.Role == Role.SuperVendor 
+            ? user.BrandId 
+            : null;
 
         return new AuthResponse(
             user.Id,
@@ -288,9 +356,11 @@ public class AuthService : IAuthService
             user.FirstName,
             user.LastName,
             user.Role,
-            token
+            token,
+            brandId
         );
     }
+
     
     private Role ParseRole(string role)
     {

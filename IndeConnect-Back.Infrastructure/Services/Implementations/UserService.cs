@@ -2,8 +2,6 @@
 using IndeConnect_Back.Application.Services.Interfaces;
 using IndeConnect_Back.Domain.user;
 using Microsoft.EntityFrameworkCore;
-using IndeConnect_Back.Domain.user;
-using Microsoft.EntityFrameworkCore;
 
 namespace IndeConnect_Back.Infrastructure.Services.Implementations;
 
@@ -16,12 +14,13 @@ public class UserService : IUserService
         _context = context;
     }
 
-    public async Task<UserDetailDto?> GetUserByIdAsync(long userId)
+    public async Task<UserDetailDto?> GetUserByIdAsync(long? userId)
     {
         var user = await _context.Users
             .Include(u => u.BrandSubscriptions)
             .Include(u => u.Reviews)
             .Include(u => u.Orders)
+            .Include(u => u.Brand) 
             .FirstOrDefaultAsync(u => u.Id == userId);
 
         if (user == null)
@@ -37,34 +36,37 @@ public class UserService : IUserService
             user.Role,           
             user.BrandSubscriptions.Count,
             user.Reviews.Count,
-            user.Orders.Count
+            user.Orders.Count,
+            user.Role == Role.SuperVendor 
+                ? user.BrandId
+                : null
         );
     }
 
-    public async Task<List<AccountDto>> GetAllAccountsAsync(long currentUserId, Role currentUserRole)
+    public async Task<List<AccountDto>> GetAllAccountsAsync(long? currentUserId, Role currentUserRole)
     {
         IQueryable<User> query;
 
         if (currentUserRole is Role.Administrator or Role.Moderator)
         {
-            // Admin & modo voient tous les comptes
             query = _context.Users;
         }
         else if (currentUserRole == Role.SuperVendor)
         {
-            // SuperVendor : uniquement vendeurs de sa(ces) marque(s)
             query =
-                (from brand in _context.Brands
-                    where brand.SuperVendorUserId == currentUserId
-                    join brandSeller in _context.BrandSellers on brand.Id equals brandSeller.BrandId
-                    join user in _context.Users on brandSeller.SellerId equals user.Id
+                (from user in _context.Users
+                    where user.BrandId == _context.Users
+                        .Where(u => u.Id == currentUserId)
+                        .Select(u => u.BrandId)
+                        .FirstOrDefault()
+                    join brandSeller in _context.BrandSellers on user.Id equals brandSeller.SellerId
                     where user.Role == Role.Vendor && brandSeller.IsActive
                     select user)
                 .Distinct();
         }
         else
         {
-            // Vendor / Client n’ont pas accès à cette liste
+            // Vendor / Client n'ont pas accès à cette liste
             throw new UnauthorizedAccessException("You are not allowed to view accounts.");
         }
 
@@ -83,7 +85,6 @@ public class UserService : IUserService
 
         return accounts;
     }
-
 
     public async Task ToggleAccountStatusAsync(long accountId, bool isEnabled)
     {

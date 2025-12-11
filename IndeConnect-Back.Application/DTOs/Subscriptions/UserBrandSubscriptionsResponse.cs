@@ -1,6 +1,6 @@
 ﻿namespace IndeConnect_Back.Application.DTOs.Subscriptions;
 
 public record UserBrandSubscriptionsResponse(
-    long UserId,
+    long? UserId,
     IEnumerable<BrandSubscriptionItem> Subscriptions
 );

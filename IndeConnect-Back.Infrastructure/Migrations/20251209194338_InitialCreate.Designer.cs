@@ -12,7 +12,7 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace IndeConnect_Back.Infrastructure.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    [Migration("20251203135031_InitialCreate")]
+    [Migration("20251209194338_InitialCreate")]
     partial class InitialCreate
     {
         /// <inheritdoc />
@@ -36,6 +36,9 @@ namespace IndeConnect_Back.Infrastructure.Migrations
                     b.Property<string>("AboutUs")
                         .HasMaxLength(2000)
                         .HasColumnType("character varying(2000)");
+
+                    b.Property<string>("AccentColor")
+                        .HasColumnType("text");
 
                     b.Property<string>("BannerUrl")
                         .HasColumnType("text");
@@ -76,8 +79,6 @@ namespace IndeConnect_Back.Infrastructure.Migrations
                         .HasColumnType("character varying(1000)");
 
                     b.HasKey("Id");
-
-                    b.HasIndex("SuperVendorUserId");
 
                     b.ToTable("Brands");
                 });
@@ -1596,6 +1597,9 @@ namespace IndeConnect_Back.Infrastructure.Migrations
 
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("Id"));
 
+                    b.Property<long?>("BrandId")
+                        .HasColumnType("bigint");
+
                     b.Property<DateTimeOffset>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
 
@@ -1641,6 +1645,10 @@ namespace IndeConnect_Back.Infrastructure.Migrations
                         .HasColumnType("bigint");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("BrandId")
+                        .IsUnique()
+                        .HasDatabaseName("IX_User_BrandId");
 
                     b.HasIndex("CreatedAt")
                         .HasDatabaseName("IX_User_CreatedAt");
@@ -1736,16 +1744,6 @@ namespace IndeConnect_Back.Infrastructure.Migrations
                         .HasDatabaseName("IX_WishlistItem_ProductAdded");
 
                     b.ToTable("WishlistItems");
-                });
-
-            modelBuilder.Entity("IndeConnect_Back.Domain.catalog.brand.Brand", b =>
-                {
-                    b.HasOne("IndeConnect_Back.Domain.user.User", "SuperVendorUser")
-                        .WithMany("BrandsAsSuperVendor")
-                        .HasForeignKey("SuperVendorUserId")
-                        .OnDelete(DeleteBehavior.Restrict);
-
-                    b.Navigation("SuperVendorUser");
                 });
 
             modelBuilder.Entity("IndeConnect_Back.Domain.catalog.brand.BrandEthicTag", b =>
@@ -2197,6 +2195,16 @@ namespace IndeConnect_Back.Infrastructure.Migrations
                     b.Navigation("User");
                 });
 
+            modelBuilder.Entity("IndeConnect_Back.Domain.user.User", b =>
+                {
+                    b.HasOne("IndeConnect_Back.Domain.catalog.brand.Brand", "Brand")
+                        .WithOne("SuperVendorUser")
+                        .HasForeignKey("IndeConnect_Back.Domain.user.User", "BrandId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.Navigation("Brand");
+                });
+
             modelBuilder.Entity("IndeConnect_Back.Domain.user.UserReview", b =>
                 {
                     b.HasOne("IndeConnect_Back.Domain.catalog.brand.Brand", "Brand")
@@ -2259,6 +2267,8 @@ namespace IndeConnect_Back.Infrastructure.Migrations
                     b.Navigation("Reviews");
 
                     b.Navigation("Sellers");
+
+                    b.Navigation("SuperVendorUser");
                 });
 
             modelBuilder.Entity("IndeConnect_Back.Domain.catalog.brand.BrandQuestionnaire", b =>
@@ -2317,8 +2327,6 @@ namespace IndeConnect_Back.Infrastructure.Migrations
                     b.Navigation("BrandSubscriptions");
 
                     b.Navigation("BrandsAsSeller");
-
-                    b.Navigation("BrandsAsSuperVendor");
 
                     b.Navigation("Cart");
 

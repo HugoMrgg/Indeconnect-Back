@@ -31,6 +31,30 @@ namespace IndeConnect_Back.Infrastructure.Migrations
                 });
 
             migrationBuilder.CreateTable(
+                name: "Brands",
+                columns: table => new
+                {
+                    Id = table.Column<long>(type: "bigint", nullable: false)
+                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
+                    Name = table.Column<string>(type: "character varying(200)", maxLength: 200, nullable: false),
+                    LogoUrl = table.Column<string>(type: "text", nullable: true),
+                    BannerUrl = table.Column<string>(type: "text", nullable: true),
+                    Description = table.Column<string>(type: "character varying(2000)", maxLength: 2000, nullable: true),
+                    AboutUs = table.Column<string>(type: "character varying(2000)", maxLength: 2000, nullable: true),
+                    WhereAreWe = table.Column<string>(type: "character varying(1000)", maxLength: 1000, nullable: true),
+                    OtherInfo = table.Column<string>(type: "character varying(1000)", maxLength: 1000, nullable: true),
+                    Contact = table.Column<string>(type: "character varying(500)", maxLength: 500, nullable: true),
+                    PriceRange = table.Column<string>(type: "character varying(3)", maxLength: 3, nullable: true),
+                    Status = table.Column<string>(type: "text", nullable: false),
+                    AccentColor = table.Column<string>(type: "text", nullable: true),
+                    SuperVendorUserId = table.Column<long>(type: "bigint", nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_Brands", x => x.Id);
+                });
+
+            migrationBuilder.CreateTable(
                 name: "Categories",
                 columns: table => new
                 {
@@ -134,6 +158,98 @@ namespace IndeConnect_Back.Infrastructure.Migrations
                 });
 
             migrationBuilder.CreateTable(
+                name: "BrandEthicTags",
+                columns: table => new
+                {
+                    Id = table.Column<long>(type: "bigint", nullable: false)
+                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
+                    BrandId = table.Column<long>(type: "bigint", nullable: false),
+                    Category = table.Column<string>(type: "character varying(50)", maxLength: 50, nullable: false),
+                    TagKey = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_BrandEthicTags", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_BrandEthicTags_Brands_BrandId",
+                        column: x => x.BrandId,
+                        principalTable: "Brands",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "BrandPolicies",
+                columns: table => new
+                {
+                    Id = table.Column<long>(type: "bigint", nullable: false)
+                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
+                    BrandId = table.Column<long>(type: "bigint", nullable: false),
+                    Type = table.Column<string>(type: "character varying(50)", maxLength: 50, nullable: false),
+                    Content = table.Column<string>(type: "character varying(10000)", maxLength: 10000, nullable: false),
+                    Language = table.Column<string>(type: "character varying(10)", maxLength: 10, nullable: true),
+                    PublishedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    IsActive = table.Column<bool>(type: "boolean", nullable: false, defaultValue: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_BrandPolicies", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_BrandPolicies_Brands_BrandId",
+                        column: x => x.BrandId,
+                        principalTable: "Brands",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "BrandQuestionnaires",
+                columns: table => new
+                {
+                    Id = table.Column<long>(type: "bigint", nullable: false)
+                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
+                    BrandId = table.Column<long>(type: "bigint", nullable: false),
+                    SubmittedAt = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: false),
+                    IsApproved = table.Column<bool>(type: "boolean", nullable: false, defaultValue: false),
+                    ApprovedAt = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_BrandQuestionnaires", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_BrandQuestionnaires_Brands_BrandId",
+                        column: x => x.BrandId,
+                        principalTable: "Brands",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "Deposits",
+                columns: table => new
+                {
+                    Id = table.Column<string>(type: "character varying(50)", maxLength: 50, nullable: false),
+                    Number = table.Column<int>(type: "integer", nullable: false),
+                    Street = table.Column<string>(type: "character varying(200)", maxLength: 200, nullable: false),
+                    PostalCode = table.Column<string>(type: "character varying(20)", maxLength: 20, nullable: false),
+                    City = table.Column<string>(type: "text", nullable: false),
+                    Country = table.Column<string>(type: "text", nullable: false),
+                    Latitude = table.Column<double>(type: "double precision", nullable: false),
+                    Longitude = table.Column<double>(type: "double precision", nullable: false),
+                    BrandId = table.Column<long>(type: "bigint", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_Deposits", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_Deposits_Brands_BrandId",
+                        column: x => x.BrandId,
+                        principalTable: "Brands",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
                 name: "Users",
                 columns: table => new
                 {
@@ -149,11 +265,46 @@ namespace IndeConnect_Back.Infrastructure.Migrations
                     InvitationTokenHash = table.Column<string>(type: "character varying(255)", maxLength: 255, nullable: true),
                     InvitationExpiresAt = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: true),
                     Role = table.Column<string>(type: "text", nullable: false),
-                    WishlistId = table.Column<long>(type: "bigint", nullable: true)
+                    WishlistId = table.Column<long>(type: "bigint", nullable: true),
+                    BrandId = table.Column<long>(type: "bigint", nullable: true)
                 },
                 constraints: table =>
                 {
                     table.PrimaryKey("PK_Users", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_Users_Brands_BrandId",
+                        column: x => x.BrandId,
+                        principalTable: "Brands",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Restrict);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "ProductGroups",
+                columns: table => new
+                {
+                    Id = table.Column<long>(type: "bigint", nullable: false)
+                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
+                    Name = table.Column<string>(type: "character varying(200)", maxLength: 200, nullable: false),
+                    BaseDescription = table.Column<string>(type: "character varying(2000)", maxLength: 2000, nullable: false),
+                    BrandId = table.Column<long>(type: "bigint", nullable: false),
+                    CategoryId = table.Column<long>(type: "bigint", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_ProductGroups", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_ProductGroups_Brands_BrandId",
+                        column: x => x.BrandId,
+                        principalTable: "Brands",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Restrict);
+                    table.ForeignKey(
+                        name: "FK_ProductGroups_Categories_CategoryId",
+                        column: x => x.CategoryId,
+                        principalTable: "Categories",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Restrict);
                 });
 
             migrationBuilder.CreateTable(
@@ -179,32 +330,56 @@ namespace IndeConnect_Back.Infrastructure.Migrations
                 });
 
             migrationBuilder.CreateTable(
-                name: "Brands",
+                name: "BrandSellers",
+                columns: table => new
+                {
+                    BrandId = table.Column<long>(type: "bigint", nullable: false),
+                    SellerId = table.Column<long>(type: "bigint", nullable: false),
+                    JoinedAt = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: false),
+                    IsActive = table.Column<bool>(type: "boolean", nullable: false, defaultValue: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_BrandSellers", x => new { x.BrandId, x.SellerId });
+                    table.ForeignKey(
+                        name: "FK_BrandSellers_Brands_BrandId",
+                        column: x => x.BrandId,
+                        principalTable: "Brands",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                    table.ForeignKey(
+                        name: "FK_BrandSellers_Users_SellerId",
+                        column: x => x.SellerId,
+                        principalTable: "Users",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Restrict);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "BrandSubscriptions",
                 columns: table => new
                 {
                     Id = table.Column<long>(type: "bigint", nullable: false)
                         .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
-                    Name = table.Column<string>(type: "character varying(200)", maxLength: 200, nullable: false),
-                    LogoUrl = table.Column<string>(type: "text", nullable: true),
-                    BannerUrl = table.Column<string>(type: "text", nullable: true),
-                    Description = table.Column<string>(type: "character varying(2000)", maxLength: 2000, nullable: true),
-                    AboutUs = table.Column<string>(type: "character varying(2000)", maxLength: 2000, nullable: true),
-                    WhereAreWe = table.Column<string>(type: "character varying(1000)", maxLength: 1000, nullable: true),
-                    OtherInfo = table.Column<string>(type: "character varying(1000)", maxLength: 1000, nullable: true),
-                    Contact = table.Column<string>(type: "character varying(500)", maxLength: 500, nullable: true),
-                    PriceRange = table.Column<string>(type: "character varying(3)", maxLength: 3, nullable: true),
-                    Status = table.Column<string>(type: "text", nullable: false),
-                    SuperVendorUserId = table.Column<long>(type: "bigint", nullable: true)
+                    UserId = table.Column<long>(type: "bigint", nullable: false),
+                    BrandId = table.Column<long>(type: "bigint", nullable: false),
+                    SubscribedAt = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: false)
                 },
                 constraints: table =>
                 {
-                    table.PrimaryKey("PK_Brands", x => x.Id);
+                    table.PrimaryKey("PK_BrandSubscriptions", x => x.Id);
                     table.ForeignKey(
-                        name: "FK_Brands_Users_SuperVendorUserId",
-                        column: x => x.SuperVendorUserId,
+                        name: "FK_BrandSubscriptions_Brands_BrandId",
+                        column: x => x.BrandId,
+                        principalTable: "Brands",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                    table.ForeignKey(
+                        name: "FK_BrandSubscriptions_Users_UserId",
+                        column: x => x.UserId,
                         principalTable: "Users",
                         principalColumn: "Id",
-                        onDelete: ReferentialAction.Restrict);
+                        onDelete: ReferentialAction.Cascade);
                 });
 
             migrationBuilder.CreateTable(
@@ -305,198 +480,6 @@ namespace IndeConnect_Back.Infrastructure.Migrations
                 });
 
             migrationBuilder.CreateTable(
-                name: "Wishlists",
-                columns: table => new
-                {
-                    Id = table.Column<long>(type: "bigint", nullable: false)
-                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
-                    UserId = table.Column<long>(type: "bigint", nullable: false)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_Wishlists", x => x.Id);
-                    table.ForeignKey(
-                        name: "FK_Wishlists_Users_UserId",
-                        column: x => x.UserId,
-                        principalTable: "Users",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
-                });
-
-            migrationBuilder.CreateTable(
-                name: "BrandEthicTags",
-                columns: table => new
-                {
-                    Id = table.Column<long>(type: "bigint", nullable: false)
-                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
-                    BrandId = table.Column<long>(type: "bigint", nullable: false),
-                    Category = table.Column<string>(type: "character varying(50)", maxLength: 50, nullable: false),
-                    TagKey = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: false)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_BrandEthicTags", x => x.Id);
-                    table.ForeignKey(
-                        name: "FK_BrandEthicTags_Brands_BrandId",
-                        column: x => x.BrandId,
-                        principalTable: "Brands",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
-                });
-
-            migrationBuilder.CreateTable(
-                name: "BrandPolicies",
-                columns: table => new
-                {
-                    Id = table.Column<long>(type: "bigint", nullable: false)
-                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
-                    BrandId = table.Column<long>(type: "bigint", nullable: false),
-                    Type = table.Column<string>(type: "character varying(50)", maxLength: 50, nullable: false),
-                    Content = table.Column<string>(type: "character varying(10000)", maxLength: 10000, nullable: false),
-                    Language = table.Column<string>(type: "character varying(10)", maxLength: 10, nullable: true),
-                    PublishedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
-                    IsActive = table.Column<bool>(type: "boolean", nullable: false, defaultValue: true)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_BrandPolicies", x => x.Id);
-                    table.ForeignKey(
-                        name: "FK_BrandPolicies_Brands_BrandId",
-                        column: x => x.BrandId,
-                        principalTable: "Brands",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
-                });
-
-            migrationBuilder.CreateTable(
-                name: "BrandQuestionnaires",
-                columns: table => new
-                {
-                    Id = table.Column<long>(type: "bigint", nullable: false)
-                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
-                    BrandId = table.Column<long>(type: "bigint", nullable: false),
-                    SubmittedAt = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: false),
-                    IsApproved = table.Column<bool>(type: "boolean", nullable: false, defaultValue: false),
-                    ApprovedAt = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: true)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_BrandQuestionnaires", x => x.Id);
-                    table.ForeignKey(
-                        name: "FK_BrandQuestionnaires_Brands_BrandId",
-                        column: x => x.BrandId,
-                        principalTable: "Brands",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
-                });
-
-            migrationBuilder.CreateTable(
-                name: "BrandSellers",
-                columns: table => new
-                {
-                    BrandId = table.Column<long>(type: "bigint", nullable: false),
-                    SellerId = table.Column<long>(type: "bigint", nullable: false),
-                    JoinedAt = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: false),
-                    IsActive = table.Column<bool>(type: "boolean", nullable: false, defaultValue: true)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_BrandSellers", x => new { x.BrandId, x.SellerId });
-                    table.ForeignKey(
-                        name: "FK_BrandSellers_Brands_BrandId",
-                        column: x => x.BrandId,
-                        principalTable: "Brands",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
-                    table.ForeignKey(
-                        name: "FK_BrandSellers_Users_SellerId",
-                        column: x => x.SellerId,
-                        principalTable: "Users",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Restrict);
-                });
-
-            migrationBuilder.CreateTable(
-                name: "BrandSubscriptions",
-                columns: table => new
-                {
-                    Id = table.Column<long>(type: "bigint", nullable: false)
-                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
-                    UserId = table.Column<long>(type: "bigint", nullable: false),
-                    BrandId = table.Column<long>(type: "bigint", nullable: false),
-                    SubscribedAt = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: false)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_BrandSubscriptions", x => x.Id);
-                    table.ForeignKey(
-                        name: "FK_BrandSubscriptions_Brands_BrandId",
-                        column: x => x.BrandId,
-                        principalTable: "Brands",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
-                    table.ForeignKey(
-                        name: "FK_BrandSubscriptions_Users_UserId",
-                        column: x => x.UserId,
-                        principalTable: "Users",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
-                });
-
-            migrationBuilder.CreateTable(
-                name: "Deposits",
-                columns: table => new
-                {
-                    Id = table.Column<string>(type: "character varying(50)", maxLength: 50, nullable: false),
-                    Number = table.Column<int>(type: "integer", nullable: false),
-                    Street = table.Column<string>(type: "character varying(200)", maxLength: 200, nullable: false),
-                    PostalCode = table.Column<string>(type: "character varying(20)", maxLength: 20, nullable: false),
-                    City = table.Column<string>(type: "text", nullable: false),
-                    Country = table.Column<string>(type: "text", nullable: false),
-                    Latitude = table.Column<double>(type: "double precision", nullable: false),
-                    Longitude = table.Column<double>(type: "double precision", nullable: false),
-                    BrandId = table.Column<long>(type: "bigint", nullable: false)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_Deposits", x => x.Id);
-                    table.ForeignKey(
-                        name: "FK_Deposits_Brands_BrandId",
-                        column: x => x.BrandId,
-                        principalTable: "Brands",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
-                });
-
-            migrationBuilder.CreateTable(
-                name: "ProductGroups",
-                columns: table => new
-                {
-                    Id = table.Column<long>(type: "bigint", nullable: false)
-                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
-                    Name = table.Column<string>(type: "character varying(200)", maxLength: 200, nullable: false),
-                    BaseDescription = table.Column<string>(type: "character varying(2000)", maxLength: 2000, nullable: false),
-                    BrandId = table.Column<long>(type: "bigint", nullable: false),
-                    CategoryId = table.Column<long>(type: "bigint", nullable: false)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_ProductGroups", x => x.Id);
-                    table.ForeignKey(
-                        name: "FK_ProductGroups_Brands_BrandId",
-                        column: x => x.BrandId,
-                        principalTable: "Brands",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Restrict);
-                    table.ForeignKey(
-                        name: "FK_ProductGroups_Categories_CategoryId",
-                        column: x => x.CategoryId,
-                        principalTable: "Categories",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Restrict);
-                });
-
-            migrationBuilder.CreateTable(
                 name: "UserReviews",
                 columns: table => new
                 {
@@ -526,67 +509,22 @@ namespace IndeConnect_Back.Infrastructure.Migrations
                 });
 
             migrationBuilder.CreateTable(
-                name: "Orders",
+                name: "Wishlists",
                 columns: table => new
                 {
                     Id = table.Column<long>(type: "bigint", nullable: false)
                         .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
-                    UserId = table.Column<long>(type: "bigint", nullable: false),
-                    ShippingAddressId = table.Column<long>(type: "bigint", nullable: false),
-                    PlacedAt = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: false),
-                    Currency = table.Column<string>(type: "character varying(3)", maxLength: 3, nullable: false, defaultValue: "EUR"),
-                    TotalAmount = table.Column<decimal>(type: "numeric(18,2)", precision: 18, scale: 2, nullable: false),
-                    Status = table.Column<string>(type: "character varying(20)", maxLength: 20, nullable: false, defaultValue: "Pending"),
-                    PaymentId = table.Column<long>(type: "bigint", nullable: true)
+                    UserId = table.Column<long>(type: "bigint", nullable: false)
                 },
                 constraints: table =>
                 {
-                    table.PrimaryKey("PK_Orders", x => x.Id);
+                    table.PrimaryKey("PK_Wishlists", x => x.Id);
                     table.ForeignKey(
-                        name: "FK_Orders_ShippingAddresses_ShippingAddressId",
-                        column: x => x.ShippingAddressId,
-                        principalTable: "ShippingAddresses",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Restrict);
-                    table.ForeignKey(
-                        name: "FK_Orders_Users_UserId",
+                        name: "FK_Wishlists_Users_UserId",
                         column: x => x.UserId,
                         principalTable: "Users",
                         principalColumn: "Id",
-                        onDelete: ReferentialAction.Restrict);
-                });
-
-            migrationBuilder.CreateTable(
-                name: "BrandQuestionResponses",
-                columns: table => new
-                {
-                    Id = table.Column<long>(type: "bigint", nullable: false)
-                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
-                    QuestionnaireId = table.Column<long>(type: "bigint", nullable: false),
-                    QuestionId = table.Column<long>(type: "bigint", nullable: false),
-                    OptionId = table.Column<long>(type: "bigint", nullable: false)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_BrandQuestionResponses", x => x.Id);
-                    table.ForeignKey(
-                        name: "FK_BrandQuestionResponses_BrandQuestionnaires_QuestionnaireId",
-                        column: x => x.QuestionnaireId,
-                        principalTable: "BrandQuestionnaires",
-                        principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
-                    table.ForeignKey(
-                        name: "FK_BrandQuestionResponses_EthicsOptions_OptionId",
-                        column: x => x.OptionId,
-                        principalTable: "EthicsOptions",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Restrict);
-                    table.ForeignKey(
-                        name: "FK_BrandQuestionResponses_EthicsQuestions_QuestionId",
-                        column: x => x.QuestionId,
-                        principalTable: "EthicsQuestions",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Restrict);
                 });
 
             migrationBuilder.CreateTable(
@@ -644,113 +582,63 @@ namespace IndeConnect_Back.Infrastructure.Migrations
                 });
 
             migrationBuilder.CreateTable(
-                name: "Deliveries",
+                name: "BrandQuestionResponses",
                 columns: table => new
                 {
                     Id = table.Column<long>(type: "bigint", nullable: false)
                         .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
-                    Description = table.Column<string>(type: "character varying(500)", maxLength: 500, nullable: false),
-                    TrackingNumber = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: true),
-                    ShippedAt = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: true),
-                    Status = table.Column<string>(type: "character varying(50)", maxLength: 50, nullable: false, defaultValue: "Pending"),
-                    OrderId = table.Column<long>(type: "bigint", nullable: false)
+                    QuestionnaireId = table.Column<long>(type: "bigint", nullable: false),
+                    QuestionId = table.Column<long>(type: "bigint", nullable: false),
+                    OptionId = table.Column<long>(type: "bigint", nullable: false)
                 },
                 constraints: table =>
                 {
-                    table.PrimaryKey("PK_Deliveries", x => x.Id);
+                    table.PrimaryKey("PK_BrandQuestionResponses", x => x.Id);
                     table.ForeignKey(
-                        name: "FK_Deliveries_Orders_OrderId",
-                        column: x => x.OrderId,
-                        principalTable: "Orders",
+                        name: "FK_BrandQuestionResponses_BrandQuestionnaires_QuestionnaireId",
+                        column: x => x.QuestionnaireId,
+                        principalTable: "BrandQuestionnaires",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                    table.ForeignKey(
+                        name: "FK_BrandQuestionResponses_EthicsOptions_OptionId",
+                        column: x => x.OptionId,
+                        principalTable: "EthicsOptions",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Restrict);
+                    table.ForeignKey(
+                        name: "FK_BrandQuestionResponses_EthicsQuestions_QuestionId",
+                        column: x => x.QuestionId,
+                        principalTable: "EthicsQuestions",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Restrict);
                 });
 
             migrationBuilder.CreateTable(
-                name: "Invoices",
+                name: "Orders",
                 columns: table => new
                 {
                     Id = table.Column<long>(type: "bigint", nullable: false)
                         .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
-                    OrderId = table.Column<long>(type: "bigint", nullable: false),
-                    BrandId = table.Column<long>(type: "bigint", nullable: false),
-                    IssuedAt = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: false),
-                    InvoiceNumber = table.Column<string>(type: "character varying(50)", maxLength: 50, nullable: false),
-                    Amount = table.Column<decimal>(type: "numeric(18,2)", precision: 18, scale: 2, nullable: false)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_Invoices", x => x.Id);
-                    table.ForeignKey(
-                        name: "FK_Invoices_Brands_BrandId",
-                        column: x => x.BrandId,
-                        principalTable: "Brands",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Restrict);
-                    table.ForeignKey(
-                        name: "FK_Invoices_Orders_OrderId",
-                        column: x => x.OrderId,
-                        principalTable: "Orders",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Restrict);
-                });
-
-            migrationBuilder.CreateTable(
-                name: "Payments",
-                columns: table => new
-                {
-                    Id = table.Column<long>(type: "bigint", nullable: false)
-                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
-                    OrderId = table.Column<long>(type: "bigint", nullable: false),
-                    PaymentProviderId = table.Column<long>(type: "bigint", nullable: false),
-                    CreatedAt = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: false),
-                    Status = table.Column<string>(type: "character varying(20)", maxLength: 20, nullable: false, defaultValue: "Pending"),
-                    Currency = table.Column<string>(type: "character varying(3)", maxLength: 3, nullable: false, defaultValue: "EUR"),
-                    Amount = table.Column<decimal>(type: "numeric(18,2)", precision: 18, scale: 2, nullable: false),
-                    TransactionId = table.Column<string>(type: "character varying(200)", maxLength: 200, nullable: true),
-                    RawPayload = table.Column<string>(type: "character varying(4000)", maxLength: 4000, nullable: true)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_Payments", x => x.Id);
-                    table.ForeignKey(
-                        name: "FK_Payments_Orders_OrderId",
-                        column: x => x.OrderId,
-                        principalTable: "Orders",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Restrict);
-                    table.ForeignKey(
-                        name: "FK_Payments_PaymentProviders_PaymentProviderId",
-                        column: x => x.PaymentProviderId,
-                        principalTable: "PaymentProviders",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Restrict);
-                });
-
-            migrationBuilder.CreateTable(
-                name: "ReturnRequests",
-                columns: table => new
-                {
-                    Id = table.Column<long>(type: "bigint", nullable: false)
-                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
-                    OrderId = table.Column<long>(type: "bigint", nullable: false),
                     UserId = table.Column<long>(type: "bigint", nullable: false),
-                    RequestedAt = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: false),
-                    Status = table.Column<string>(type: "character varying(20)", maxLength: 20, nullable: false, defaultValue: "Requested"),
-                    Reason = table.Column<string>(type: "character varying(1000)", maxLength: 1000, nullable: true),
-                    ProcessedAt = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: true)
+                    ShippingAddressId = table.Column<long>(type: "bigint", nullable: false),
+                    PlacedAt = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: false),
+                    Currency = table.Column<string>(type: "character varying(3)", maxLength: 3, nullable: false, defaultValue: "EUR"),
+                    TotalAmount = table.Column<decimal>(type: "numeric(18,2)", precision: 18, scale: 2, nullable: false),
+                    Status = table.Column<string>(type: "character varying(20)", maxLength: 20, nullable: false, defaultValue: "Pending"),
+                    PaymentId = table.Column<long>(type: "bigint", nullable: true)
                 },
                 constraints: table =>
                 {
-                    table.PrimaryKey("PK_ReturnRequests", x => x.Id);
+                    table.PrimaryKey("PK_Orders", x => x.Id);
                     table.ForeignKey(
-                        name: "FK_ReturnRequests_Orders_OrderId",
-                        column: x => x.OrderId,
-                        principalTable: "Orders",
+                        name: "FK_Orders_ShippingAddresses_ShippingAddressId",
+                        column: x => x.ShippingAddressId,
+                        principalTable: "ShippingAddresses",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Restrict);
                     table.ForeignKey(
-                        name: "FK_ReturnRequests_Users_UserId",
+                        name: "FK_Orders_Users_UserId",
                         column: x => x.UserId,
                         principalTable: "Users",
                         principalColumn: "Id",
@@ -910,6 +798,120 @@ namespace IndeConnect_Back.Infrastructure.Migrations
                         principalTable: "Wishlists",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "Deliveries",
+                columns: table => new
+                {
+                    Id = table.Column<long>(type: "bigint", nullable: false)
+                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
+                    Description = table.Column<string>(type: "character varying(500)", maxLength: 500, nullable: false),
+                    TrackingNumber = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: true),
+                    ShippedAt = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: true),
+                    Status = table.Column<string>(type: "character varying(50)", maxLength: 50, nullable: false, defaultValue: "Pending"),
+                    OrderId = table.Column<long>(type: "bigint", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_Deliveries", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_Deliveries_Orders_OrderId",
+                        column: x => x.OrderId,
+                        principalTable: "Orders",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Restrict);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "Invoices",
+                columns: table => new
+                {
+                    Id = table.Column<long>(type: "bigint", nullable: false)
+                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
+                    OrderId = table.Column<long>(type: "bigint", nullable: false),
+                    BrandId = table.Column<long>(type: "bigint", nullable: false),
+                    IssuedAt = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: false),
+                    InvoiceNumber = table.Column<string>(type: "character varying(50)", maxLength: 50, nullable: false),
+                    Amount = table.Column<decimal>(type: "numeric(18,2)", precision: 18, scale: 2, nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_Invoices", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_Invoices_Brands_BrandId",
+                        column: x => x.BrandId,
+                        principalTable: "Brands",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Restrict);
+                    table.ForeignKey(
+                        name: "FK_Invoices_Orders_OrderId",
+                        column: x => x.OrderId,
+                        principalTable: "Orders",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Restrict);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "Payments",
+                columns: table => new
+                {
+                    Id = table.Column<long>(type: "bigint", nullable: false)
+                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
+                    OrderId = table.Column<long>(type: "bigint", nullable: false),
+                    PaymentProviderId = table.Column<long>(type: "bigint", nullable: false),
+                    CreatedAt = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: false),
+                    Status = table.Column<string>(type: "character varying(20)", maxLength: 20, nullable: false, defaultValue: "Pending"),
+                    Currency = table.Column<string>(type: "character varying(3)", maxLength: 3, nullable: false, defaultValue: "EUR"),
+                    Amount = table.Column<decimal>(type: "numeric(18,2)", precision: 18, scale: 2, nullable: false),
+                    TransactionId = table.Column<string>(type: "character varying(200)", maxLength: 200, nullable: true),
+                    RawPayload = table.Column<string>(type: "character varying(4000)", maxLength: 4000, nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_Payments", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_Payments_Orders_OrderId",
+                        column: x => x.OrderId,
+                        principalTable: "Orders",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Restrict);
+                    table.ForeignKey(
+                        name: "FK_Payments_PaymentProviders_PaymentProviderId",
+                        column: x => x.PaymentProviderId,
+                        principalTable: "PaymentProviders",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Restrict);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "ReturnRequests",
+                columns: table => new
+                {
+                    Id = table.Column<long>(type: "bigint", nullable: false)
+                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
+                    OrderId = table.Column<long>(type: "bigint", nullable: false),
+                    UserId = table.Column<long>(type: "bigint", nullable: false),
+                    RequestedAt = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: false),
+                    Status = table.Column<string>(type: "character varying(20)", maxLength: 20, nullable: false, defaultValue: "Requested"),
+                    Reason = table.Column<string>(type: "character varying(1000)", maxLength: 1000, nullable: true),
+                    ProcessedAt = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_ReturnRequests", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_ReturnRequests_Orders_OrderId",
+                        column: x => x.OrderId,
+                        principalTable: "Orders",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Restrict);
+                    table.ForeignKey(
+                        name: "FK_ReturnRequests_Users_UserId",
+                        column: x => x.UserId,
+                        principalTable: "Users",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Restrict);
                 });
 
             migrationBuilder.CreateTable(
@@ -1090,11 +1092,6 @@ namespace IndeConnect_Back.Infrastructure.Migrations
                 table: "BrandQuestionResponses",
                 columns: new[] { "QuestionnaireId", "QuestionId" },
                 unique: true);
-
-            migrationBuilder.CreateIndex(
-                name: "IX_Brands_SuperVendorUserId",
-                table: "Brands",
-                column: "SuperVendorUserId");
 
             migrationBuilder.CreateIndex(
                 name: "IX_BrandSellers_IsActive",
@@ -1582,6 +1579,12 @@ namespace IndeConnect_Back.Infrastructure.Migrations
                 column: "UserId");
 
             migrationBuilder.CreateIndex(
+                name: "IX_User_BrandId",
+                table: "Users",
+                column: "BrandId",
+                unique: true);
+
+            migrationBuilder.CreateIndex(
                 name: "IX_User_CreatedAt",
                 table: "Users",
                 column: "CreatedAt");
@@ -1741,13 +1744,13 @@ namespace IndeConnect_Back.Infrastructure.Migrations
                 name: "Sales");
 
             migrationBuilder.DropTable(
-                name: "Brands");
+                name: "Users");
 
             migrationBuilder.DropTable(
                 name: "Categories");
 
             migrationBuilder.DropTable(
-                name: "Users");
+                name: "Brands");
         }
     }
 }

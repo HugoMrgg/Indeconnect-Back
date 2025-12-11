@@ -4,6 +4,7 @@ using IndeConnect_Back.Domain.catalog.product;
 using IndeConnect_Back.Domain.order;
 using IndeConnect_Back.Domain.payment;
 using IndeConnect_Back.Domain.user;
+using IndeConnect_Back.Infrastructure.Configurations;
 
 namespace IndeConnect_Back.Infrastructure;
 
@@ -65,5 +66,7 @@ public class AppDbContext : DbContext
         base.OnModelCreating(modelBuilder);
         
         modelBuilder.ApplyConfigurationsFromAssembly(typeof(AppDbContext).Assembly);
+        modelBuilder.ApplyConfiguration(new ProductReviewConfiguration());
+
     }
 }
