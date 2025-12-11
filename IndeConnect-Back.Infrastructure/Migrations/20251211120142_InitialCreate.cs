@@ -653,7 +653,6 @@ namespace IndeConnect_Back.Infrastructure.Migrations
                         .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
                     ProductId = table.Column<long>(type: "bigint", nullable: false),
                     Description = table.Column<string>(type: "text", nullable: false),
-                    Key = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: false),
                     Value = table.Column<string>(type: "character varying(500)", maxLength: 500, nullable: false),
                     DisplayOrder = table.Column<int>(type: "integer", nullable: false, defaultValue: 0)
                 },
@@ -1344,11 +1343,6 @@ namespace IndeConnect_Back.Infrastructure.Migrations
                 column: "TransactionId",
                 unique: true,
                 filter: "\"TransactionId\" IS NOT NULL");
-
-            migrationBuilder.CreateIndex(
-                name: "IX_ProductDetail_Key",
-                table: "ProductDetails",
-                column: "Key");
 
             migrationBuilder.CreateIndex(
                 name: "IX_ProductDetail_ProductOrder",
