@@ -6,5 +6,4 @@ public class SignatureResponse
     public long Timestamp { get; set; }
     public string ApiKey { get; set; } = string.Empty;
     public string CloudName { get; set; } = string.Empty;
-    public string Folder { get; set; } = string.Empty;
-}
+    public string UploadPreset { get; set; } = string.Empty; }

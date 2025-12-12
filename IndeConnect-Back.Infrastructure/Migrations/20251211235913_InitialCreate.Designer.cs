@@ -12,7 +12,7 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace IndeConnect_Back.Infrastructure.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    [Migration("20251211120142_InitialCreate")]
+    [Migration("20251211235913_InitialCreate")]
     partial class InitialCreate
     {
         /// <inheritdoc />
@@ -1944,13 +1944,13 @@ namespace IndeConnect_Back.Infrastructure.Migrations
                     b.HasOne("IndeConnect_Back.Domain.catalog.product.Product", "Product")
                         .WithMany("Reviews")
                         .HasForeignKey("ProductId")
-                        .OnDelete(DeleteBehavior.Restrict)
+                        .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
                     b.HasOne("IndeConnect_Back.Domain.user.User", "User")
-                        .WithMany()
+                        .WithMany("ProductReviews")
                         .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.Restrict)
+                        .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
                     b.Navigation("Product");
@@ -2325,6 +2325,8 @@ namespace IndeConnect_Back.Infrastructure.Migrations
                     b.Navigation("Orders");
 
                     b.Navigation("PaymentMethods");
+
+                    b.Navigation("ProductReviews");
 
                     b.Navigation("Returns");
 
