@@ -156,4 +156,28 @@ public class BrandController : ControllerBase
 
         return Ok(brand);
     }
+    [HttpPut("my-brand/deposit")]
+    [Authorize(Roles = "SuperVendor")]
+    [ProducesResponseType(typeof(DepositDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+    public async Task<ActionResult<DepositDto>> UpsertMyBrandDeposit(
+        [FromBody] UpsertBrandDepositRequest request,
+        [FromServices] UserHelper userHelper)
+    {
+        var currentUserId = userHelper.GetUserId();
+
+        try
+        {
+            var deposit = await _brandService.UpsertMyBrandDepositAsync(currentUserId, request);
+            return Ok(deposit);
+        }
+        catch (KeyNotFoundException ex)
+        {
+            return NotFound(new ProblemDetails
+            {
+                Title = "Brand not found",
+                Detail = ex.Message
+            });
+        }
+    }
 }

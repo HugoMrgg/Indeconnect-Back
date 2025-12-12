@@ -19,10 +19,12 @@ public class Deposit
     private Deposit() { }
 
     public Deposit(
-        string id, 
-        int number, 
-        string street, 
+        string id,
+        int number,
+        string street,
         string postalCode,
+        string city,
+        string country,
         double latitude,
         double longitude,
         long brandId)
@@ -31,11 +33,12 @@ public class Deposit
         Number = number;
         Street = street.Trim();
         PostalCode = postalCode.Trim();
+        City = city.Trim();
+        Country = country.Trim();
         Latitude = latitude;
         Longitude = longitude;
         BrandId = brandId;
     }
 
-    // Helper pour construire l'adresse complète
-    public string GetFullAddress() => $"{Number} {Street}, {PostalCode}";
+    public string GetFullAddress() => $"{Number} {Street}, {PostalCode} {City}, {Country}";
 }

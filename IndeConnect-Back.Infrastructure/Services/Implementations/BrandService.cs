@@ -10,11 +10,13 @@ public class BrandService : IBrandService
 {
     private readonly AppDbContext _context;
     private readonly BrandEthicsScorer _ethicsScorer;
+    private readonly IGeocodeService _geocodeService;
     
-    public BrandService(AppDbContext context, BrandEthicsScorer ethicsScorer)
+    public BrandService(AppDbContext context, BrandEthicsScorer ethicsScorer, IGeocodeService geocodeService)
     {
         _context = context;
         _ethicsScorer = ethicsScorer;
+        _geocodeService = geocodeService;
     }
     
     public async Task<BrandsListResponse> GetBrandsSortedByEthicsAsync(GetBrandsQuery query)
@@ -147,7 +149,8 @@ public class BrandService : IBrandService
             d.GetFullAddress(),
             userLat.HasValue && userLon.HasValue 
                 ? (int?)CalculateDistanceKm(userLat.Value, userLon.Value, d.Latitude, d.Longitude)
-                : null
+                : null,
+            d.City
         ));
 
         return new BrandDetailDto(
@@ -205,7 +208,8 @@ public class BrandService : IBrandService
         var deposits = brand.Deposits.Select(d => new DepositDto(
             d.Id,
             d.GetFullAddress(),
-            null
+            null,
+            d.City
         ));
 
         return new BrandDetailDto(
@@ -362,5 +366,51 @@ public class BrandService : IBrandService
         );
 
         await _context.SaveChangesAsync();
+    }
+    public async Task<DepositDto> UpsertMyBrandDepositAsync(
+        long? currentUserId,
+        UpsertBrandDepositRequest request)
+    {
+        var brand = await _context.Brands
+            .Include(b => b.Deposits)
+            .FirstOrDefaultAsync(b => b.SuperVendorUserId == currentUserId);
+
+        if (brand == null)
+            throw new KeyNotFoundException("No brand associated with this user.");
+
+        var existing = brand.Deposits.FirstOrDefault();
+        var id = existing?.Id ?? Guid.NewGuid().ToString("N");
+
+        // Adresse complète pour le geocoding
+        var fullAddress =
+            $"{request.Number} {request.Street}, {request.PostalCode} {request.City}, {request.Country}";
+
+        // Appel au service de geocoding (NominatimGeocodeService)
+        var coords = await _geocodeService.GeocodeAddressAsync(fullAddress);
+
+        var latitude = coords?.Latitude ?? 0;
+        var longitude = coords?.Longitude ?? 0;
+
+        brand.SetSingleDeposit(
+            id: id,
+            number: request.Number,
+            street: request.Street,
+            postalCode: request.PostalCode,
+            city: request.City,
+            country: request.Country,
+            latitude: latitude,
+            longitude: longitude
+        );
+
+        await _context.SaveChangesAsync();
+
+        var saved = brand.Deposits.First();
+
+        return new DepositDto(
+            Id: saved.Id,
+            FullAddress: saved.GetFullAddress(),
+            DistanceKm: null,
+            City: request.City
+        );
     }
 }

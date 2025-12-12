@@ -8,16 +8,22 @@ public class BrandEthicsScorer
         IEnumerable<BrandQuestionResponse> responses,
         EthicsCategory category)
     {
-        // Filtre : récupère juste les réponses dans la bonne catégorie
-        var validResponses = responses
-            .Where(r => r.Question.Category == category);
+        if (responses == null)
+            return 0m;
 
-        // Additionne les scores des options choisies (pondérées !)
-        decimal totalScore = 0;
+        var validResponses = responses
+            .Where(r => r != null
+                        && r.Question != null
+                        && r.Option != null
+                        && r.Question.Category == category);
+
+        decimal totalScore = 0m;
         foreach (var response in validResponses)
         {
             totalScore += response.Option.Score;
         }
+
         return totalScore;
     }
+
 }

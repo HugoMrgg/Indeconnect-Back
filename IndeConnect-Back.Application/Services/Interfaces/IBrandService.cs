@@ -8,4 +8,5 @@ public interface IBrandService
     Task<BrandDetailDto?> GetBrandByIdAsync(long brandId, double? userLat, double? userLon);
     Task<BrandDetailDto?> GetMyBrandAsync(long? superVendorUserId);
     Task UpdateBrandAsync(long brandId, UpdateBrandRequest request, long? currentUserId);
+    Task<DepositDto> UpsertMyBrandDepositAsync(long? currentUserId, UpsertBrandDepositRequest request);
 }
