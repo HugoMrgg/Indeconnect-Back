@@ -165,6 +165,7 @@ public class CartService : ICartService
                 i.ProductId,
                 product.Name,
                 product.Brand.Name,
+                product.Brand.Id, 
                 primaryImage,
                 product.PrimaryColor != null 
                     ? new ColorDto(product.PrimaryColor.Id, product.PrimaryColor.Name, product.PrimaryColor.Hexa)

@@ -17,7 +17,7 @@ public class Order
     public DateTimeOffset PlacedAt { get; private set; }
     public string Currency { get; private set; } = "EUR";
     public decimal TotalAmount { get; private set; }
-    public OrderStatus Status { get; private set; } = OrderStatus.Pending;
+    public OrderStatus Status { get; set; } = OrderStatus.Pending;
 
     public long? PaymentId { get; private set; }
     public Payment? Payment { get; private set; }

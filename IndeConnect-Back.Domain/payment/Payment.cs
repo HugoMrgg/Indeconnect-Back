@@ -14,7 +14,7 @@ public class Payment
     public PaymentProvider PaymentProvider { get; private set; } = default!;
     
     public DateTimeOffset CreatedAt { get; private set; }
-    public PaymentStatus Status { get; private set; } = PaymentStatus.Pending;
+    public PaymentStatus Status { get; set; } = PaymentStatus.Pending;
     public string Currency { get; private set; } = "EUR";
     public decimal Amount { get; private set; }
 
@@ -23,7 +23,7 @@ public class Payment
 
     private Payment() { }
     
-    public Payment(long orderId, long paymentProviderId, decimal amount, string? currency = null)
+    public Payment(long orderId, long paymentProviderId, decimal amount, string transactionId, string? currency = null)
     {
         if (amount <= 0)
             throw new ArgumentException("Amount must be positive", nameof(amount));
@@ -34,6 +34,7 @@ public class Payment
         Currency = currency ?? "EUR";
         CreatedAt = DateTimeOffset.UtcNow;
         Status = PaymentStatus.Pending;
+        TransactionId = transactionId;
     }
     
     public void MarkAsPaid(string transactionId, string? rawPayload = null)

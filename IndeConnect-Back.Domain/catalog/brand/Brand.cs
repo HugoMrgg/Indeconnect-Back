@@ -135,4 +135,21 @@ public class Brand
     {
         _deposits.Clear();
     }
+    private readonly List<BrandShippingMethod> _shippingMethods = new();
+    public IReadOnlyCollection<BrandShippingMethod> ShippingMethods => _shippingMethods;
+
+// Méthode pour ajouter une méthode de livraison
+    public void AddShippingMethod(BrandShippingMethod method)
+    {
+        if (method.BrandId != Id)
+            throw new InvalidOperationException("Cette méthode appartient à une autre marque");
+
+        _shippingMethods.Add(method);
+    }
+
+// Méthode pour retirer une méthode
+    public void RemoveShippingMethod(BrandShippingMethod method)
+    {
+        _shippingMethods.Remove(method);
+    }
 }
