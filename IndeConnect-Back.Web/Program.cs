@@ -32,9 +32,9 @@ var postgresUser     = Environment.GetEnvironmentVariable("POSTGRES_USER");
 var postgresPassword = Environment.GetEnvironmentVariable("POSTGRES_PASSWORD");
 var postgresHost     = Environment.GetEnvironmentVariable("POSTGRES_HOST");
 var postgresPort     = Environment.GetEnvironmentVariable("POSTGRES_PORT");
+
 var connectionString =
     $"Host={postgresHost};Port={postgresPort};Database={postgresDb};Username={postgresUser};Password={postgresPassword}";
-Console.WriteLine("postgresDb = " + connectionString);
 
 builder.Services.AddDbContext<AppDbContext>(options =>
 {

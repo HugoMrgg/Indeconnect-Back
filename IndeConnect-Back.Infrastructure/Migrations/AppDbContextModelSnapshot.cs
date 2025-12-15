@@ -1413,7 +1413,7 @@ namespace IndeConnect_Back.Infrastructure.Migrations
                     b.HasIndex("UserId", "Status")
                         .HasDatabaseName("IX_ReturnRequest_UserStatus");
 
-                    b.ToTable("ReturnRequests");
+                    b.ToTable("ReturnRequests", (string)null);
                 });
 
             modelBuilder.Entity("IndeConnect_Back.Domain.payment.Payment", b =>
