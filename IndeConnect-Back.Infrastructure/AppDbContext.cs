@@ -30,7 +30,10 @@ public class AppDbContext : DbContext
     public DbSet<BrandPolicy> BrandPolicies { get; set; }
     public DbSet<BrandQuestionnaire> BrandQuestionnaires { get; set; }
     public DbSet<BrandQuestionResponse> BrandQuestionResponses { get; set; }
+    public DbSet<BrandQuestionResponseOption> BrandQuestionResponseOptions { get; set; }
+    public DbSet<BrandEthicScore> BrandEthicScores { get; set; }
     public DbSet<Deposit> Deposits { get; set; }
+    public DbSet<EthicsCategoryEntity> EthicsCategories { get; set; }
     public DbSet<EthicsQuestion> EthicsQuestions { get; set; } 
     public DbSet<EthicsOption> EthicsOptions { get; set; }
     

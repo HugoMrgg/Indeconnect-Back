@@ -25,12 +25,13 @@ public class BrandQuestionResponseConfiguration : IEntityTypeConfiguration<Brand
                .OnDelete(DeleteBehavior.Restrict)
                .IsRequired();
         
-        // Relation with EthicsOption
-        builder.HasOne(br => br.Option)
-               .WithMany()
-               .HasForeignKey(br => br.OptionId)
-               .OnDelete(DeleteBehavior.Restrict)
-               .IsRequired();
+        builder.Property(br => br.CalculatedScore).IsRequired(false);
+        
+        builder.HasMany(br => br.SelectedOptions)
+               .WithOne(x => x.Response)
+               .HasForeignKey(x => x.ResponseId)
+               .OnDelete(DeleteBehavior.Cascade);
+        
         
         builder.HasIndex(br => new { br.QuestionnaireId, CriterionId = br.QuestionId })
                .IsUnique()
@@ -42,7 +43,6 @@ public class BrandQuestionResponseConfiguration : IEntityTypeConfiguration<Brand
         builder.HasIndex(br => br.QuestionId)
                .HasDatabaseName("IX_BrandQuestionResponse_QuestionId");
         
-        builder.HasIndex(br => br.OptionId)
-               .HasDatabaseName("IX_BrandQuestionResponse_OptionId");
+        
     }
 }
