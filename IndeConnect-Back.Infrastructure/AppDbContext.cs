@@ -33,6 +33,7 @@ public class AppDbContext : DbContext
     public DbSet<Deposit> Deposits { get; set; }
     public DbSet<EthicsQuestion> EthicsQuestions { get; set; } 
     public DbSet<EthicsOption> EthicsOptions { get; set; }
+    public DbSet<BrandShippingMethod> BrandShippingMethods { get; set; }
     
     // CATALOG - PRODUCT DOMAIN
     public DbSet<Category> Categories { get; set; }

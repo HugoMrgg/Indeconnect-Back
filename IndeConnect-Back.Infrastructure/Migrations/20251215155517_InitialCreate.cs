@@ -225,6 +225,34 @@ namespace IndeConnect_Back.Infrastructure.Migrations
                 });
 
             migrationBuilder.CreateTable(
+                name: "BrandShippingMethods",
+                columns: table => new
+                {
+                    Id = table.Column<long>(type: "bigint", nullable: false)
+                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
+                    BrandId = table.Column<long>(type: "bigint", nullable: false),
+                    ProviderName = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: false),
+                    MethodType = table.Column<string>(type: "character varying(50)", maxLength: 50, nullable: false),
+                    DisplayName = table.Column<string>(type: "character varying(200)", maxLength: 200, nullable: false),
+                    Price = table.Column<decimal>(type: "numeric(18,2)", precision: 18, scale: 2, nullable: false),
+                    EstimatedMinDays = table.Column<int>(type: "integer", nullable: false),
+                    EstimatedMaxDays = table.Column<int>(type: "integer", nullable: false),
+                    MaxWeight = table.Column<decimal>(type: "numeric(10,2)", precision: 10, scale: 2, nullable: true),
+                    ProviderConfig = table.Column<string>(type: "character varying(2000)", maxLength: 2000, nullable: true),
+                    IsEnabled = table.Column<bool>(type: "boolean", nullable: false, defaultValue: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_BrandShippingMethods", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_BrandShippingMethods_Brands_BrandId",
+                        column: x => x.BrandId,
+                        principalTable: "Brands",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
                 name: "Deposits",
                 columns: table => new
                 {
@@ -266,7 +294,8 @@ namespace IndeConnect_Back.Infrastructure.Migrations
                     InvitationExpiresAt = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: true),
                     Role = table.Column<string>(type: "text", nullable: false),
                     WishlistId = table.Column<long>(type: "bigint", nullable: true),
-                    BrandId = table.Column<long>(type: "bigint", nullable: true)
+                    BrandId = table.Column<long>(type: "bigint", nullable: true),
+                    StripeCustomerId = table.Column<string>(type: "text", nullable: true)
                 },
                 constraints: table =>
                 {
@@ -653,7 +682,6 @@ namespace IndeConnect_Back.Infrastructure.Migrations
                         .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
                     ProductId = table.Column<long>(type: "bigint", nullable: false),
                     Description = table.Column<string>(type: "text", nullable: false),
-                    Key = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: false),
                     Value = table.Column<string>(type: "character varying(500)", maxLength: 500, nullable: false),
                     DisplayOrder = table.Column<int>(type: "integer", nullable: false, defaultValue: 0)
                 },
@@ -737,13 +765,13 @@ namespace IndeConnect_Back.Infrastructure.Migrations
                         column: x => x.ProductId,
                         principalTable: "Products",
                         principalColumn: "Id",
-                        onDelete: ReferentialAction.Restrict);
+                        onDelete: ReferentialAction.Cascade);
                     table.ForeignKey(
                         name: "FK_ProductReviews_Users_UserId",
                         column: x => x.UserId,
                         principalTable: "Users",
                         principalColumn: "Id",
-                        onDelete: ReferentialAction.Restrict);
+                        onDelete: ReferentialAction.Cascade);
                 });
 
             migrationBuilder.CreateTable(
@@ -753,8 +781,8 @@ namespace IndeConnect_Back.Infrastructure.Migrations
                     Id = table.Column<long>(type: "bigint", nullable: false)
                         .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
                     ProductId = table.Column<long>(type: "bigint", nullable: false),
-                    SizeId = table.Column<long>(type: "bigint", nullable: true),
                     SKU = table.Column<string>(type: "character varying(50)", maxLength: 50, nullable: false),
+                    SizeId = table.Column<long>(type: "bigint", nullable: true),
                     StockCount = table.Column<int>(type: "integer", nullable: false, defaultValue: 0),
                     PriceOverride = table.Column<decimal>(type: "numeric(18,2)", precision: 18, scale: 2, nullable: true)
                 },
@@ -1104,6 +1132,16 @@ namespace IndeConnect_Back.Infrastructure.Migrations
                 column: "SellerId");
 
             migrationBuilder.CreateIndex(
+                name: "IX_BrandShippingMethods_BrandId",
+                table: "BrandShippingMethods",
+                column: "BrandId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_BrandShippingMethods_BrandId_IsEnabled",
+                table: "BrandShippingMethods",
+                columns: new[] { "BrandId", "IsEnabled" });
+
+            migrationBuilder.CreateIndex(
                 name: "IX_BrandSubscription_UserId_BrandId",
                 table: "BrandSubscriptions",
                 columns: new[] { "UserId", "BrandId" },
@@ -1344,11 +1382,6 @@ namespace IndeConnect_Back.Infrastructure.Migrations
                 column: "TransactionId",
                 unique: true,
                 filter: "\"TransactionId\" IS NOT NULL");
-
-            migrationBuilder.CreateIndex(
-                name: "IX_ProductDetail_Key",
-                table: "ProductDetails",
-                column: "Key");
 
             migrationBuilder.CreateIndex(
                 name: "IX_ProductDetail_ProductOrder",
@@ -1649,6 +1682,9 @@ namespace IndeConnect_Back.Infrastructure.Migrations
 
             migrationBuilder.DropTable(
                 name: "BrandSellers");
+
+            migrationBuilder.DropTable(
+                name: "BrandShippingMethods");
 
             migrationBuilder.DropTable(
                 name: "BrandSubscriptions");

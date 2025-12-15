@@ -1,4 +1,5 @@
-﻿using IndeConnect_Back.Domain.catalog.product;
+﻿// Domain/order/OrderItem.cs
+using IndeConnect_Back.Domain.catalog.product;
 
 namespace IndeConnect_Back.Domain.order;
 
@@ -20,7 +21,7 @@ public class OrderItem
 
     private OrderItem() { }
     
-    public OrderItem(long orderId, long productId, string productName, int quantity, decimal unitPrice, long? variantId = null)
+    public OrderItem(long productId, string productName, int quantity, decimal unitPrice, long? variantId = null)
     {
         if (string.IsNullOrWhiteSpace(productName))
             throw new ArgumentException("Product name is required", nameof(productName));
@@ -29,11 +30,15 @@ public class OrderItem
         if (unitPrice < 0)
             throw new ArgumentException("Unit price cannot be negative", nameof(unitPrice));
             
-        OrderId = orderId;
         ProductId = productId;
         ProductName = productName.Trim();
         Quantity = quantity;
         UnitPrice = unitPrice;
         VariantId = variantId;
+    }
+    
+    internal void SetOrderId(long orderId)
+    {
+        OrderId = orderId;
     }
 }

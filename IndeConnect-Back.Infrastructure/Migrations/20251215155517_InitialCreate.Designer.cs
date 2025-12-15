@@ -12,8 +12,8 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace IndeConnect_Back.Infrastructure.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    [Migration("20251203135359_ProductCrudChanges")]
-    partial class ProductCrudChanges
+    [Migration("20251215155517_InitialCreate")]
+    partial class InitialCreate
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -36,6 +36,9 @@ namespace IndeConnect_Back.Infrastructure.Migrations
                     b.Property<string>("AboutUs")
                         .HasMaxLength(2000)
                         .HasColumnType("character varying(2000)");
+
+                    b.Property<string>("AccentColor")
+                        .HasColumnType("text");
 
                     b.Property<string>("BannerUrl")
                         .HasColumnType("text");
@@ -76,8 +79,6 @@ namespace IndeConnect_Back.Infrastructure.Migrations
                         .HasColumnType("character varying(1000)");
 
                     b.HasKey("Id");
-
-                    b.HasIndex("SuperVendorUserId");
 
                     b.ToTable("Brands");
                 });
@@ -264,6 +265,64 @@ namespace IndeConnect_Back.Infrastructure.Migrations
                     b.HasIndex("SellerId");
 
                     b.ToTable("BrandSellers");
+                });
+
+            modelBuilder.Entity("IndeConnect_Back.Domain.catalog.brand.BrandShippingMethod", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("Id"));
+
+                    b.Property<long>("BrandId")
+                        .HasColumnType("bigint");
+
+                    b.Property<string>("DisplayName")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<int>("EstimatedMaxDays")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("EstimatedMinDays")
+                        .HasColumnType("integer");
+
+                    b.Property<bool>("IsEnabled")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(true);
+
+                    b.Property<decimal?>("MaxWeight")
+                        .HasPrecision(10, 2)
+                        .HasColumnType("numeric(10,2)");
+
+                    b.Property<string>("MethodType")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<decimal>("Price")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("numeric(18,2)");
+
+                    b.Property<string>("ProviderConfig")
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)");
+
+                    b.Property<string>("ProviderName")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("BrandId");
+
+                    b.HasIndex("BrandId", "IsEnabled");
+
+                    b.ToTable("BrandShippingMethods", (string)null);
                 });
 
             modelBuilder.Entity("IndeConnect_Back.Domain.catalog.brand.Deposit", b =>
@@ -988,13 +1047,15 @@ namespace IndeConnect_Back.Infrastructure.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("BrandId");
+                    b.HasIndex("BrandId")
+                        .HasDatabaseName("IX_Invoices_BrandId");
 
                     b.HasIndex("InvoiceNumber")
                         .IsUnique()
                         .HasDatabaseName("IX_Invoice_UniqueNumber");
 
-                    b.HasIndex("OrderId");
+                    b.HasIndex("OrderId")
+                        .HasDatabaseName("IX_Invoices_OrderId");
 
                     b.ToTable("Invoices", (string)null);
                 });
@@ -1150,7 +1211,7 @@ namespace IndeConnect_Back.Infrastructure.Migrations
                     b.HasIndex("UserId", "Status")
                         .HasDatabaseName("IX_ReturnRequest_UserStatus");
 
-                    b.ToTable("ReturnRequests");
+                    b.ToTable("ReturnRequests", (string)null);
                 });
 
             modelBuilder.Entity("IndeConnect_Back.Domain.payment.Payment", b =>
@@ -1588,6 +1649,9 @@ namespace IndeConnect_Back.Infrastructure.Migrations
 
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("Id"));
 
+                    b.Property<long?>("BrandId")
+                        .HasColumnType("bigint");
+
                     b.Property<DateTimeOffset>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
 
@@ -1600,6 +1664,9 @@ namespace IndeConnect_Back.Infrastructure.Migrations
                         .IsRequired()
                         .HasMaxLength(100)
                         .HasColumnType("character varying(100)");
+
+                    b.Property<string>("GoogleId")
+                        .HasColumnType("text");
 
                     b.Property<DateTimeOffset?>("InvitationExpiresAt")
                         .HasColumnType("timestamp with time zone");
@@ -1626,10 +1693,17 @@ namespace IndeConnect_Back.Infrastructure.Migrations
                         .IsRequired()
                         .HasColumnType("text");
 
+                    b.Property<string>("StripeCustomerId")
+                        .HasColumnType("text");
+
                     b.Property<long?>("WishlistId")
                         .HasColumnType("bigint");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("BrandId")
+                        .IsUnique()
+                        .HasDatabaseName("IX_User_BrandId");
 
                     b.HasIndex("CreatedAt")
                         .HasDatabaseName("IX_User_CreatedAt");
@@ -1727,16 +1801,6 @@ namespace IndeConnect_Back.Infrastructure.Migrations
                     b.ToTable("WishlistItems");
                 });
 
-            modelBuilder.Entity("IndeConnect_Back.Domain.catalog.brand.Brand", b =>
-                {
-                    b.HasOne("IndeConnect_Back.Domain.user.User", "SuperVendorUser")
-                        .WithMany("BrandsAsSuperVendor")
-                        .HasForeignKey("SuperVendorUserId")
-                        .OnDelete(DeleteBehavior.Restrict);
-
-                    b.Navigation("SuperVendorUser");
-                });
-
             modelBuilder.Entity("IndeConnect_Back.Domain.catalog.brand.BrandEthicTag", b =>
                 {
                     b.HasOne("IndeConnect_Back.Domain.catalog.brand.Brand", "Brand")
@@ -1814,6 +1878,17 @@ namespace IndeConnect_Back.Infrastructure.Migrations
                     b.Navigation("Brand");
 
                     b.Navigation("Seller");
+                });
+
+            modelBuilder.Entity("IndeConnect_Back.Domain.catalog.brand.BrandShippingMethod", b =>
+                {
+                    b.HasOne("IndeConnect_Back.Domain.catalog.brand.Brand", "Brand")
+                        .WithMany("ShippingMethods")
+                        .HasForeignKey("BrandId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Brand");
                 });
 
             modelBuilder.Entity("IndeConnect_Back.Domain.catalog.brand.Deposit", b =>
@@ -1943,13 +2018,13 @@ namespace IndeConnect_Back.Infrastructure.Migrations
                     b.HasOne("IndeConnect_Back.Domain.catalog.product.Product", "Product")
                         .WithMany("Reviews")
                         .HasForeignKey("ProductId")
-                        .OnDelete(DeleteBehavior.Restrict)
+                        .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
                     b.HasOne("IndeConnect_Back.Domain.user.User", "User")
-                        .WithMany()
+                        .WithMany("ProductReviews")
                         .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.Restrict)
+                        .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
                     b.Navigation("Product");
@@ -2186,6 +2261,16 @@ namespace IndeConnect_Back.Infrastructure.Migrations
                     b.Navigation("User");
                 });
 
+            modelBuilder.Entity("IndeConnect_Back.Domain.user.User", b =>
+                {
+                    b.HasOne("IndeConnect_Back.Domain.catalog.brand.Brand", "Brand")
+                        .WithOne("SuperVendorUser")
+                        .HasForeignKey("IndeConnect_Back.Domain.user.User", "BrandId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.Navigation("Brand");
+                });
+
             modelBuilder.Entity("IndeConnect_Back.Domain.user.UserReview", b =>
                 {
                     b.HasOne("IndeConnect_Back.Domain.catalog.brand.Brand", "Brand")
@@ -2248,6 +2333,10 @@ namespace IndeConnect_Back.Infrastructure.Migrations
                     b.Navigation("Reviews");
 
                     b.Navigation("Sellers");
+
+                    b.Navigation("ShippingMethods");
+
+                    b.Navigation("SuperVendorUser");
                 });
 
             modelBuilder.Entity("IndeConnect_Back.Domain.catalog.brand.BrandQuestionnaire", b =>
@@ -2307,13 +2396,13 @@ namespace IndeConnect_Back.Infrastructure.Migrations
 
                     b.Navigation("BrandsAsSeller");
 
-                    b.Navigation("BrandsAsSuperVendor");
-
                     b.Navigation("Cart");
 
                     b.Navigation("Orders");
 
                     b.Navigation("PaymentMethods");
+
+                    b.Navigation("ProductReviews");
 
                     b.Navigation("Returns");
 

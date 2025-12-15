@@ -1,4 +1,5 @@
-﻿using IndeConnect_Back.Domain.order;
+﻿// Infrastructure/Configurations/InvoiceConfiguration.cs
+using IndeConnect_Back.Domain.order;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
@@ -24,16 +25,24 @@ public class InvoiceConfiguration : IEntityTypeConfiguration<Invoice>
         builder.HasOne(i => i.Order)
             .WithMany(o => o.Invoices)
             .HasForeignKey(i => i.OrderId)
-            .OnDelete(DeleteBehavior.Restrict);
+            .OnDelete(DeleteBehavior.Restrict)
+            .IsRequired(); 
         
         builder.HasOne(i => i.Brand)
             .WithMany()
             .HasForeignKey(i => i.BrandId)
-            .OnDelete(DeleteBehavior.Restrict);
+            .OnDelete(DeleteBehavior.Restrict)
+            .IsRequired(); 
         
         builder.HasIndex(i => i.InvoiceNumber)
             .IsUnique()
             .HasDatabaseName("IX_Invoice_UniqueNumber");
+        
+        builder.HasIndex(i => i.OrderId)
+            .HasDatabaseName("IX_Invoices_OrderId");
+        
+        builder.HasIndex(i => i.BrandId)
+            .HasDatabaseName("IX_Invoices_BrandId");
         
         builder.ToTable("Invoices");
     }
