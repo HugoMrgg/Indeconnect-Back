@@ -11,14 +11,18 @@ public class EthicsOption
     public string Key { get; private set; } = default!; 
     public string Label { get; private set; } = default!;
     public decimal Score { get; private set; }       
+    public int Order { get; private set; }
+    public bool IsActive { get; private set; } = true;
 
     private EthicsOption() { }
 
-    public EthicsOption(long questionId, string key, string label, decimal score)
+    public EthicsOption(long questionId, string key, string label, decimal score, int order = 0, bool isActive = true)
     {
         QuestionId = questionId;
         Key = key.Trim();
         Label = label.Trim();
         Score = score;
+        Order = order;
+        IsActive = isActive;
     }
 }
