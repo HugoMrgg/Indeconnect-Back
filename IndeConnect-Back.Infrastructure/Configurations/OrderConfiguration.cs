@@ -65,11 +65,11 @@ public class OrderConfiguration : IEntityTypeConfiguration<Order>
                .HasForeignKey(i => i.OrderId)
                .OnDelete(DeleteBehavior.Restrict);
         
-        // Relation with Deliveries (One-to-Many)
-        builder.HasMany(o => o.Deliveries)
-               .WithOne(d => d.Order)
-               .HasForeignKey(d => d.OrderId)
-               .OnDelete(DeleteBehavior.Restrict);
+        // Relation with BrandDeliveries (One-to-Many)
+        builder.HasMany(o => o.BrandDeliveries)
+               .WithOne(bd => bd.Order)
+               .HasForeignKey(bd => bd.OrderId)
+               .OnDelete(DeleteBehavior.Cascade);
         
         // Relation with ReturnRequests (One-to-Many)
         builder.HasMany(o => o.Returns)

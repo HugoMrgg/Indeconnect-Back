@@ -7,4 +7,5 @@ public interface IOrderService
     Task<OrderDto> CreateOrderAsync(long userId, CreateOrderRequest request);
     Task<OrderDto?> GetOrderByIdAsync(long orderId);
     Task<List<OrderDto>> GetUserOrdersAsync(long userId);
+    Task<OrderTrackingDto?> GetOrderTrackingAsync(long orderId);
 }

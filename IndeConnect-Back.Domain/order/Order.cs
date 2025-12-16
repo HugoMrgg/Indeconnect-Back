@@ -25,8 +25,8 @@ public class Order
     private readonly List<OrderItem> _items = new();
     public IReadOnlyCollection<OrderItem> Items => _items;
 
-    private readonly List<Delivery> _deliveries = new();
-    public IReadOnlyCollection<Delivery> Deliveries => _deliveries;
+    private readonly List<BrandDelivery> _brandDeliveries = new();
+    public IReadOnlyCollection<BrandDelivery> BrandDeliveries => _brandDeliveries;
 
     private readonly List<Invoice> _invoices = new();
     public IReadOnlyCollection<Invoice> Invoices => _invoices;
@@ -47,7 +47,43 @@ public class Order
         Currency = currency ?? "EUR";
         Status = OrderStatus.Pending;
         PlacedAt = DateTimeOffset.UtcNow;
-        
+
         TotalAmount = _items.Sum(item => item.Quantity * item.UnitPrice);
+    }
+
+    public void AddBrandDelivery(BrandDelivery delivery)
+    {
+        if (delivery == null)
+            throw new ArgumentNullException(nameof(delivery));
+
+        _brandDeliveries.Add(delivery);
+    }
+
+    public void AddInvoice(Invoice invoice)
+    {
+        if (invoice == null)
+            throw new ArgumentNullException(nameof(invoice));
+
+        _invoices.Add(invoice);
+    }
+
+    /// <summary>
+    /// Updates the global order status based on all brand deliveries.
+    /// Order is Delivered only when ALL brand deliveries are delivered.
+    /// </summary>
+    public void UpdateGlobalStatusFromDeliveries()
+    {
+        if (_brandDeliveries.Count == 0)
+            return;
+
+        if (_brandDeliveries.All(d => d.Status == DeliveryStatus.Delivered))
+        {
+            Status = OrderStatus.Delivered;
+        }
+        else if (_brandDeliveries.Any(d => d.Status != DeliveryStatus.Pending && d.Status != DeliveryStatus.Cancelled))
+        {
+            if (Status == OrderStatus.Paid)
+                Status = OrderStatus.Processing;
+        }
     }
 }

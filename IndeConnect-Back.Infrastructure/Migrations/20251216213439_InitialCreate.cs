@@ -829,6 +829,48 @@ namespace IndeConnect_Back.Infrastructure.Migrations
                 });
 
             migrationBuilder.CreateTable(
+                name: "BrandDeliveries",
+                columns: table => new
+                {
+                    Id = table.Column<long>(type: "bigint", nullable: false)
+                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
+                    BrandId = table.Column<long>(type: "bigint", nullable: false),
+                    OrderId = table.Column<long>(type: "bigint", nullable: false),
+                    ShippingMethodId = table.Column<long>(type: "bigint", nullable: true),
+                    ShippingFee = table.Column<decimal>(type: "numeric(18,2)", nullable: false, defaultValue: 0m),
+                    Description = table.Column<string>(type: "character varying(500)", maxLength: 500, nullable: false),
+                    TrackingNumber = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: true),
+                    Status = table.Column<string>(type: "character varying(50)", maxLength: 50, nullable: false, defaultValue: "Pending"),
+                    CreatedAt = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: false),
+                    ShippedAt = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: true),
+                    DeliveredAt = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: true),
+                    UpdatedAt = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: false),
+                    EstimatedDelivery = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_BrandDeliveries", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_BrandDeliveries_BrandShippingMethods_ShippingMethodId",
+                        column: x => x.ShippingMethodId,
+                        principalTable: "BrandShippingMethods",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Restrict);
+                    table.ForeignKey(
+                        name: "FK_BrandDeliveries_Brands_BrandId",
+                        column: x => x.BrandId,
+                        principalTable: "Brands",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Restrict);
+                    table.ForeignKey(
+                        name: "FK_BrandDeliveries_Orders_OrderId",
+                        column: x => x.OrderId,
+                        principalTable: "Orders",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
                 name: "Deliveries",
                 columns: table => new
                 {
@@ -836,7 +878,10 @@ namespace IndeConnect_Back.Infrastructure.Migrations
                         .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
                     Description = table.Column<string>(type: "character varying(500)", maxLength: 500, nullable: false),
                     TrackingNumber = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: true),
+                    CreatedAt = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: false),
                     ShippedAt = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: true),
+                    DeliveredAt = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: true),
+                    UpdatedAt = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: false),
                     Status = table.Column<string>(type: "character varying(50)", maxLength: 50, nullable: false, defaultValue: "Pending"),
                     OrderId = table.Column<long>(type: "bigint", nullable: false)
                 },
@@ -985,6 +1030,7 @@ namespace IndeConnect_Back.Infrastructure.Migrations
                     OrderId = table.Column<long>(type: "bigint", nullable: false),
                     ProductId = table.Column<long>(type: "bigint", nullable: false),
                     VariantId = table.Column<long>(type: "bigint", nullable: true),
+                    BrandDeliveryId = table.Column<long>(type: "bigint", nullable: true),
                     ProductName = table.Column<string>(type: "character varying(200)", maxLength: 200, nullable: false),
                     Quantity = table.Column<int>(type: "integer", nullable: false),
                     UnitPrice = table.Column<decimal>(type: "numeric(18,2)", precision: 18, scale: 2, nullable: false)
@@ -992,6 +1038,12 @@ namespace IndeConnect_Back.Infrastructure.Migrations
                 constraints: table =>
                 {
                     table.PrimaryKey("PK_OrderItems", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_OrderItems_BrandDeliveries_BrandDeliveryId",
+                        column: x => x.BrandDeliveryId,
+                        principalTable: "BrandDeliveries",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.SetNull);
                     table.ForeignKey(
                         name: "FK_OrderItems_Orders_OrderId",
                         column: x => x.OrderId,
@@ -1046,6 +1098,49 @@ namespace IndeConnect_Back.Infrastructure.Migrations
                     { 19L, "45" },
                     { 99L, "Unique" }
                 });
+
+            migrationBuilder.CreateIndex(
+                name: "IX_BrandDeliveries_BrandId",
+                table: "BrandDeliveries",
+                column: "BrandId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_BrandDeliveries_ShippingMethodId",
+                table: "BrandDeliveries",
+                column: "ShippingMethodId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_BrandDelivery_DeliveredAt",
+                table: "BrandDeliveries",
+                column: "DeliveredAt");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_BrandDelivery_OrderBrand",
+                table: "BrandDeliveries",
+                columns: new[] { "OrderId", "BrandId" },
+                unique: true);
+
+            migrationBuilder.CreateIndex(
+                name: "IX_BrandDelivery_OrderStatus",
+                table: "BrandDeliveries",
+                columns: new[] { "OrderId", "Status" });
+
+            migrationBuilder.CreateIndex(
+                name: "IX_BrandDelivery_ShippedAt",
+                table: "BrandDeliveries",
+                column: "ShippedAt");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_BrandDelivery_Status",
+                table: "BrandDeliveries",
+                column: "Status");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_BrandDelivery_UniqueTrackingNumber",
+                table: "BrandDeliveries",
+                column: "TrackingNumber",
+                unique: true,
+                filter: "\"TrackingNumber\" IS NOT NULL");
 
             migrationBuilder.CreateIndex(
                 name: "IX_BrandEthicTag_Category",
@@ -1202,6 +1297,11 @@ namespace IndeConnect_Back.Infrastructure.Migrations
                 unique: true);
 
             migrationBuilder.CreateIndex(
+                name: "IX_Delivery_DeliveredAt",
+                table: "Deliveries",
+                column: "DeliveredAt");
+
+            migrationBuilder.CreateIndex(
                 name: "IX_Delivery_OrderStatus",
                 table: "Deliveries",
                 columns: new[] { "OrderId", "Status" });
@@ -1307,6 +1407,11 @@ namespace IndeConnect_Back.Infrastructure.Migrations
                 name: "IX_OrderItem_VariantId",
                 table: "OrderItems",
                 column: "VariantId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_OrderItems_BrandDeliveryId",
+                table: "OrderItems",
+                column: "BrandDeliveryId");
 
             migrationBuilder.CreateIndex(
                 name: "IX_Order_PlacedAt",
@@ -1684,9 +1789,6 @@ namespace IndeConnect_Back.Infrastructure.Migrations
                 name: "BrandSellers");
 
             migrationBuilder.DropTable(
-                name: "BrandShippingMethods");
-
-            migrationBuilder.DropTable(
                 name: "BrandSubscriptions");
 
             migrationBuilder.DropTable(
@@ -1744,13 +1846,13 @@ namespace IndeConnect_Back.Infrastructure.Migrations
                 name: "Carts");
 
             migrationBuilder.DropTable(
+                name: "BrandDeliveries");
+
+            migrationBuilder.DropTable(
                 name: "ProductVariants");
 
             migrationBuilder.DropTable(
                 name: "Keywords");
-
-            migrationBuilder.DropTable(
-                name: "Orders");
 
             migrationBuilder.DropTable(
                 name: "PaymentProviders");
@@ -1760,6 +1862,12 @@ namespace IndeConnect_Back.Infrastructure.Migrations
 
             migrationBuilder.DropTable(
                 name: "EthicsQuestions");
+
+            migrationBuilder.DropTable(
+                name: "BrandShippingMethods");
+
+            migrationBuilder.DropTable(
+                name: "Orders");
 
             migrationBuilder.DropTable(
                 name: "Products");

@@ -22,11 +22,13 @@ public class ShippingController : ControllerBase
     /// </summary>
     [HttpGet("shipping/brands/{brandId}/methods")]
     [AllowAnonymous]
-    public async Task<ActionResult<List<ShippingMethodDto>>> GetBrandShippingMethods(long brandId)
+    public async Task<ActionResult<List<ShippingMethodDto>>> GetBrandShippingMethods(
+        long brandId,
+        [FromQuery] long? addressId = null)
     {
         try
         {
-            var methods = await _shippingService.GetBrandShippingMethodsAsync(brandId);
+            var methods = await _shippingService.GetBrandShippingMethodsAsync(brandId, addressId);
             return Ok(methods);
         }
         catch (Exception ex)
