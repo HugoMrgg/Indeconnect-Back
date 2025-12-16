@@ -18,6 +18,7 @@ public class AppDbContext : DbContext
     public DbSet<WishlistItem> WishlistItems { get; set; }
     public DbSet<ShippingAddress> ShippingAddresses { get; set; }
     public DbSet<Delivery> Deliveries { get; set; }
+    public DbSet<BrandDelivery> BrandDeliveries { get; set; }
     public DbSet<UserReview> UserReviews { get; set; }
     public DbSet<AuditLog> AuditLogs { get; set; }
     public DbSet<PasswordResetToken> PasswordResetTokens { get; set; }

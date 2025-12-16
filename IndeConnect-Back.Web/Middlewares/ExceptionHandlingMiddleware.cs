@@ -22,18 +22,18 @@ public class ExceptionHandlingMiddleware
         }
         catch (UnauthorizedAccessException ex)
         {
-            _logger.LogWarning(ex, "Unauthorized access.");
+            _logger.LogWarning(ex, "Unauthorized access");
             await WriteProblem(context, HttpStatusCode.Unauthorized, ex.Message);
         }
         catch (InvalidOperationException ex)
         {
-            _logger.LogWarning(ex, "Invalid operation.");
+            _logger.LogWarning(ex, "Invalid operation");
             await WriteProblem(context, HttpStatusCode.BadRequest, ex.Message);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Unexpected error.");
-            await WriteProblem(context, HttpStatusCode.InternalServerError, "An unexpected error occurred.");
+            _logger.LogError(ex, "Unexpected error");
+            await WriteProblem(context, HttpStatusCode.InternalServerError, "An unexpected error occurred");
         }
     }
 

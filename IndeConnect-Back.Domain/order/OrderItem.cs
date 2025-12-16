@@ -14,7 +14,10 @@ public class OrderItem
     
     public long? VariantId { get; private set; }
     public ProductVariant? Variant { get; private set; }
-    
+
+    public long? BrandDeliveryId { get; private set; }
+    public BrandDelivery? BrandDelivery { get; private set; }
+
     public string ProductName { get; private set; } = default!;
     public int Quantity { get; private set; }
     public decimal UnitPrice { get; private set; }
@@ -40,5 +43,10 @@ public class OrderItem
     internal void SetOrderId(long orderId)
     {
         OrderId = orderId;
+    }
+
+    public void AssignToBrandDelivery(long brandDeliveryId)
+    {
+        BrandDeliveryId = brandDeliveryId;
     }
 }

@@ -11,4 +11,8 @@ public record ShippingMethodDto
     public int EstimatedMaxDays { get; init; }
     public decimal? MaxWeight { get; init; }
     public bool IsEnabled { get; init; }
+
+    public int? TotalEstimatedMinDays { get; init; } 
+    public int? TotalEstimatedMaxDays { get; init; }
+    public DateTimeOffset? EstimatedDeliveryDate { get; init; } 
 }

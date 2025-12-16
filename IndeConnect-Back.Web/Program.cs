@@ -57,13 +57,17 @@ builder.Services.AddScoped<IEthicsService, EthicsService>();
 builder.Services.AddScoped<IEthicsQuestionnaireService, EthicsQuestionnaireService>();
 builder.Services.AddScoped<IEthicsAdminService, EthicsAdminService>();
 builder.Services.AddScoped<ICartService, CartService>();
-builder.Services.AddScoped<IEmailService, SendGridEmailService>();           
+builder.Services.AddScoped<IEmailService, SendGridEmailService>();
+builder.Services.AddScoped<IOrderEmailTemplateService, OrderEmailTemplateService>();
 builder.Services.AddScoped<IPasswordResetTokenService, PasswordResetTokenService>(); 
 builder.Services.AddScoped<IShippingAddressService, ShippingAddressService>();
 builder.Services.AddScoped<IShippingService, ShippingService>();
 builder.Services.AddScoped<IOrderService, OrderService>();
 builder.Services.AddScoped<IPaymentService, PaymentService>();
 builder.Services.AddScoped<IPaymentMethodService, PaymentMethodService>();
+
+// Background service for automatic order progression
+builder.Services.AddHostedService<OrderProgressionService>();
 
 builder.Services.AddHttpClient();
 builder.Services.AddMemoryCache();

@@ -22,7 +22,16 @@ public class DeliveryConfiguration : IEntityTypeConfiguration<Delivery>
                .HasMaxLength(100)
                .IsRequired(false);
         
+        builder.Property(d => d.CreatedAt)
+               .IsRequired();
+        
+        builder.Property(d => d.UpdatedAt)
+               .IsRequired();
+        
         builder.Property(d => d.ShippedAt)
+               .IsRequired(false);
+        
+        builder.Property(d => d.DeliveredAt) 
                .IsRequired(false);
         
         builder.Property(d => d.Status)
@@ -33,7 +42,7 @@ public class DeliveryConfiguration : IEntityTypeConfiguration<Delivery>
         
         // Relation with Order
         builder.HasOne(d => d.Order)
-               .WithMany(o => o.Deliveries)
+               .WithMany() // No navigation property
                .HasForeignKey(d => d.OrderId)
                .OnDelete(DeleteBehavior.Restrict)
                .IsRequired();

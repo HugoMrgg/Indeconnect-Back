@@ -1,29 +1,68 @@
 ﻿using IndeConnect_Back.Application.DTOs.Brands;
 using IndeConnect_Back.Application.Services.Interfaces;
 using IndeConnect_Back.Domain.catalog.brand;
+using IndeConnect_Back.Domain.user;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 
 namespace IndeConnect_Back.Infrastructure.Services.Implementations;
 
 public class ShippingService : IShippingService
 {
     private readonly AppDbContext _context;
+    private readonly ILogger<ShippingService> _logger;
 
-    public ShippingService(AppDbContext context)
+    public ShippingService(AppDbContext context, ILogger<ShippingService> logger)
     {
         _context = context;
+        _logger = logger;
     }
 
-    public async Task<List<ShippingMethodDto>> GetBrandShippingMethodsAsync(long brandId)
-    {
-        var methods = await _context.Set<BrandShippingMethod>()
-            .Where(m => m.BrandId == brandId && m.IsEnabled)
-            .OrderBy(m => m.Price)
-            .ThenBy(m => m.DisplayName)
-            .ToListAsync();
+   public async Task<List<ShippingMethodDto>> GetBrandShippingMethodsAsync(long brandId, long? shippingAddressId = null)
+{
+    var methods = await _context.Set<BrandShippingMethod>()
+        .Where(m => m.BrandId == brandId && m.IsEnabled)
+        .OrderBy(m => m.Price)
+        .ThenBy(m => m.DisplayName)
+        .ToListAsync();
 
+
+    // Si pas d'adresse fournie, retourner les méthodes sans calcul
+    if (!shippingAddressId.HasValue)
+    {
         return methods.Select(MapToDto).ToList();
     }
+
+
+    // Charger l'adresse de livraison
+    var shippingAddress = await _context.ShippingAddresses
+        .FirstOrDefaultAsync(a => a.Id == shippingAddressId.Value);
+
+    if (shippingAddress == null)
+    {
+        return methods.Select(MapToDto).ToList();
+    }
+
+
+    // Charger le premier dépôt de la marque
+    var deposit = await _context.Deposits
+        .Where(d => d.BrandId == brandId)
+        .FirstOrDefaultAsync();
+
+    if (deposit == null)
+    {
+        return methods.Select(MapToDto).ToList();
+    }
+
+    // Calculer avec la MÊME logique que OrderService
+    var now = DateTimeOffset.UtcNow;
+    
+    // Mapper avec les calculs
+    var result = methods.Select(m => MapToDtoWithCalculation(m, deposit, shippingAddress, now)).ToList();
+    
+    return result;
+}
+
 
     public async Task<ShippingMethodDto> CreateBrandShippingMethodAsync(long brandId, CreateShippingMethodDto dto)
     {
@@ -109,6 +148,48 @@ public class ShippingService : IShippingService
         await _context.SaveChangesAsync();
     }
 
+    /// <summary>
+    /// Calcule la date estimée avec la MÊME logique que OrderService.CalculateEstimatedDeliveryDate
+    /// </summary>
+    private DateTimeOffset CalculateEstimatedDeliveryDate(
+        Deposit deposit,
+        ShippingAddress deliveryAddress,
+        DateTimeOffset orderPlacedAt,
+        BrandShippingMethod shippingMethod)
+    {
+        // Calculer le délai de base selon la distance (EN HEURES comme OrderService)
+        int baseHours;
+
+        // Même ville : 24h
+        if (deposit.City?.Trim().Equals(deliveryAddress.City?.Trim(), StringComparison.OrdinalIgnoreCase) == true)
+        {
+            baseHours = 24;
+        }
+        // Même pays : 48h
+        else if (deposit.Country?.Trim().Equals(deliveryAddress.Country?.Trim(), StringComparison.OrdinalIgnoreCase) == true)
+        {
+            baseHours = 48;
+        }
+        // Pays différent : 72h
+        else
+        {
+            baseHours = 72;
+        }
+
+        // Ajouter le délai de la méthode de livraison (moyenne entre min et max, convertie en heures)
+        var shippingMethodAvgDays = (shippingMethod.EstimatedMinDays + shippingMethod.EstimatedMaxDays) / 2.0;
+        var shippingMethodHours = (int)(shippingMethodAvgDays * 24);
+
+        var totalHours = baseHours + shippingMethodHours;
+        var estimatedDate = orderPlacedAt.AddHours(totalHours);
+
+        _logger.LogInformation(
+            "Calculated delivery: baseHours={BaseHours} + methodHours={MethodHours} = {TotalHours}h => {EstimatedDate}",
+            baseHours, shippingMethodHours, totalHours, estimatedDate);
+
+        return estimatedDate;
+    }
+
     private static ShippingMethodDto MapToDto(BrandShippingMethod method)
     {
         return new ShippingMethodDto
@@ -122,6 +203,41 @@ public class ShippingService : IShippingService
             EstimatedMaxDays = method.EstimatedMaxDays,
             MaxWeight = method.MaxWeight,
             IsEnabled = method.IsEnabled
+        };
+    }
+
+    /// <summary>
+    /// Mapper avec calculs basés sur deposit + shippingAddress + shippingMethod
+    /// </summary>
+    private ShippingMethodDto MapToDtoWithCalculation(
+        BrandShippingMethod method,
+        Deposit deposit,
+        ShippingAddress shippingAddress,
+        DateTimeOffset now)
+    {
+
+        // Calculer la date estimée avec la MÊME logique que OrderService
+        var estimatedDate = CalculateEstimatedDeliveryDate(deposit, shippingAddress, now, method);
+
+        // Calculer les délais totaux en jours à partir de maintenant
+        var totalDays = (estimatedDate - now).TotalDays;
+        var totalMinDays = (int)Math.Floor(totalDays);
+        var totalMaxDays = (int)Math.Ceiling(totalDays);
+        
+        return new ShippingMethodDto
+        {
+            Id = method.Id,
+            ProviderName = method.ProviderName,
+            MethodType = method.MethodType.ToString(),
+            DisplayName = method.DisplayName,
+            Price = method.Price,
+            EstimatedMinDays = method.EstimatedMinDays,
+            EstimatedMaxDays = method.EstimatedMaxDays,
+            MaxWeight = method.MaxWeight,
+            IsEnabled = method.IsEnabled,
+            TotalEstimatedMinDays = totalMinDays,
+            TotalEstimatedMaxDays = totalMaxDays,
+            EstimatedDeliveryDate = estimatedDate
         };
     }
 }

@@ -11,17 +11,25 @@ public class PaymentService : IPaymentService
 {
     private readonly AppDbContext _context;
     private readonly ILogger<PaymentService> _logger;
+    private readonly IEmailService _emailService;
+    private readonly IOrderEmailTemplateService _templateService;
 
-    public PaymentService(AppDbContext context, ILogger<PaymentService> logger)
+    public PaymentService(
+        AppDbContext context,
+        ILogger<PaymentService> logger,
+        IEmailService emailService,
+        IOrderEmailTemplateService templateService)
     {
         _context = context;
         _logger = logger;
+        _emailService = emailService;
+        _templateService = templateService;
 
         var stripeKey = Environment.GetEnvironmentVariable("STRIPE_API_SECRET");
 
         if (string.IsNullOrEmpty(stripeKey))
         {
-            _logger.LogError("⚠STRIPE_API_SECRET is not configured!");
+            _logger.LogError("STRIPE_API_SECRET is not configured");
             throw new InvalidOperationException("Stripe API key is missing");
         }
 
@@ -34,15 +42,15 @@ public class PaymentService : IPaymentService
         var user = await _context.Users.FindAsync(userId);
         if (user == null) throw new Exception("User not found");
 
-        // Si déjà créé, le retourner
+        // Return existing Stripe Customer if already created
         if (!string.IsNullOrEmpty(user.StripeCustomerId))
         {
-            _logger.LogInformation("Reusing existing Stripe Customer {CustomerId} for User {UserId}", 
+            _logger.LogInformation("Reusing existing Stripe Customer {CustomerId} for User {UserId}",
                 user.StripeCustomerId, userId);
             return user.StripeCustomerId;
         }
 
-        // Créer un nouveau customer Stripe
+        // Create new Stripe Customer
         var customerService = new CustomerService();
         var customer = await customerService.CreateAsync(new CustomerCreateOptions
         {
@@ -72,23 +80,23 @@ public class PaymentService : IPaymentService
 
         if (order == null)
         {
-            _logger.LogWarning("⚠Order {OrderId} not found", orderId);
-            throw new InvalidOperationException("Commande introuvable");
+            _logger.LogWarning("Order {OrderId} not found", orderId);
+            throw new InvalidOperationException("Order not found");
         }
 
-        _logger.LogInformation("Order {OrderId} found - Total: {Total} {Currency}", 
+        _logger.LogInformation("Order {OrderId} found - Total: {Total} {Currency}",
             orderId, order.TotalAmount, order.Currency);
 
-        // Créer ou récupérer le Stripe Customer
+        // Get or create Stripe Customer
         var customerId = await GetOrCreateStripeCustomerAsync(order.UserId);
 
-        // Vérifier si un Payment existe déjà
+        // Check if Payment already exists
         var existingPayment = await _context.Payments
             .FirstOrDefaultAsync(p => p.OrderId == orderId && p.Status == PaymentStatus.Pending);
 
         if (existingPayment != null && !string.IsNullOrEmpty(existingPayment.TransactionId))
         {
-            _logger.LogInformation("♻️ Reusing existing PaymentIntent {PaymentIntentId}", 
+            _logger.LogInformation("Reusing existing PaymentIntent {PaymentIntentId}",
                 existingPayment.TransactionId);
 
             var service = new PaymentIntentService();
@@ -97,7 +105,7 @@ public class PaymentService : IPaymentService
             return paymentIntent.ClientSecret;
         }
 
-        // Récupérer le PaymentProvider "Stripe"
+        // Get Stripe PaymentProvider
         var stripeProvider = await _context.PaymentProviders
             .FirstOrDefaultAsync(p => p.Name == "Stripe");
 
@@ -107,18 +115,18 @@ public class PaymentService : IPaymentService
             throw new InvalidOperationException("Stripe provider not configured");
         }
 
-        // Créer PaymentIntent avec support PayPal + Customer
+        // Create PaymentIntent with PayPal support and Customer
         var options = new PaymentIntentCreateOptions
         {
             Amount = (long)(order.TotalAmount * 100),
             Currency = order.Currency.ToLower(),
-            Customer = customerId, 
-            
+            Customer = customerId,
+
             PaymentMethodTypes = new List<string>
             {
-                "card",        // Cartes bancaires
+                "card",        // Credit/debit cards
                 "paypal",      // PayPal
-                "bancontact"   // Bancontact (déjà utilisé)
+                "bancontact"   // Bancontact
             },
             
             SetupFutureUsage = "off_session",
@@ -159,7 +167,7 @@ public class PaymentService : IPaymentService
         catch (StripeException ex)
         {
             _logger.LogError(ex, "Stripe error creating PaymentIntent");
-            throw new InvalidOperationException($"Erreur Stripe: {ex.Message}");
+            throw new InvalidOperationException($"Stripe error: {ex.Message}");
         }
         catch (Exception ex)
         {
@@ -178,9 +186,9 @@ public class PaymentService : IPaymentService
 
         if (payment == null)
         {
-            _logger.LogWarning("Payment not found for Order {OrderId} and PaymentIntent {PaymentIntentId}", 
+            _logger.LogWarning("Payment not found for Order {OrderId} and PaymentIntent {PaymentIntentId}",
                 orderId, paymentIntentId);
-            throw new InvalidOperationException("Paiement introuvable");
+            throw new InvalidOperationException("Payment not found");
         }
 
         try
@@ -193,8 +201,11 @@ public class PaymentService : IPaymentService
             if (paymentIntent.Status == "succeeded")
             {
                 payment.MarkAsPaid(paymentIntentId);
-                
-                var order = await _context.Orders.FindAsync(orderId);
+
+                var order = await _context.Orders
+                    .Include(o => o.User)
+                    .FirstOrDefaultAsync(o => o.Id == orderId);
+
                 if (order != null)
                 {
                     order.Status = OrderStatus.Paid;
@@ -203,12 +214,31 @@ public class PaymentService : IPaymentService
 
                 await _context.SaveChangesAsync();
                 _logger.LogInformation("Payment confirmed for Order {OrderId}", orderId);
+
+                // Envoyer l'email de confirmation de paiement
+                if (order != null)
+                {
+                    try
+                    {
+                        var html = _templateService.GeneratePaymentConfirmationEmail(order, order.User);
+                        await _emailService.SendEmailAsync(
+                            order.User.Email,
+                            $"Paiement confirmé pour la commande #{orderId}",
+                            html);
+                        _logger.LogInformation("Payment confirmation email sent for Order {OrderId} to {Email}",
+                            orderId, order.User.Email);
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogError(ex, "Failed to send payment confirmation email for Order {OrderId}", orderId);
+                    }
+                }
             }
             else
             {
-                _logger.LogWarning("PaymentIntent {PaymentIntentId} has status {Status}", 
+                _logger.LogWarning("PaymentIntent {PaymentIntentId} has status {Status}",
                     paymentIntentId, paymentIntent.Status);
-                throw new InvalidOperationException($"Le paiement n'a pas abouti (statut: {paymentIntent.Status})");
+                throw new InvalidOperationException($"Payment did not succeed (status: {paymentIntent.Status})");
             }
 
             return payment;
@@ -216,7 +246,7 @@ public class PaymentService : IPaymentService
         catch (StripeException ex)
         {
             _logger.LogError(ex, "Stripe error confirming payment");
-            throw new InvalidOperationException($"Erreur Stripe: {ex.Message}");
+            throw new InvalidOperationException($"Stripe error: {ex.Message}");
         }
     }
 }
