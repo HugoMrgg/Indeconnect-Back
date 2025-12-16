@@ -1413,7 +1413,7 @@ namespace IndeConnect_Back.Infrastructure.Migrations
                     b.HasIndex("UserId", "Status")
                         .HasDatabaseName("IX_ReturnRequest_UserStatus");
 
-                    b.ToTable("ReturnRequests", (string)null);
+                    b.ToTable("ReturnRequests");
                 });
 
             modelBuilder.Entity("IndeConnect_Back.Domain.payment.Payment", b =>
@@ -1736,6 +1736,9 @@ namespace IndeConnect_Back.Infrastructure.Migrations
                         .HasColumnType("timestamp with time zone");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("DeliveredAt")
+                        .HasDatabaseName("IX_Delivery_DeliveredAt");
 
                     b.HasIndex("ShippedAt")
                         .HasDatabaseName("IX_Delivery_ShippedAt");
