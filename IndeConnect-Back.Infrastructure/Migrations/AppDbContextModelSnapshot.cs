@@ -1620,9 +1620,6 @@ namespace IndeConnect_Back.Infrastructure.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("DeliveredAt")
-                        .HasDatabaseName("IX_Delivery_DeliveredAt");
-
                     b.HasIndex("ShippedAt")
                         .HasDatabaseName("IX_Delivery_ShippedAt");
 

@@ -1297,11 +1297,6 @@ namespace IndeConnect_Back.Infrastructure.Migrations
                 unique: true);
 
             migrationBuilder.CreateIndex(
-                name: "IX_Delivery_DeliveredAt",
-                table: "Deliveries",
-                column: "DeliveredAt");
-
-            migrationBuilder.CreateIndex(
                 name: "IX_Delivery_OrderStatus",
                 table: "Deliveries",
                 columns: new[] { "OrderId", "Status" });
