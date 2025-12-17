@@ -1,8 +1,9 @@
 ﻿-- ============================================
--- SCRIPT MASSIF COMPLET - NOUVEAU MODÈLE PRODUCTGROUP
+-- SCRIPT MASSIF COMPLET - NOUVEAU MODÈLE AVEC ETHICS V2
 -- ============================================
 
 -- 1. NETTOYER TOUT
+DELETE FROM "BrandQuestionResponseOptions";
 DELETE FROM "BrandQuestionResponses";
 DELETE FROM "BrandQuestionnaires";
 DELETE FROM "UserReviews";
@@ -15,6 +16,7 @@ DELETE FROM "ProductGroups";
 DELETE FROM "Brands";
 DELETE FROM "EthicsOptions";
 DELETE FROM "EthicsQuestions";
+DELETE FROM "EthicsCategories";
 DELETE FROM "Keywords";
 DELETE FROM "Categories";
 DELETE FROM "Colors";
@@ -68,24 +70,70 @@ VALUES
     (104, 'fair-trade'), (105, 'vegan'), (106, 'premium'), (107, 'casual'),
     (108, 'elegant'), (109, 'sporty');
 
-INSERT INTO "EthicsQuestions" ("Id", "Category", "Key", "Label", "Order")
-VALUES
-    (100, 'MaterialsManufacturing', 'material_origin', 'Où proviennent vos matériaux ?', 1),
-    (101, 'MaterialsManufacturing', 'manufacturing_conditions', 'Conditions de travail ?', 2),
-    (102, 'MaterialsManufacturing', 'organic_certified', 'Certifiés bio ?', 3),
-    (103, 'Transport', 'transport_method', 'Mode de transport ?', 1),
-    (104, 'Transport', 'carbon_offset', 'Compensation carbone ?', 2),
-    (105, 'Transport', 'local_production', 'Production locale ?', 3);
+-- ============================================
+-- NOUVELLE STRUCTURE ETHICS V2
+-- ============================================
 
-INSERT INTO "EthicsOptions" ("Id", "QuestionId", "Key", "Label", "Score")
+-- 3.1 CRÉER LES CATÉGORIES D'ÉTHIQUE (NOUVELLE TABLE)
+INSERT INTO "EthicsCategories" ("Id", "Key", "Label", "Order", "IsActive")
 VALUES
-    (100, 100, 'local', 'Local', 100.0), (101, 100, 'regional', 'Regional', 75.0), (102, 100, 'imported', 'Imported', 40.0),
-    (103, 100, 'unknown', 'Unknown', 0.0), (104, 101, 'excellent', 'Excellent', 100.0), (105, 101, 'good', 'Good', 80.0),
-    (106, 101, 'fair', 'Fair', 50.0), (107, 101, 'poor', 'Poor', 10.0), (108, 102, 'fully', 'Fully certified', 100.0),
-    (109, 102, 'mostly', 'Mostly (80%+)', 70.0), (110, 102, 'partial', 'Partial', 40.0), (111, 102, 'none', 'None', 0.0),
-    (112, 103, 'sea', 'Sea', 90.0), (113, 103, 'train', 'Train', 85.0), (114, 103, 'truck', 'Truck', 60.0), (115, 103, 'air', 'Air', 10.0),
-    (116, 104, 'yes_cert', 'Yes certified', 100.0), (117, 104, 'partial_off', 'Partial', 60.0), (118, 104, 'planned', 'Planned', 20.0), (119, 104, 'no', 'No', 0.0),
-    (120, 105, 'local_100', '100% local', 100.0), (121, 105, 'local_70', '70%+ local', 75.0), (122, 105, 'partial_local', 'Partial', 40.0), (123, 105, 'no_local', 'None', 0.0);
+    (1, 'MaterialsManufacturing', 'Matériaux et Fabrication', 1, true),
+    (2, 'Transport', 'Transport et Logistique', 2, true),
+    (3, 'SocialImpact', 'Impact Social', 3, true),
+    (4, 'Environmental', 'Environnement', 4, true);
+
+-- 3.2 CRÉER LES QUESTIONS D'ÉTHIQUE (AVEC CategoryId)
+-- AnswerType : 0=SingleChoice, 1=MultipleChoice, 2=Text, 3=Number
+INSERT INTO "EthicsQuestions" ("Id", "CategoryId", "Key", "Label", "Order", "AnswerType", "IsActive")
+VALUES
+    -- MaterialsManufacturing (CategoryId=1)
+    (100, 1, 'material_origin', 'Où proviennent vos matériaux ?', 1, 0, true),
+    (101, 1, 'manufacturing_conditions', 'Conditions de travail ?', 2, 0, true),
+    (102, 1, 'organic_certified', 'Certifiés bio ?', 3, 0, true),
+
+    -- Transport (CategoryId=2)
+    (103, 2, 'transport_method', 'Mode de transport ?', 1, 0, true),
+    (104, 2, 'carbon_offset', 'Compensation carbone ?', 2, 0, true),
+    (105, 2, 'local_production', 'Production locale ?', 3, 0, true);
+
+-- 3.3 CRÉER LES OPTIONS DE RÉPONSE (AVEC Order ET IsActive)
+INSERT INTO "EthicsOptions" ("Id", "QuestionId", "Key", "Label", "Score", "Order", "IsActive")
+VALUES
+    -- material_origin (QuestionId=100)
+    (100, 100, 'local', 'Local', 100.0, 1, true),
+    (101, 100, 'regional', 'Régional', 75.0, 2, true),
+    (102, 100, 'imported', 'Importé', 40.0, 3, true),
+    (103, 100, 'unknown', 'Inconnu', 0.0, 4, true),
+
+    -- manufacturing_conditions (QuestionId=101)
+    (104, 101, 'excellent', 'Excellent', 100.0, 1, true),
+    (105, 101, 'good', 'Bon', 80.0, 2, true),
+    (106, 101, 'fair', 'Correct', 50.0, 3, true),
+    (107, 101, 'poor', 'Mauvais', 10.0, 4, true),
+
+    -- organic_certified (QuestionId=102)
+    (108, 102, 'fully', 'Entièrement certifié', 100.0, 1, true),
+    (109, 102, 'mostly', 'Majoritaire (80%+)', 70.0, 2, true),
+    (110, 102, 'partial', 'Partiel', 40.0, 3, true),
+    (111, 102, 'none', 'Aucun', 0.0, 4, true),
+
+    -- transport_method (QuestionId=103)
+    (112, 103, 'sea', 'Maritime', 90.0, 1, true),
+    (113, 103, 'train', 'Train', 85.0, 2, true),
+    (114, 103, 'truck', 'Camion', 60.0, 3, true),
+    (115, 103, 'air', 'Avion', 10.0, 4, true),
+
+    -- carbon_offset (QuestionId=104)
+    (116, 104, 'yes_cert', 'Oui certifié', 100.0, 1, true),
+    (117, 104, 'partial_off', 'Partiellement', 60.0, 2, true),
+    (118, 104, 'planned', 'En projet', 20.0, 3, true),
+    (119, 104, 'no', 'Non', 0.0, 4, true),
+
+    -- local_production (QuestionId=105)
+    (120, 105, 'local_100', '100% local', 100.0, 1, true),
+    (121, 105, 'local_70', '70%+ local', 75.0, 2, true),
+    (122, 105, 'partial_local', 'Partiel', 40.0, 3, true),
+    (123, 105, 'no_local', 'Non local', 0.0, 4, true);
 
 -- 4. CRÉER LES MARQUES
 INSERT INTO "Brands" ("Id", "Name", "LogoUrl", "BannerUrl", "Description", "AboutUs", "WhereAreWe", "Contact", "PriceRange", "Status")
@@ -102,20 +150,13 @@ VALUES
     (109, 'EcoKids', 'https://res.cloudinary.com/db82qv38a/image/upload/v1765219583/logo10_bmv4db.jpg', 'https://res.cloudinary.com/db82qv38a/image/upload/v1765219601/banner7_g133qm.png', 'Enfants', 'Safe', 'Copenhagen', 'kids@eco.dk', '€€', 'Approved');
 
 -- 5. CRÉER LES ADRESSES DE LIVRAISON DE TEST POUR L'UTILISATEUR PRINCIPAL (Hugo - ID 97)
--- Ces adresses permettent de tester différentes distances de livraison
-
 INSERT INTO "ShippingAddresses" ("Id", "UserId", "Street", "Number", "PostalCode", "City", "Country", "IsDefault")
 VALUES
-    -- Hugo (UserId 97) - Adresse à Bruxelles (même ville que EcoWear)
     (2000, 97, 'Avenue Louise', '100', '1050', 'Bruxelles', 'BE', true),
-
-    -- Hugo (UserId 97) - Adresse à Liège (même pays, ville différente)
     (2001, 97, 'Rue Léopold', '25', '4000', 'Liège', 'BE', false),
-
-    -- Hugo (UserId 97) - Adresse à Paris, France (pays différent)
     (2002, 97, 'Rue de Rivoli', '50', '75001', 'Paris', 'FR', false);
 
--- 6. CRÉER LES DÉPÔTS EN BELGIQUE (inchangé)
+-- 6. CRÉER LES DÉPÔTS EN BELGIQUE
 INSERT INTO "Deposits" ("Id", "Number", "Street", "City", "PostalCode", "Country", "Latitude", "Longitude", "BrandId")
 VALUES
     ('deposit-eco-1', 42, 'Rue de la Loi', 'Bruxelles', '1000', 'Belgium', 50.8503, 4.3517, 100),
@@ -133,28 +174,6 @@ VALUES
     ('deposit-art-2', 3, 'Naamsestraat', 'Louvain', '3000', 'Belgium', 50.8771, 4.7005, 108),
     ('deposit-kid-1', 8, 'Hoogstraat', 'Hasselt', '3500', 'Belgium', 50.9307, 5.3378, 109);
 
--- ============================================
--- SCÉNARIOS DE TEST POUR LA PROGRESSION DYNAMIQUE
--- ============================================
--- Hugo (ID 97 - lesmurgias@gmail.com) a 3 adresses :
---   1. Bruxelles → Commande chez EcoWear (Deposit à Bruxelles) = 24h base (même ville)
---   2. Liège → Commande chez NaturalStyle (Deposit à Anvers) = 48h base (même pays)
---   3. Paris → Commande chez LuxeBrand (Deposit à Bruges) = 72h base (pays différent)
---
--- Note : La distance est calculée entre l'adresse client et le premier Deposit de la marque
---        En production, on utiliserait les coordonnées GPS (Latitude/Longitude) des Deposits
---
--- Avec les méthodes de livraison :
---   - BPost Standard (3-5j avg=4j) : +96h
---   - DHL Express (1-2j avg=1.5j) : +36h
---   - ProutLand Express (1j) : +24h
---
--- Exemples :
---   Bruxelles + EcoWear + BPost Standard = 24h + 96h = 120h (5 jours)
---   Liège + NaturalStyle + DHL Express = 48h + 36h = 84h (3.5 jours)
---   Paris + LuxeBrand + DHL Premium = 72h + 36h = 108h (4.5 jours)
--- ============================================
-
 -- 7. CRÉER LES PRODUCTGROUPS
 INSERT INTO "ProductGroups" ("Id", "Name", "BaseDescription", "BrandId", "CategoryId")
 VALUES
@@ -170,21 +189,15 @@ VALUES
     (100, 'Organic Cotton Tee - Red', 'T-shirt coton bio rouge vif', 39.99, true, NOW(), 'Online', 100, 100, 100, 100),
     (101, 'Organic Cotton Tee - Blue', 'T-shirt coton bio bleu océan', 39.99, true, NOW(), 'Online', 100, 100, 100, 101),
     (102, 'Organic Cotton Tee - White', 'T-shirt coton bio blanc pur', 39.99, true, NOW(), 'Online', 100, 100, 100, 103),
-
     (103, 'Eco Hoodie - Black', 'Hoodie éco noir classique', 59.99, true, NOW(), 'Online', 100, 106, 101, 102),
     (104, 'Eco Hoodie - Gray', 'Hoodie éco gris chiné', 59.99, true, NOW(), 'Online', 100, 106, 101, 107),
-
     (105, 'Sustainable Jeans - Blue', 'Jean durable bleu denim', 89.99, true, NOW(), 'Online', 101, 101, 102, 101),
     (106, 'Sustainable Jeans - Black', 'Jean durable noir intense', 89.99, true, NOW(), 'Online', 101, 101, 102, 102),
-
     (107, 'Premium Jacket - Black', 'Veste premium noire élégante', 149.99, true, NOW(), 'Online', 103, 105, 103, 102),
     (108, 'Premium Jacket - Navy', 'Veste premium bleu marine', 149.99, true, NOW(), 'Online', 103, 105, 103, 106),
     (109, 'Premium Jacket - Gray', 'Veste premium grise sophistiquée', 149.99, true, NOW(), 'Online', 103, 105, 103, 107),
-
     (110, 'Sport Leggings - Black', 'Leggings sport noir technique', 44.99, true, NOW(), 'Online', 104, 107, 104, 102),
     (111, 'Sport Leggings - Purple', 'Leggings sport violet dynamique', 44.99, true, NOW(), 'Online', 104, 107, 104, 108),
-
-    -- Standalone
     (112, 'Vintage Dress', 'Robe vintage unique', 54.99, true, NOW(), 'Online', 105, 104, NULL, NULL),
     (113, 'Ethical Denim Blue', 'Jean éthique bleu', 94.99, true, NOW(), 'Online', 106, 101, NULL, 101),
     (114, 'Minimal Tee White', 'T-shirt minimal blanc', 34.99, true, NOW(), 'Online', 107, 100, NULL, 103),
@@ -215,105 +228,109 @@ VALUES
     (118, 115, 'https://res.cloudinary.com/db82qv38a/image/upload/v1765219592/bag-brown-1_yawuge.jpg', 'Image', 1, true),
     (119, 116, 'https://res.cloudinary.com/db82qv38a/image/upload/v1765219569/kids-tee-1_rmwbfh.jpg', 'Image', 1, true);
 
--- 10. CRÉER LES PRODUCTVARIANTS (CORRIGÉ AVEC LES BONS SizeId)
--- Mapping tailles:
--- T-shirts/Hoodies/Jackets: S=2, M=3, L=4, XL=5, XXL=6
--- Jeans: 28=20, 30=21, 32=22, 34=23, 36=24
--- Unique: 99
-
+-- 10. CRÉER LES PRODUCTVARIANTS
 INSERT INTO "ProductVariants" ("Id", "ProductId", "SizeId", "SKU", "StockCount")
 VALUES
-    -- T-shirts Red (ProductId 100)
-    (100, 100, 2, 'ECO-TEE-RED-S', 20),
-    (101, 100, 3, 'ECO-TEE-RED-M', 50),
-    (102, 100, 4, 'ECO-TEE-RED-L', 30),
+    (100, 100, 2, 'ECO-TEE-RED-S', 20), (101, 100, 3, 'ECO-TEE-RED-M', 50), (102, 100, 4, 'ECO-TEE-RED-L', 30),
+    (103, 101, 2, 'ECO-TEE-BLUE-S', 25), (104, 101, 3, 'ECO-TEE-BLUE-M', 60), (105, 101, 4, 'ECO-TEE-BLUE-L', 35),
+    (106, 102, 2, 'ECO-TEE-WHITE-S', 15), (107, 102, 3, 'ECO-TEE-WHITE-M', 40), (108, 102, 4, 'ECO-TEE-WHITE-L', 25),
+    (109, 103, 2, 'ECO-HOOD-BLACK-S', 10), (110, 103, 3, 'ECO-HOOD-BLACK-M', 30), (111, 103, 4, 'ECO-HOOD-BLACK-L', 25), (112, 103, 5, 'ECO-HOOD-BLACK-XL', 15),
+    (113, 104, 2, 'ECO-HOOD-GRAY-S', 12), (114, 104, 3, 'ECO-HOOD-GRAY-M', 28), (115, 104, 4, 'ECO-HOOD-GRAY-L', 20), (116, 104, 5, 'ECO-HOOD-GRAY-XL', 10),
+    (117, 105, 20, 'SUST-JEAN-BLUE-28', 15), (118, 105, 21, 'SUST-JEAN-BLUE-30', 40), (119, 105, 22, 'SUST-JEAN-BLUE-32', 35), (120, 105, 23, 'SUST-JEAN-BLUE-34', 25),
+    (121, 106, 20, 'SUST-JEAN-BLACK-28', 10), (122, 106, 21, 'SUST-JEAN-BLACK-30', 30), (123, 106, 22, 'SUST-JEAN-BLACK-32', 28), (124, 106, 23, 'SUST-JEAN-BLACK-34', 20),
+    (125, 107, 3, 'PREM-JACK-BLACK-M', 15), (126, 107, 4, 'PREM-JACK-BLACK-L', 20), (127, 107, 5, 'PREM-JACK-BLACK-XL', 10),
+    (128, 108, 3, 'PREM-JACK-NAVY-M', 12), (129, 108, 4, 'PREM-JACK-NAVY-L', 18), (130, 108, 5, 'PREM-JACK-NAVY-XL', 8),
+    (131, 109, 3, 'PREM-JACK-GRAY-M', 10), (132, 109, 4, 'PREM-JACK-GRAY-L', 15), (133, 109, 5, 'PREM-JACK-GRAY-XL', 5),
+    (134, 110, 2, 'SPORT-LEG-BLACK-S', 30), (135, 110, 3, 'SPORT-LEG-BLACK-M', 45), (136, 110, 4, 'SPORT-LEG-BLACK-L', 25),
+    (137, 111, 2, 'SPORT-LEG-PURPLE-S', 25), (138, 111, 3, 'SPORT-LEG-PURPLE-M', 40), (139, 111, 4, 'SPORT-LEG-PURPLE-L', 20),
+    (140, 112, 3, 'VINT-DRESS-M', 10), (141, 113, 21, 'ETH-DENIM-30', 20), (142, 114, 3, 'MIN-TEE-M', 30),
+    (143, 115, 99, 'ART-BAG-ONESIZE', 15), (144, 116, 2, 'KIDS-TEE-S', 40);
 
-    -- T-shirts Blue (ProductId 101)
-    (103, 101, 2, 'ECO-TEE-BLUE-S', 25),
-    (104, 101, 3, 'ECO-TEE-BLUE-M', 60),
-    (105, 101, 4, 'ECO-TEE-BLUE-L', 35),
+-- ============================================
+-- 11. QUESTIONNAIRES ET RÉPONSES ÉTHIQUES (NOUVELLE STRUCTURE)
+-- ============================================
 
-    -- T-shirts White (ProductId 102)
-    (106, 102, 2, 'ECO-TEE-WHITE-S', 15),
-    (107, 102, 3, 'ECO-TEE-WHITE-M', 40),
-    (108, 102, 4, 'ECO-TEE-WHITE-L', 25),
-
-    -- Hoodies Black (ProductId 103)
-    (109, 103, 2, 'ECO-HOOD-BLACK-S', 10),
-    (110, 103, 3, 'ECO-HOOD-BLACK-M', 30),
-    (111, 103, 4, 'ECO-HOOD-BLACK-L', 25),
-    (112, 103, 5, 'ECO-HOOD-BLACK-XL', 15),
-
-    -- Hoodies Gray (ProductId 104)
-    (113, 104, 2, 'ECO-HOOD-GRAY-S', 12),
-    (114, 104, 3, 'ECO-HOOD-GRAY-M', 28),
-    (115, 104, 4, 'ECO-HOOD-GRAY-L', 20),
-    (116, 104, 5, 'ECO-HOOD-GRAY-XL', 10),
-
-    -- Jeans Blue (ProductId 105)
-    (117, 105, 20, 'SUST-JEAN-BLUE-28', 15),
-    (118, 105, 21, 'SUST-JEAN-BLUE-30', 40),
-    (119, 105, 22, 'SUST-JEAN-BLUE-32', 35),
-    (120, 105, 23, 'SUST-JEAN-BLUE-34', 25),
-
-    -- Jeans Black (ProductId 106)
-    (121, 106, 20, 'SUST-JEAN-BLACK-28', 10),
-    (122, 106, 21, 'SUST-JEAN-BLACK-30', 30),
-    (123, 106, 22, 'SUST-JEAN-BLACK-32', 28),
-    (124, 106, 23, 'SUST-JEAN-BLACK-34', 20),
-
-    -- Jackets Black (ProductId 107)
-    (125, 107, 3, 'PREM-JACK-BLACK-M', 15),
-    (126, 107, 4, 'PREM-JACK-BLACK-L', 20),
-    (127, 107, 5, 'PREM-JACK-BLACK-XL', 10),
-
-    -- Jackets Navy (ProductId 108)
-    (128, 108, 3, 'PREM-JACK-NAVY-M', 12),
-    (129, 108, 4, 'PREM-JACK-NAVY-L', 18),
-    (130, 108, 5, 'PREM-JACK-NAVY-XL', 8),
-
-    -- Jackets Gray (ProductId 109)
-    (131, 109, 3, 'PREM-JACK-GRAY-M', 10),
-    (132, 109, 4, 'PREM-JACK-GRAY-L', 15),
-    (133, 109, 5, 'PREM-JACK-GRAY-XL', 5),
-
-    -- Leggings Black (ProductId 110)
-    (134, 110, 2, 'SPORT-LEG-BLACK-S', 30),
-    (135, 110, 3, 'SPORT-LEG-BLACK-M', 45),
-    (136, 110, 4, 'SPORT-LEG-BLACK-L', 25),
-
-    -- Leggings Purple (ProductId 111)
-    (137, 111, 2, 'SPORT-LEG-PURPLE-S', 25),
-    (138, 111, 3, 'SPORT-LEG-PURPLE-M', 40),
-    (139, 111, 4, 'SPORT-LEG-PURPLE-L', 20),
-
-    -- Standalone products
-    (140, 112, 3, 'VINT-DRESS-M', 10),
-    (141, 113, 21, 'ETH-DENIM-30', 20),
-    (142, 114, 3, 'MIN-TEE-M', 30),
-    (143, 115, 99, 'ART-BAG-ONESIZE', 15),
-    (144, 116, 2, 'KIDS-TEE-S', 40);
-
--- 11. QUESTIONNAIRES ET RÉPONSES ÉTHIQUES
-INSERT INTO "BrandQuestionnaires" ("Id", "BrandId", "SubmittedAt", "IsApproved", "ApprovedAt")
+-- 11.1 Créer les questionnaires (avec Status enum au lieu de IsApproved)
+-- Status : 0=Draft, 1=Submitted, 2=UnderReview, 3=Approved, 4=Rejected
+INSERT INTO "BrandQuestionnaires" ("Id", "BrandId", "Status", "CreatedAt", "SubmittedAt", "ReviewedAt")
 VALUES
-    (100, 100, NOW(), true, NOW()), (101, 101, NOW(), true, NOW()), (102, 102, NOW(), true, NOW()),
-    (103, 103, NOW(), true, NOW()), (104, 104, NOW(), true, NOW()), (105, 105, NOW(), true, NOW()),
-    (106, 106, NOW(), true, NOW()), (107, 107, NOW(), true, NOW()), (108, 108, NOW(), true, NOW()),
-    (109, 109, NOW(), true, NOW());
+    (100, 100, 3, NOW() - INTERVAL '30 days', NOW() - INTERVAL '25 days', NOW() - INTERVAL '20 days'),
+    (101, 101, 3, NOW() - INTERVAL '30 days', NOW() - INTERVAL '25 days', NOW() - INTERVAL '20 days'),
+    (102, 102, 3, NOW() - INTERVAL '30 days', NOW() - INTERVAL '25 days', NOW() - INTERVAL '20 days'),
+    (103, 103, 3, NOW() - INTERVAL '30 days', NOW() - INTERVAL '25 days', NOW() - INTERVAL '20 days'),
+    (104, 104, 3, NOW() - INTERVAL '30 days', NOW() - INTERVAL '25 days', NOW() - INTERVAL '20 days'),
+    (105, 105, 3, NOW() - INTERVAL '30 days', NOW() - INTERVAL '25 days', NOW() - INTERVAL '20 days'),
+    (106, 106, 3, NOW() - INTERVAL '30 days', NOW() - INTERVAL '25 days', NOW() - INTERVAL '20 days'),
+    (107, 107, 3, NOW() - INTERVAL '30 days', NOW() - INTERVAL '25 days', NOW() - INTERVAL '20 days'),
+    (108, 108, 3, NOW() - INTERVAL '30 days', NOW() - INTERVAL '25 days', NOW() - INTERVAL '20 days'),
+    (109, 109, 3, NOW() - INTERVAL '30 days', NOW() - INTERVAL '25 days', NOW() - INTERVAL '20 days');
 
-INSERT INTO "BrandQuestionResponses" ("Id", "QuestionnaireId", "QuestionId", "OptionId")
+-- 11.2 Créer les réponses (SANS OptionId direct)
+INSERT INTO "BrandQuestionResponses" ("Id", "QuestionnaireId", "QuestionId", "CalculatedScore")
 VALUES
-    (100, 100, 100, 100), (101, 100, 101, 104), (102, 100, 102, 108), (103, 100, 103, 112), (104, 100, 104, 116), (105, 100, 105, 120),
-    (106, 101, 100, 101), (107, 101, 101, 105), (108, 101, 102, 109), (109, 101, 103, 113), (110, 101, 104, 117), (111, 101, 105, 121),
-    (112, 102, 100, 102), (113, 102, 101, 106), (114, 102, 102, 110), (115, 102, 103, 114), (116, 102, 104, 118), (117, 102, 105, 122),
-    (118, 103, 100, 100), (119, 103, 101, 104), (120, 103, 102, 109), (121, 103, 103, 112), (122, 103, 104, 116), (123, 103, 105, 121),
-    (124, 104, 100, 101), (125, 104, 101, 105), (126, 104, 102, 110), (127, 104, 103, 114), (128, 104, 104, 117), (129, 104, 105, 122),
-    (130, 105, 100, 102), (131, 105, 101, 107), (132, 105, 102, 111), (133, 105, 103, 115), (134, 105, 104, 119), (135, 105, 105, 123),
-    (136, 106, 100, 100), (137, 106, 101, 104), (138, 106, 102, 108), (139, 106, 103, 113), (140, 106, 104, 116), (141, 106, 105, 120),
-    (142, 107, 100, 101), (143, 107, 101, 106), (144, 107, 102, 110), (145, 107, 103, 115), (146, 107, 104, 118), (147, 107, 105, 122),
-    (148, 108, 100, 100), (149, 108, 101, 104), (150, 108, 102, 108), (151, 108, 103, 112), (152, 108, 104, 116), (153, 108, 105, 120),
-    (154, 109, 100, 101), (155, 109, 101, 106), (156, 109, 102, 109), (157, 109, 103, 113), (158, 109, 104, 117), (159, 109, 105, 121);
+    -- EcoWear (QuestionnaireId=100)
+    (100, 100, 100, 100.0), (101, 100, 101, 100.0), (102, 100, 102, 100.0),
+    (103, 100, 103, 90.0), (104, 100, 104, 100.0), (105, 100, 105, 100.0),
+
+    -- NaturalStyle (QuestionnaireId=101)
+    (106, 101, 100, 75.0), (107, 101, 101, 80.0), (108, 101, 102, 70.0),
+    (109, 101, 103, 85.0), (110, 101, 104, 60.0), (111, 101, 105, 75.0),
+
+    -- UrbanFit (QuestionnaireId=102)
+    (112, 102, 100, 40.0), (113, 102, 101, 50.0), (114, 102, 102, 40.0),
+    (115, 102, 103, 60.0), (116, 102, 104, 20.0), (117, 102, 105, 40.0),
+
+    -- LuxeBrand (QuestionnaireId=103)
+    (118, 103, 100, 100.0), (119, 103, 101, 100.0), (120, 103, 102, 70.0),
+    (121, 103, 103, 90.0), (122, 103, 104, 100.0), (123, 103, 105, 75.0),
+
+    -- SportWear Pro (QuestionnaireId=104)
+    (124, 104, 100, 75.0), (125, 104, 101, 80.0), (126, 104, 102, 40.0),
+    (127, 104, 103, 60.0), (128, 104, 104, 60.0), (129, 104, 105, 40.0),
+
+    -- VintageTales (QuestionnaireId=105)
+    (130, 105, 100, 40.0), (131, 105, 101, 50.0), (132, 105, 102, 0.0),
+    (133, 105, 103, 10.0), (134, 105, 104, 0.0), (135, 105, 105, 0.0),
+
+    -- EthicalDenim (QuestionnaireId=106)
+    (136, 106, 100, 100.0), (137, 106, 101, 100.0), (138, 106, 102, 100.0),
+    (139, 106, 103, 85.0), (140, 106, 104, 100.0), (141, 106, 105, 100.0),
+
+    -- MinimalStyle (QuestionnaireId=107)
+    (142, 107, 100, 75.0), (143, 107, 101, 50.0), (144, 107, 102, 40.0),
+    (145, 107, 103, 10.0), (146, 107, 104, 20.0), (147, 107, 105, 40.0),
+
+    -- ArtisanCraft (QuestionnaireId=108)
+    (148, 108, 100, 100.0), (149, 108, 101, 100.0), (150, 108, 102, 100.0),
+    (151, 108, 103, 90.0), (152, 108, 104, 100.0), (153, 108, 105, 100.0),
+
+    -- EcoKids (QuestionnaireId=109)
+    (154, 109, 100, 75.0), (155, 109, 101, 50.0), (156, 109, 102, 70.0),
+    (157, 109, 103, 85.0), (158, 109, 104, 60.0), (159, 109, 105, 75.0);
+
+-- 11.3 Créer les liens Response-Options (NOUVELLE TABLE)
+INSERT INTO "BrandQuestionResponseOptions" ("ResponseId", "OptionId")
+VALUES
+    -- EcoWear
+    (100, 100), (101, 104), (102, 108), (103, 112), (104, 116), (105, 120),
+    -- NaturalStyle
+    (106, 101), (107, 105), (108, 109), (109, 113), (110, 117), (111, 121),
+    -- UrbanFit
+    (112, 102), (113, 106), (114, 110), (115, 114), (116, 118), (117, 122),
+    -- LuxeBrand
+    (118, 100), (119, 104), (120, 109), (121, 112), (122, 116), (123, 121),
+    -- SportWear Pro
+    (124, 101), (125, 105), (126, 110), (127, 114), (128, 117), (129, 122),
+    -- VintageTales
+    (130, 102), (131, 107), (132, 111), (133, 115), (134, 119), (135, 123),
+    -- EthicalDenim
+    (136, 100), (137, 104), (138, 108), (139, 113), (140, 116), (141, 120),
+    -- MinimalStyle
+    (142, 101), (143, 106), (144, 110), (145, 115), (146, 118), (147, 122),
+    -- ArtisanCraft
+    (148, 100), (149, 104), (150, 108), (151, 112), (152, 116), (153, 120),
+    -- EcoKids
+    (154, 101), (155, 106), (156, 109), (157, 113), (158, 117), (159, 121);
 
 -- 12. AVIS UTILISATEURS
 INSERT INTO "UserReviews" ("UserId", "BrandId", "Rating", "Comment", "CreatedAt")
@@ -360,146 +377,77 @@ VALUES
 -- 13. TAGS ÉTHIQUES
 INSERT INTO "BrandEthicTags" ("BrandId", "Category", "TagKey")
 VALUES
-    (100, 'MaterialsManufacturing', 'local'),
-    (100, 'MaterialsManufacturing', 'organic'),
-    (100, 'MaterialsManufacturing', 'fair-trade'),
-    (100, 'MaterialsManufacturing', 'eco-friendly'),
-
-    (101, 'MaterialsManufacturing', 'organic'),
-    (101, 'MaterialsManufacturing', 'sustainable'),
+    (100, 'MaterialsManufacturing', 'local'), (100, 'MaterialsManufacturing', 'organic'),
+    (100, 'MaterialsManufacturing', 'fair-trade'), (100, 'MaterialsManufacturing', 'eco-friendly'),
+    (101, 'MaterialsManufacturing', 'organic'), (101, 'MaterialsManufacturing', 'sustainable'),
     (101, 'MaterialsManufacturing', 'eco-friendly'),
-
-    (102, 'MaterialsManufacturing', 'casual'),
-    (102, 'MaterialsManufacturing', 'vegan'),
-
-    (103, 'MaterialsManufacturing', 'premium'),
-    (103, 'MaterialsManufacturing', 'local'),
-    (103, 'MaterialsManufacturing', 'organic'),
-    (103, 'MaterialsManufacturing', 'sustainable'),
-
-    (104, 'MaterialsManufacturing', 'sporty'),
-    (104, 'MaterialsManufacturing', 'sustainable'),
+    (102, 'MaterialsManufacturing', 'casual'), (102, 'MaterialsManufacturing', 'vegan'),
+    (103, 'MaterialsManufacturing', 'premium'), (103, 'MaterialsManufacturing', 'local'),
+    (103, 'MaterialsManufacturing', 'organic'), (103, 'MaterialsManufacturing', 'sustainable'),
+    (104, 'MaterialsManufacturing', 'sporty'), (104, 'MaterialsManufacturing', 'sustainable'),
     (104, 'MaterialsManufacturing', 'eco-friendly'),
-
     (105, 'MaterialsManufacturing', 'vintage'),
-
-    (106, 'MaterialsManufacturing', 'ethical'),
-    (106, 'MaterialsManufacturing', 'fair-trade'),
-    (106, 'MaterialsManufacturing', 'local'),
-    (106, 'MaterialsManufacturing', 'organic'),
-
-    (107, 'MaterialsManufacturing', 'sustainable'),
-    (107, 'MaterialsManufacturing', 'elegant'),
-
-    (108, 'MaterialsManufacturing', 'premium'),
-    (108, 'MaterialsManufacturing', 'local'),
+    (106, 'MaterialsManufacturing', 'ethical'), (106, 'MaterialsManufacturing', 'fair-trade'),
+    (106, 'MaterialsManufacturing', 'local'), (106, 'MaterialsManufacturing', 'organic'),
+    (107, 'MaterialsManufacturing', 'sustainable'), (107, 'MaterialsManufacturing', 'elegant'),
+    (108, 'MaterialsManufacturing', 'premium'), (108, 'MaterialsManufacturing', 'local'),
     (108, 'MaterialsManufacturing', 'ethical'),
-
-    (109, 'MaterialsManufacturing', 'organic'),
-    (109, 'MaterialsManufacturing', 'eco-friendly'),
+    (109, 'MaterialsManufacturing', 'organic'), (109, 'MaterialsManufacturing', 'eco-friendly'),
     (109, 'MaterialsManufacturing', 'sustainable');
 
 INSERT INTO "BrandEthicTags" ("BrandId", "Category", "TagKey")
 VALUES
-    (100, 'Transport', 'carbon-offset'),
-    (100, 'Transport', 'local-production'),
+    (100, 'Transport', 'carbon-offset'), (100, 'Transport', 'local-production'),
     (101, 'Transport', 'local-production'),
     (103, 'Transport', 'carbon-offset'),
     (106, 'Transport', 'local-production'),
     (108, 'Transport', 'local-production');
 
--- ============================================
 -- 14. CRÉER LES MÉTHODES DE LIVRAISON PAR MARQUE
--- ============================================
-
--- Méthodes pour EcoWear (BrandId 100)
 INSERT INTO "BrandShippingMethods" ("Id", "BrandId", "ProviderName", "MethodType", "DisplayName", "Price", "EstimatedMinDays", "EstimatedMaxDays", "IsEnabled")
 VALUES
     (100, 100, 'BPost', 'HomeDelivery', 'BPost - Livraison à domicile', 0.00, 3, 5, true),
     (101, 100, 'BPost', 'PickupPoint', 'BPost - Point relais', 0.00, 2, 4, true),
-    (102, 100, 'Colruyt', 'StorePickup', 'Retrait en magasin Colruyt', 0.00, 1, 2, true);
-
--- Méthodes pour NaturalStyle (BrandId 101)
-INSERT INTO "BrandShippingMethods" ("Id", "BrandId", "ProviderName", "MethodType", "DisplayName", "Price", "EstimatedMinDays", "EstimatedMaxDays", "IsEnabled")
-VALUES
+    (102, 100, 'Colruyt', 'StorePickup', 'Retrait en magasin Colruyt', 0.00, 1, 2, true),
     (103, 101, 'DHL', 'HomeDelivery', 'DHL - Livraison express', 7.50, 1, 2, true),
     (104, 101, 'BPost', 'Locker', 'BPost - Casier automatique', 3.99, 2, 3, true),
-    (105, 101, 'NaturalStyle', 'StorePickup', 'Retrait en boutique NaturalStyle', 0.00, 1, 1, true);
-
--- Méthodes pour UrbanFit (BrandId 102)
-INSERT INTO "BrandShippingMethods" ("Id", "BrandId", "ProviderName", "MethodType", "DisplayName", "Price", "EstimatedMinDays", "EstimatedMaxDays", "IsEnabled")
-VALUES
+    (105, 101, 'NaturalStyle', 'StorePickup', 'Retrait en boutique NaturalStyle', 0.00, 1, 1, true),
     (106, 102, 'BPost', 'HomeDelivery', 'BPost - Livraison standard', 4.99, 3, 5, true),
     (107, 102, 'UPS', 'HomeDelivery', 'UPS - Livraison rapide', 9.99, 1, 3, true),
-    (108, 102, 'UrbanFit', 'StorePickup', 'Retrait en magasin UrbanFit', 0.00, 1, 2, true);
-
--- Méthodes pour LuxeBrand (BrandId 103)
-INSERT INTO "BrandShippingMethods" ("Id", "BrandId", "ProviderName", "MethodType", "DisplayName", "Price", "EstimatedMinDays", "EstimatedMaxDays", "IsEnabled")
-VALUES
+    (108, 102, 'UrbanFit', 'StorePickup', 'Retrait en magasin UrbanFit', 0.00, 1, 2, true),
     (109, 103, 'DHL Premium', 'HomeDelivery', 'DHL Premium - Livraison VIP', 15.00, 1, 2, true),
-    (110, 103, 'LuxeBrand', 'StorePickup', 'Retrait en boutique Luxe', 0.00, 1, 1, true);
-
--- Méthodes pour SportWear Pro (BrandId 104)
-INSERT INTO "BrandShippingMethods" ("Id", "BrandId", "ProviderName", "MethodType", "DisplayName", "Price", "EstimatedMinDays", "EstimatedMaxDays", "IsEnabled")
-VALUES
+    (110, 103, 'LuxeBrand', 'StorePickup', 'Retrait en boutique Luxe', 0.00, 1, 1, true),
     (111, 104, 'BPost', 'HomeDelivery', 'BPost - Livraison standard', 0.00, 3, 5, true),
     (112, 104, 'DPD', 'HomeDelivery', 'DPD - Livraison express', 6.99, 1, 2, true),
-    (113, 104, 'BPost', 'Locker', 'BPost - Point relais', 2.99, 2, 4, true);
-
--- Méthodes pour VintageTales (BrandId 105)
-INSERT INTO "BrandShippingMethods" ("Id", "BrandId", "ProviderName", "MethodType", "DisplayName", "Price", "EstimatedMinDays", "EstimatedMaxDays", "IsEnabled")
-VALUES
+    (113, 104, 'BPost', 'Locker', 'BPost - Point relais', 2.99, 2, 4, true),
     (114, 105, 'BPost', 'HomeDelivery', 'BPost - Livraison standard', 5.99, 4, 6, true),
-    (115, 105, 'VintageTales', 'StorePickup', 'Retrait en boutique Vintage', 0.00, 1, 3, true);
-
--- Méthodes pour EthicalDenim (BrandId 106)
-INSERT INTO "BrandShippingMethods" ("Id", "BrandId", "ProviderName", "MethodType", "DisplayName", "Price", "EstimatedMinDays", "EstimatedMaxDays", "IsEnabled")
-VALUES
+    (115, 105, 'VintageTales', 'StorePickup', 'Retrait en boutique Vintage', 0.00, 1, 3, true),
     (116, 106, 'BPost', 'HomeDelivery', 'BPost - Livraison à domicile', 0.00, 3, 5, true),
     (117, 106, 'BPost', 'PickupPoint', 'BPost - Point de collecte', 0.00, 2, 4, true),
-    (118, 106, 'DHL', 'HomeDelivery', 'DHL - Livraison express', 8.99, 1, 2, true);
-
--- Méthodes pour MinimalStyle (BrandId 107)
-INSERT INTO "BrandShippingMethods" ("Id", "BrandId", "ProviderName", "MethodType", "DisplayName", "Price", "EstimatedMinDays", "EstimatedMaxDays", "IsEnabled")
-VALUES
+    (118, 106, 'DHL', 'HomeDelivery', 'DHL - Livraison express', 8.99, 1, 2, true),
     (119, 107, 'BPost', 'HomeDelivery', 'BPost - Livraison standard', 4.50, 3, 5, true),
-    (120, 107, 'MinimalStyle', 'StorePickup', 'Retrait en boutique Minimal', 0.00, 1, 2, true);
-
--- Méthodes pour ArtisanCraft (BrandId 108)
-INSERT INTO "BrandShippingMethods" ("Id", "BrandId", "ProviderName", "MethodType", "DisplayName", "Price", "EstimatedMinDays", "EstimatedMaxDays", "IsEnabled")
-VALUES
+    (120, 107, 'MinimalStyle', 'StorePickup', 'Retrait en boutique Minimal', 0.00, 1, 2, true),
     (121, 108, 'BPost', 'HomeDelivery', 'BPost - Livraison soignée', 6.99, 4, 6, true),
-    (122, 108, 'ArtisanCraft', 'StorePickup', 'Retrait atelier Artisan', 0.00, 1, 1, true);
-
--- Méthodes pour EcoKids (BrandId 109)
-INSERT INTO "BrandShippingMethods" ("Id", "BrandId", "ProviderName", "MethodType", "DisplayName", "Price", "EstimatedMinDays", "EstimatedMaxDays", "IsEnabled")
-VALUES
+    (122, 108, 'ArtisanCraft', 'StorePickup', 'Retrait atelier Artisan', 0.00, 1, 1, true),
     (123, 109, 'BPost', 'HomeDelivery', 'BPost - Livraison à domicile', 0.00, 3, 5, true),
     (124, 109, 'BPost', 'Locker', 'BPost - Casier automatique', 3.50, 2, 4, true),
-    (125, 109, 'EcoKids', 'StorePickup', 'Retrait en magasin EcoKids', 0.00, 1, 2, true);
-
--- Méthode fun bonus (ProutLand Express pour EcoWear)
-INSERT INTO "BrandShippingMethods" ("Id", "BrandId", "ProviderName", "MethodType", "DisplayName", "Price", "EstimatedMinDays", "EstimatedMaxDays", "IsEnabled")
-VALUES
+    (125, 109, 'EcoKids', 'StorePickup', 'Retrait en magasin EcoKids', 0.00, 1, 2, true),
     (126, 100, 'ProutLand Express', 'HomeDelivery', 'ProutLand Express - Livraison éclair ⚡', 12.99, 1, 1, true);
 
--- RÉSUMÉ FINAL DES MÉTHODES
-SELECT '✅ MÉTHODES DE LIVRAISON CRÉÉES !' as status;
-SELECT 'BrandShippingMethods : ' || COUNT(*) as info FROM "BrandShippingMethods";
-
-
 -- RÉSUMÉ FINAL
-SELECT '✅ TOUTES LES DONNÉES INSÉRÉES AVEC NOUVEAU MODÈLE !' as status;
-
+SELECT '✅ TOUTES LES DONNÉES INSÉRÉES AVEC NOUVEAU MODÈLE ETHICS V2 !' as status;
 SELECT 'Users : ' || COUNT(*) as info FROM "Users";
 SELECT 'Brands : ' || COUNT(*) as info FROM "Brands";
 SELECT 'Deposits : ' || COUNT(*) as info FROM "Deposits";
+SELECT 'EthicsCategories : ' || COUNT(*) as info FROM "EthicsCategories";
+SELECT 'EthicsQuestions : ' || COUNT(*) as info FROM "EthicsQuestions";
+SELECT 'EthicsOptions : ' || COUNT(*) as info FROM "EthicsOptions";
 SELECT 'ProductGroups : ' || COUNT(*) as info FROM "ProductGroups";
 SELECT 'Products : ' || COUNT(*) as info FROM "Products";
 SELECT 'ProductMedia : ' || COUNT(*) as info FROM "ProductMedia";
 SELECT 'ProductVariants : ' || COUNT(*) as info FROM "ProductVariants";
 SELECT 'Questionnaires : ' || COUNT(*) as info FROM "BrandQuestionnaires";
-SELECT 'Responses : ' || COUNT(*) as info FROM "BrandQuestionResponses";
+SELECT 'QuestionResponses : ' || COUNT(*) as info FROM "BrandQuestionResponses";
+SELECT 'ResponseOptions : ' || COUNT(*) as info FROM "BrandQuestionResponseOptions";
 SELECT 'Reviews : ' || COUNT(*) as info FROM "UserReviews";
-SELECT * FROM "Orders"
-SELECT * FROM "BrandDeliveries"
+SELECT 'ShippingMethods : ' || COUNT(*) as info FROM "BrandShippingMethods";
