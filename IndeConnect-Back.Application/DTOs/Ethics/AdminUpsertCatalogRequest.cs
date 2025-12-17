@@ -16,17 +16,17 @@ public record UpsertCategoryDto(
 
 public record UpsertQuestionDto(
     long? Id,
-    long CategoryId,
+    string CategoryKey,   // ✅ lien par Key
     string Key,
     string Label,
     int Order,
-    string AnswerType, // "Single" | "Multiple"
+    string AnswerType,
     bool IsActive
 );
 
 public record UpsertOptionDto(
     long? Id,
-    long QuestionId,
+    string QuestionKey,   // ✅ lien par Key
     string Key,
     string Label,
     int Order,
