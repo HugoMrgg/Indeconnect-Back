@@ -1,0 +1,302 @@
+﻿using IndeConnect_Back.Application.DTOs.Ethics;
+using IndeConnect_Back.Application.Services.Interfaces;
+using IndeConnect_Back.Domain;
+using IndeConnect_Back.Domain.catalog.brand;
+using Microsoft.EntityFrameworkCore;
+
+namespace IndeConnect_Back.Infrastructure.Services.Implementations;
+
+public class EthicsQuestionnaireService : IEthicsQuestionnaireService
+{
+    private readonly AppDbContext _context;
+    private readonly BrandEthicsScorer _scorer;
+
+    public EthicsQuestionnaireService(AppDbContext context, BrandEthicsScorer scorer)
+    {
+        _context = context;
+        _scorer = scorer;
+    }
+
+    public async Task<EthicsFormDto> GetMyEthicsFormAsync(long superVendorUserId)
+    {
+        var brandId = await GetBrandIdForSuperVendorOrThrow(superVendorUserId);
+
+        // Dernier questionnaire Draft/Submitted (un seul attendu fonctionnellement)
+        var questionnaire = await _context.BrandQuestionnaires
+            .Include(q => q.Responses)
+                .ThenInclude(r => r.SelectedOptions)
+                    .ThenInclude(so => so.Option)
+            .Include(q => q.Responses)
+                .ThenInclude(r => r.Question)
+            .Where(q => q.BrandId == brandId &&
+                        (q.Status == QuestionnaireStatus.Draft || q.Status == QuestionnaireStatus.Submitted))
+            .OrderByDescending(q => q.CreatedAt)
+            .FirstOrDefaultAsync();
+
+        var catalog = await LoadActiveCatalogAsync();
+
+        return BuildFormDto(catalog, questionnaire);
+    }
+
+    public async Task<EthicsFormDto> UpsertMyQuestionnaireAsync(long superVendorUserId, UpsertQuestionnaireRequest request)
+    {
+        var brandId = await GetBrandIdForSuperVendorOrThrow(superVendorUserId);
+
+        var catalog = await LoadActiveCatalogAsync();
+        var questionsById = catalog.QuestionsById;
+        var optionsById = catalog.OptionsById;
+
+        // Charger / créer questionnaire Draft/Submitted
+        var questionnaire = await _context.BrandQuestionnaires
+            .Include(q => q.Responses)
+                .ThenInclude(r => r.SelectedOptions)
+            .Include(q => q.Responses)
+                .ThenInclude(r => r.Question)
+            .Where(q => q.BrandId == brandId &&
+                        (q.Status == QuestionnaireStatus.Draft || q.Status == QuestionnaireStatus.Submitted))
+            .OrderByDescending(q => q.CreatedAt)
+            .FirstOrDefaultAsync();
+
+        if (questionnaire == null)
+        {
+            questionnaire = new BrandQuestionnaire(brandId);
+            _context.BrandQuestionnaires.Add(questionnaire);
+        }
+
+        // On refuse toute modification si déjà Approved/Rejected (traçabilité)
+        if (questionnaire.Status is QuestionnaireStatus.Approved or QuestionnaireStatus.Rejected)
+            throw new InvalidOperationException("Ce questionnaire est déjà clôturé (Approved/Rejected) et ne peut plus être modifié.");
+
+        // Validation + upsert réponses
+        var answers = (request.Answers ?? Array.Empty<QuestionAnswerDto>()).ToList();
+
+        using var tx = await _context.Database.BeginTransactionAsync();
+
+        foreach (var a in answers)
+        {
+            if (!questionsById.TryGetValue(a.QuestionId, out var q))
+                throw new InvalidOperationException($"Question inconnue ou inactive: {a.QuestionId}");
+
+            var optionIds = (a.OptionIds ?? Array.Empty<long>()).Distinct().ToList();
+
+            // Respect radio/checkbox
+            if (q.AnswerType == EthicsAnswerType.Single)
+            {
+                if (optionIds.Count > 1)
+                    throw new InvalidOperationException($"Question {q.Id} (Single) : une seule option autorisée.");
+                if (request.Submit && optionIds.Count != 1)
+                    throw new InvalidOperationException($"Question {q.Id} (Single) : exactement 1 option est requise à la soumission.");
+            }
+            else if (q.AnswerType == EthicsAnswerType.Multiple)
+            {
+                if (request.Submit && optionIds.Count < 1)
+                    throw new InvalidOperationException($"Question {q.Id} (Multiple) : au moins 1 option est requise à la soumission.");
+            }
+            else
+            {
+                throw new InvalidOperationException($"Type de réponse non supporté pour la question {q.Id}.");
+            }
+
+            // Valider options (existantes, actives, appartiennent à la question)
+            foreach (var optId in optionIds)
+            {
+                if (!optionsById.TryGetValue(optId, out var opt))
+                    throw new InvalidOperationException($"Option inconnue ou inactive: {optId}");
+
+                if (opt.QuestionId != q.Id)
+                    throw new InvalidOperationException($"Option {optId} n'appartient pas à la question {q.Id}.");
+            }
+
+            // Upsert BrandQuestionResponse (1 par question)
+            var response = questionnaire.Responses.FirstOrDefault(r => r.QuestionId == q.Id);
+            if (response == null)
+            {
+                response = new BrandQuestionResponse(questionnaire.Id, q.Id);
+                (questionnaire as dynamic).GetType();
+                _context.BrandQuestionResponses.Add(response);
+            }
+
+            // Remplacer la sélection (join table)
+            // 1) supprimer anciens liens
+            if (response.SelectedOptions.Any())
+                _context.BrandQuestionResponseOptions.RemoveRange(response.SelectedOptions);
+
+            // 2) ajouter nouveaux liens
+            foreach (var optId in optionIds)
+                _context.BrandQuestionResponseOptions.Add(new BrandQuestionResponseOption(response.Id, optId));
+
+            // Score audit (optionnel)
+            var calculatedScore = optionIds.Count == 0
+                ? 0m
+                : optionIds.Sum(id => optionsById[id].Score);
+
+            response.SetCalculatedScore(calculatedScore);
+        }
+
+        if (request.Submit)
+        {
+            questionnaire.MarkSubmitted();
+        }
+
+        await _context.SaveChangesAsync();
+
+        // Recharger questionnaire avec options
+        questionnaire = await _context.BrandQuestionnaires
+            .Include(q => q.Responses)
+                .ThenInclude(r => r.SelectedOptions)
+                    .ThenInclude(so => so.Option)
+            .Include(q => q.Responses)
+                .ThenInclude(r => r.Question)
+            .FirstAsync(q => q.Id == questionnaire.Id);
+
+        // Calcul + persistance des scores
+        if (request.Submit)
+        {
+            await UpsertPendingScoresAsync(brandId, questionnaire, catalog.ActiveCategories);
+            await _context.SaveChangesAsync();
+        }
+
+        await tx.CommitAsync();
+
+        // Retourner le formulaire (catalogue + réponses)
+        return BuildFormDto(catalog, questionnaire);
+    }
+
+    // -------------------------
+    // Helpers
+    // -------------------------
+
+    private async Task<long> GetBrandIdForSuperVendorOrThrow(long superVendorUserId)
+    {
+        var user = await _context.Users.FirstOrDefaultAsync(u => u.Id == superVendorUserId);
+        if (user == null || !user.BrandId.HasValue)
+            throw new InvalidOperationException("Utilisateur SuperVendor sans Brand associée.");
+
+        return user.BrandId.Value;
+    }
+
+    private sealed record ActiveCatalog(
+        IReadOnlyList<EthicsCategoryEntity> ActiveCategories,
+        IReadOnlyList<EthicsQuestion> ActiveQuestions,
+        IReadOnlyList<EthicsOption> ActiveOptions,
+        Dictionary<long, EthicsQuestion> QuestionsById,
+        Dictionary<long, EthicsOption> OptionsById
+    );
+
+    private async Task<ActiveCatalog> LoadActiveCatalogAsync()
+    {
+        var categories = await _context.EthicsCategories
+            .AsNoTracking()
+            .Where(c => c.IsActive)
+            .OrderBy(c => c.Order)
+            .ThenBy(c => c.Id)
+            .ToListAsync();
+
+        var questions = await _context.EthicsQuestions
+            .AsNoTracking()
+            .Where(q => q.IsActive)
+            .OrderBy(q => q.CategoryId)
+            .ThenBy(q => q.Order)
+            .ThenBy(q => q.Id)
+            .ToListAsync();
+
+        var options = await _context.EthicsOptions
+            .AsNoTracking()
+            .Where(o => o.IsActive)
+            .OrderBy(o => o.QuestionId)
+            .ThenBy(o => o.Order)
+            .ThenBy(o => o.Id)
+            .ToListAsync();
+
+        var questionsById = questions.ToDictionary(q => q.Id, q => q);
+        var optionsById = options.ToDictionary(o => o.Id, o => o);
+
+        return new ActiveCatalog(categories, questions, options, questionsById, optionsById);
+    }
+
+    private EthicsFormDto BuildFormDto(ActiveCatalog catalog, BrandQuestionnaire? questionnaire)
+    {
+        var selectedByQuestionId = new Dictionary<long, HashSet<long>>();
+
+        if (questionnaire != null)
+        {
+            foreach (var r in questionnaire.Responses)
+            {
+                var set = new HashSet<long>();
+                foreach (var so in r.SelectedOptions)
+                    set.Add(so.OptionId);
+
+                selectedByQuestionId[r.QuestionId] = set;
+            }
+        }
+
+        var categoriesDto = catalog.ActiveCategories.Select(c =>
+        {
+            var questionsDto = catalog.ActiveQuestions
+                .Where(q => q.CategoryId == c.Id)
+                .OrderBy(q => q.Order)
+                .ThenBy(q => q.Id)
+                .Select(q =>
+                {
+                    var optionsDto = catalog.ActiveOptions
+                        .Where(o => o.QuestionId == q.Id)
+                        .OrderBy(o => o.Order)
+                        .ThenBy(o => o.Id)
+                        .Select(o => new EthicsOptionDto(o.Id, o.Key, o.Label, o.Order, o.Score))
+                        .ToList();
+
+                    var selected = selectedByQuestionId.TryGetValue(q.Id, out var set)
+                        ? set.ToList()
+                        : new List<long>();
+
+                    return new EthicsQuestionDto(
+                        q.Id,
+                        q.Key,
+                        q.Label,
+                        q.Order,
+                        q.AnswerType.ToString(),
+                        optionsDto,
+                        selected
+                    );
+                })
+                .ToList();
+
+            return new EthicsCategoryDto(c.Id, c.Key, c.Label, c.Order, questionsDto);
+        }).ToList();
+
+        return new EthicsFormDto(
+            questionnaire?.Id,
+            questionnaire?.Status.ToString() ?? QuestionnaireStatus.Draft.ToString(),
+            categoriesDto
+        );
+    }
+
+    private async Task UpsertPendingScoresAsync(long brandId, BrandQuestionnaire questionnaire, IReadOnlyList<EthicsCategoryEntity> activeCategories)
+    {
+        // Nettoyer les scores déjà calculés pour CE questionnaire
+        var existing = await _context.BrandEthicScores
+            .Where(s => s.QuestionnaireId == questionnaire.Id)
+            .ToListAsync();
+
+        if (existing.Any())
+            _context.BrandEthicScores.RemoveRange(existing);
+
+        // Calcul par catégorie
+        foreach (var cat in activeCategories)
+        {
+            var raw = _scorer.ComputeRawScore(questionnaire.Responses, cat.Id);
+
+            var final = raw;
+
+            _context.BrandEthicScores.Add(new BrandEthicScore(
+                brandId: brandId,
+                categoryId: cat.Id,
+                questionnaireId: questionnaire.Id,
+                rawScore: raw,
+                finalScore: final,
+                isOfficial: false
+            ));
+        }
+    }
+}
+    

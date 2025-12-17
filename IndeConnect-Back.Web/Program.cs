@@ -54,6 +54,8 @@ builder.Services.AddScoped<IGeocodeService, NominatimGeocodeService>();
 builder.Services.AddScoped<ICartService, CartService>();
 builder.Services.AddScoped<IAuditTrailService, AuditTrailService>();
 builder.Services.AddScoped<IEthicsService, EthicsService>();
+builder.Services.AddScoped<IEthicsQuestionnaireService, EthicsQuestionnaireService>();
+builder.Services.AddScoped<IEthicsAdminService, EthicsAdminService>();
 builder.Services.AddScoped<ICartService, CartService>();
 builder.Services.AddScoped<IEmailService, SendGridEmailService>();           
 builder.Services.AddScoped<IPasswordResetTokenService, PasswordResetTokenService>(); 

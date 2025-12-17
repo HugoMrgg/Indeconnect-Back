@@ -11,15 +11,16 @@ public class BrandQuestionResponse
     public long QuestionId { get; private set; }
     public EthicsQuestion Question { get; private set; } = default!;
 
-    public long OptionId { get; private set; }
-    public EthicsOption Option { get; private set; } = default!;
-
+    private readonly List<BrandQuestionResponseOption> _selectedOptions = new();
+    public IReadOnlyCollection<BrandQuestionResponseOption> SelectedOptions => _selectedOptions;
+    public decimal? CalculatedScore { get; private set; } 
     private BrandQuestionResponse() { }
 
-    public BrandQuestionResponse(long questionnaireId, long questionId, long optionId)
+    public BrandQuestionResponse(long questionnaireId, long questionId)
     {
         QuestionnaireId = questionnaireId;
         QuestionId = questionId;
-        OptionId = optionId;
     }
+    
+    public void SetCalculatedScore(decimal score) => CalculatedScore = score;
 }

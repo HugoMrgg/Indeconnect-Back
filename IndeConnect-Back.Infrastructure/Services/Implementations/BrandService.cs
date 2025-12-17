@@ -1,4 +1,4 @@
-﻿using IndeConnect_Back.Application.DTOs.Brands;
+﻿﻿using IndeConnect_Back.Application.DTOs.Brands;
 using IndeConnect_Back.Application.Services.Interfaces;
 using IndeConnect_Back.Domain;
 using IndeConnect_Back.Domain.catalog.brand;
@@ -9,16 +9,34 @@ namespace IndeConnect_Back.Infrastructure.Services.Implementations;
 public class BrandService : IBrandService
 {
     private readonly AppDbContext _context;
-    private readonly BrandEthicsScorer _ethicsScorer;
     private readonly IGeocodeService _geocodeService;
+
+    // TODO IMPORTANT: ces keys doivent matcher celles stockées en DB dans EthicsCategoryEntity.Key.
+    // Je mets plusieurs alias pour être robuste si seed "creation" vs "materialsManufacturing", etc.
+    private static readonly string[] ProductionCategoryKeys =
+    {
+        "materialsmanufacturing",
+        "materials_manufacturing",
+        "creation",
+        "creation-des-habits",
+        "production"
+    };
+
+    private static readonly string[] TransportCategoryKeys =
+    {
+        "transport"
+    };
     
-    public BrandService(AppDbContext context, BrandEthicsScorer ethicsScorer, IGeocodeService geocodeService)
+    // TODO
+    // private const string TransportKey = "transport";
+    // private const string CreationKey  = "creation";
+
+    public BrandService(AppDbContext context, IGeocodeService geocodeService)
     {
         _context = context;
-        _ethicsScorer = ethicsScorer;
         _geocodeService = geocodeService;
     }
-    
+
     public async Task<BrandsListResponse> GetBrandsSortedByEthicsAsync(GetBrandsQuery query)
     {
         var brandsQuery = _context.Brands
@@ -26,12 +44,6 @@ public class BrandService : IBrandService
             .Include(b => b.EthicTags)
             .Include(b => b.Deposits)
             .Include(b => b.Reviews)
-            .Include(b => b.Questionnaires)
-                .ThenInclude(q => q.Responses)
-                    .ThenInclude(r => r.Option)
-            .Include(b => b.Questionnaires)
-                .ThenInclude(q => q.Responses)
-                    .ThenInclude(r => r.Question)
             .AsQueryable();
 
         if (!string.IsNullOrEmpty(query.PriceRange))
@@ -49,22 +61,45 @@ public class BrandService : IBrandService
 
         var brands = await brandsQuery.ToListAsync();
 
+        // Charger en une fois les scores OFFICIELS persistés
+        var scoresByBrand = await LoadOfficialEthicsScoresByBrandAsync(brands.Select(b => b.Id));
+
         var enrichedBrands = brands
-            .Select(b => new
+            .Select(b =>
             {
-                Brand = b,
-                EthicsScoreProduction = CalculateEthicsScore(b, EthicsSortType.MaterialsManufacturing, query.Latitude, query.Longitude),
-                EthicsScoreTransport = CalculateEthicsScore(b, EthicsSortType.Transport, query.Latitude, query.Longitude),
-                UserRating = b.Reviews.Any() ? b.Reviews.Average(r => (double)r.Rating) : 0.0,
-                Address = b.Deposits.FirstOrDefault() != null
+                var ethicsScoreProduction = GetOfficialScoreByKeys(scoresByBrand, b.Id, ProductionCategoryKeys);
+                var ethicsScoreTransportBase = GetOfficialScoreByKeys(scoresByBrand, b.Id, TransportCategoryKeys);
+
+                var userRating = b.Reviews.Any() ? b.Reviews.Average(r => (double)r.Rating) : 0.0;
+
+                var address = b.Deposits.FirstOrDefault() != null
                     ? $"{b.Deposits.First().Number} {b.Deposits.First().Street}, {b.Deposits.First().PostalCode}"
-                    : null,
-                MinDistance = query.Latitude.HasValue && query.Longitude.HasValue
+                    : null;
+
+                var minDistance = query.Latitude.HasValue && query.Longitude.HasValue
                     ? GetMinimumDistanceToDeposits(b.Deposits, query.Latitude.Value, query.Longitude.Value)
-                    : double.MaxValue
+                    : double.MaxValue;
+
+                // Transport score = score officiel (depuis questionnaire approuvé) + multiplicateur "proximité utilisateur"
+                var ethicsScoreTransport = ApplyUserDistanceMultiplierToTransport(
+                    ethicsScoreTransportBase,
+                    minDistance,
+                    query.Latitude,
+                    query.Longitude
+                );
+
+                return new
+                {
+                    Brand = b,
+                    EthicsScoreProduction = ethicsScoreProduction,
+                    EthicsScoreTransport = ethicsScoreTransport,
+                    UserRating = userRating,
+                    Address = address,
+                    MinDistance = minDistance
+                };
             })
             .ToList();
-        
+
         if (query.UserRatingMin.HasValue)
         {
             enrichedBrands = enrichedBrands
@@ -125,29 +160,36 @@ public class BrandService : IBrandService
             LocationUsed: query.Latitude.HasValue && query.Longitude.HasValue
         );
     }
-    
+
     public async Task<BrandDetailDto?> GetBrandByIdAsync(long brandId, double? userLat, double? userLon)
     {
         var brand = await _context.Brands
             .Include(b => b.EthicTags)
             .Include(b => b.Deposits)
             .Include(b => b.Reviews)
-            .Include(b => b.Questionnaires)
-            .ThenInclude(q => q.Responses)
-            .ThenInclude(r => r.Option)
             .FirstOrDefaultAsync(b => b.Id == brandId && b.Status == BrandStatus.Approved);
 
         if (brand == null)
             return null;
 
         var avgRating = brand.Reviews.Any() ? brand.Reviews.Average(r => (double)r.Rating) : 0.0;
-        var ethicsScoreProduction = CalculateEthicsScore(brand, EthicsSortType.MaterialsManufacturing, userLat, userLon);
-        var ethicsScoreTransport = CalculateEthicsScore(brand, EthicsSortType.Transport, userLat, userLon);
+
+        // Charger scores officiels (persistés) pour cette marque
+        var scoresByBrand = await LoadOfficialEthicsScoresByBrandAsync(new[] { brand.Id });
+
+        var ethicsScoreProduction = GetOfficialScoreByKeys(scoresByBrand, brand.Id, ProductionCategoryKeys);
+
+        var transportBase = GetOfficialScoreByKeys(scoresByBrand, brand.Id, TransportCategoryKeys);
+        var minDistance = userLat.HasValue && userLon.HasValue
+            ? GetMinimumDistanceToDeposits(brand.Deposits, userLat.Value, userLon.Value)
+            : double.MaxValue;
+
+        var ethicsScoreTransport = ApplyUserDistanceMultiplierToTransport(transportBase, minDistance, userLat, userLon);
 
         var deposits = brand.Deposits.Select(d => new DepositDto(
             d.Id,
             d.GetFullAddress(),
-            userLat.HasValue && userLon.HasValue 
+            userLat.HasValue && userLon.HasValue
                 ? (int?)CalculateDistanceKm(userLat.Value, userLon.Value, d.Latitude, d.Longitude)
                 : null,
             d.City
@@ -174,9 +216,6 @@ public class BrandService : IBrandService
     }
 
     /// <summary>
-    /// Get brand by ID for preview (SuperVendor can see their Draft brand)
-    /// </summary>
-    /// <summary>
     /// Get the brand of the authenticated SuperVendor (for editing/preview)
     /// </summary>
     public async Task<BrandDetailDto?> GetMyBrandAsync(long? superVendorUserId)
@@ -184,7 +223,7 @@ public class BrandService : IBrandService
         // Récupérer l'utilisateur pour avoir son BrandId
         var user = await _context.Users
             .FirstOrDefaultAsync(u => u.Id == superVendorUserId);
-    
+
         if (user == null || !user.BrandId.HasValue)
             return null;
 
@@ -193,17 +232,20 @@ public class BrandService : IBrandService
             .Include(b => b.EthicTags)
             .Include(b => b.Deposits)
             .Include(b => b.Reviews)
-            .Include(b => b.Questionnaires)
-            .ThenInclude(q => q.Responses)
-            .ThenInclude(r => r.Option)
             .FirstOrDefaultAsync(b => b.Id == user.BrandId.Value);
 
         if (brand == null)
             return null;
 
         var avgRating = brand.Reviews.Any() ? brand.Reviews.Average(r => (double)r.Rating) : 0.0;
-        var ethicsScoreProduction = CalculateEthicsScore(brand, EthicsSortType.MaterialsManufacturing, null, null);
-        var ethicsScoreTransport = CalculateEthicsScore(brand, EthicsSortType.Transport, null, null);
+
+        // Scores officiels (si aucun questionnaire approuvé, ça retombe à 0)
+        var scoresByBrand = await LoadOfficialEthicsScoresByBrandAsync(new[] { brand.Id });
+
+        var ethicsScoreProduction = GetOfficialScoreByKeys(scoresByBrand, brand.Id, ProductionCategoryKeys);
+
+        // Pas de userLat/userLon ici, donc pas de multiplicateur transport
+        var ethicsScoreTransport = GetOfficialScoreByKeys(scoresByBrand, brand.Id, TransportCategoryKeys);
 
         var deposits = brand.Deposits.Select(d => new DepositDto(
             d.Id,
@@ -232,39 +274,26 @@ public class BrandService : IBrandService
         );
     }
 
-    private double CalculateEthicsScore(
-        Brand brand,
-        EthicsSortType sortBy,
+    private double ApplyUserDistanceMultiplierToTransport(
+        double transportBaseScore,
+        double minDistanceKm,
         double? userLat,
         double? userLon)
     {
-        var category = sortBy == EthicsSortType.MaterialsManufacturing
-            ? EthicsCategory.MaterialsManufacturing
-            : EthicsCategory.Transport;
+        // Comme avant : le multiplicateur est "UX" (proximité à l'utilisateur),
+        // donc il doit rester calculé à la volée.
+        if (!userLat.HasValue || !userLon.HasValue)
+            return transportBaseScore;
 
-        var questionnaireResponses = brand.Questionnaires.SelectMany(q => q.Responses);
-        decimal baseScore = _ethicsScorer.ComputeScore(questionnaireResponses, category);
-
-        if (sortBy == EthicsSortType.Transport && userLat.HasValue && userLon.HasValue)
+        var distanceMultiplier = minDistanceKm switch
         {
-            var minDistance = GetMinimumDistanceToDeposits(
-                brand.Deposits,
-                userLat.Value,
-                userLon.Value
-            );
+            < 50 => 2.0,
+            < 200 => 1.5,
+            < 500 => 1.0,
+            _ => 0.5
+        };
 
-            var distanceMultiplier = minDistance switch
-            {
-                < 50 => 2.0m,
-                < 200 => 1.5m,
-                < 500 => 1.0m,
-                _ => 0.5m
-            };
-            
-            baseScore *= distanceMultiplier;
-        }
-        
-        return (double)baseScore;
+        return transportBaseScore * distanceMultiplier;
     }
 
     private double GetMinimumDistanceToDeposits(
@@ -272,7 +301,7 @@ public class BrandService : IBrandService
         double userLat,
         double userLon)
     {
-        if (!deposits.Any()) 
+        if (!deposits.Any())
             return double.MaxValue;
 
         var validDeposits = deposits
@@ -291,17 +320,17 @@ public class BrandService : IBrandService
 
     private double CalculateDistanceKm(double lat1, double lon1, double lat2, double lon2)
     {
-        const double R = 6371; 
-        
+        const double R = 6371;
+
         var dLat = ToRadians(lat2 - lat1);
         var dLon = ToRadians(lon2 - lon1);
-        
+
         var a = Math.Sin(dLat / 2) * Math.Sin(dLat / 2) +
                 Math.Cos(ToRadians(lat1)) * Math.Cos(ToRadians(lat2)) *
                 Math.Sin(dLon / 2) * Math.Sin(dLon / 2);
-        
+
         var c = 2 * Math.Atan2(Math.Sqrt(a), Math.Sqrt(1 - a));
-        
+
         return R * c;
     }
 
@@ -328,7 +357,7 @@ public class BrandService : IBrandService
             brand.Id,
             brand.Name,
             brand.LogoUrl,
-            brand.BannerUrl,     
+            brand.BannerUrl,
             brand.Description,
             ethicsScoreProduction,
             ethicsScoreTransport,
@@ -340,7 +369,7 @@ public class BrandService : IBrandService
     }
 
     private double ToRadians(double degrees) => degrees * Math.PI / 180;
-    
+
     public async Task UpdateBrandAsync(long brandId, UpdateBrandRequest request, long? currentUserId)
     {
         var brand = await _context.Brands
@@ -367,6 +396,7 @@ public class BrandService : IBrandService
 
         await _context.SaveChangesAsync();
     }
+
     public async Task<DepositDto> UpsertMyBrandDepositAsync(
         long? currentUserId,
         UpsertBrandDepositRequest request)
@@ -404,13 +434,68 @@ public class BrandService : IBrandService
 
         await _context.SaveChangesAsync();
 
-        var saved = brand.Deposits.First();
+        var deposit = brand.Deposits.First();
 
         return new DepositDto(
-            Id: saved.Id,
-            FullAddress: saved.GetFullAddress(),
-            DistanceKm: null,
-            City: request.City
+            deposit.Id,
+            deposit.GetFullAddress(),
+            null,
+            deposit.City
         );
+    }
+
+    // -------------------------
+    // Scores officiels persistés
+    // -------------------------
+
+    private async Task<Dictionary<long, Dictionary<string, double>>> LoadOfficialEthicsScoresByBrandAsync(IEnumerable<long> brandIds)
+    {
+        var ids = brandIds.Distinct().ToList();
+        if (ids.Count == 0) return new();
+
+        // OFFICIEL uniquement : provient du dernier questionnaire Approved (après review admin)
+        var rows = await _context.BrandEthicScores
+            .AsNoTracking()
+            .Include(s => s.Category)
+            .Where(s => s.IsOfficial && ids.Contains(s.BrandId))
+            .Select(s => new
+            {
+                s.BrandId,
+                CategoryKey = s.Category.Key,
+                FinalScore = (double)s.FinalScore
+            })
+            .ToListAsync();
+
+        var dict = new Dictionary<long, Dictionary<string, double>>();
+
+        foreach (var r in rows)
+        {
+            if (!dict.TryGetValue(r.BrandId, out var byCat))
+            {
+                byCat = new Dictionary<string, double>(StringComparer.OrdinalIgnoreCase);
+                dict[r.BrandId] = byCat;
+            }
+
+            byCat[r.CategoryKey] = r.FinalScore;
+        }
+
+        return dict;
+    }
+
+    private static double GetOfficialScoreByKeys(
+        Dictionary<long, Dictionary<string, double>> scoresByBrand,
+        long brandId,
+        IEnumerable<string> possibleKeys)
+    {
+        if (!scoresByBrand.TryGetValue(brandId, out var byCat))
+            return 0.0;
+
+        foreach (var key in possibleKeys)
+        {
+            if (byCat.TryGetValue(key, out var score))
+                return score;
+        }
+
+        return 0.0;
     }
 }

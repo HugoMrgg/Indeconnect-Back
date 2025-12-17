@@ -13,10 +13,14 @@ public class EthicsQuestionConfiguration : IEntityTypeConfiguration<EthicsQuesti
         builder.HasKey(eq => eq.Id);
         
         // Properties
-        builder.Property(eq => eq.Category)
-               .HasConversion(new EnumToStringConverter<EthicsCategory>())
-               .IsRequired()
-               .HasMaxLength(50);
+        builder.Property(eq => eq.CategoryId).IsRequired();
+        builder.HasOne(eq => eq.Category)
+               .WithMany()
+               .HasForeignKey(eq => eq.CategoryId)
+               .OnDelete(DeleteBehavior.Restrict);
+        
+        builder.Property(eq => eq.AnswerType).IsRequired();
+        builder.Property(eq => eq.IsActive).IsRequired().HasDefaultValue(true);
         
         builder.Property(eq => eq.Key)
                .IsRequired()
@@ -41,10 +45,10 @@ public class EthicsQuestionConfiguration : IEntityTypeConfiguration<EthicsQuesti
                .IsUnique()
                .HasDatabaseName("IX_EthicsQuestion_UniqueKey");
         
-        builder.HasIndex(eq => eq.Category)
+        builder.HasIndex(eq => eq.CategoryId)
                .HasDatabaseName("IX_EthicsQuestion_Category");
         
-        builder.HasIndex(eq => new { eq.Category, eq.Order })
+        builder.HasIndex(eq => new { eq.CategoryId, eq.Order })
                .HasDatabaseName("IX_EthicsQuestion_CategoryOrder");
     }
 }
