@@ -161,11 +161,12 @@ public class EthicsQuestionnaireService : IEthicsQuestionnaireService
         // Retourner le formulaire (catalogue + réponses)
         return BuildFormDto(catalog, questionnaire);
     }
-
+    
     // -------------------------
     // Helpers
     // -------------------------
-
+    
+    
     private async Task<long> GetBrandIdForSuperVendorOrThrow(long superVendorUserId)
     {
         var user = await _context.Users.FirstOrDefaultAsync(u => u.Id == superVendorUserId);
@@ -298,5 +299,22 @@ public class EthicsQuestionnaireService : IEthicsQuestionnaireService
             ));
         }
     }
+    
+    private static bool IsNewId(long id) => id <= 0;
+
+    private static EthicsAnswerType ParseAnswerType(string s)
+    {
+        if (string.Equals(s, "Single", StringComparison.OrdinalIgnoreCase)) return EthicsAnswerType.Single;
+        if (string.Equals(s, "Multiple", StringComparison.OrdinalIgnoreCase)) return EthicsAnswerType.Multiple;
+        throw new InvalidOperationException($"AnswerType invalide: '{s}'. Attendu: 'Single' ou 'Multiple'.");
+    }
+
+
+    // Permet de modifier une propriété même si setter privé
+    private void Set<TEntity>(TEntity entity, string propName, object? value) where TEntity : class
+    {
+        _context.Entry(entity).Property(propName).CurrentValue = value;
+    }
+
 }
     
