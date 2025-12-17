@@ -3,5 +3,6 @@
 public record DepositDto(
     string Id,
     string FullAddress,
-    double? DistanceKm
+    double? DistanceKm,
+    string City
 );

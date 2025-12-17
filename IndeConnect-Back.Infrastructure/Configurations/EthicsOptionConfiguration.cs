@@ -24,6 +24,11 @@ public class EthicsOptionConfiguration : IEntityTypeConfiguration<EthicsOption>
             .IsRequired()
             .HasPrecision(5, 2); 
         
+        builder.Property(eo => eo.Order).IsRequired().HasDefaultValue(0);
+        builder.Property(eo => eo.IsActive).IsRequired().HasDefaultValue(true);
+        
+       
+        
         // Relation with EthicsQuestion
         builder.HasOne(eo => eo.Question)
             .WithMany(eq => eq.Options)
@@ -40,5 +45,8 @@ public class EthicsOptionConfiguration : IEntityTypeConfiguration<EthicsOption>
         
         builder.HasIndex(eo => eo.QuestionId)
             .HasDatabaseName("IX_EthicsOption_QuestionId");
+        
+        builder.HasIndex(eo => new { eo.QuestionId, eo.IsActive, eo.Order })
+            .HasDatabaseName("IX_EthicsOption_Question_Order");
     }
 }

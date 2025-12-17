@@ -104,6 +104,37 @@ public class Brand
             color, @"^#[0-9A-Fa-f]{6}$"
         );
     }
+    public void SetSingleDeposit(
+        string id,
+        int number,
+        string street,
+        string postalCode,
+        string city,
+        string country,
+        double latitude,
+        double longitude)
+    {
+        _deposits.Clear();
+
+        var deposit = new Deposit(
+            id: id,
+            number: number,
+            street: street,
+            postalCode: postalCode,
+            city: city,
+            country: country,
+            latitude: latitude,
+            longitude: longitude,
+            brandId: Id
+        );
+
+        _deposits.Add(deposit);
+    }
+
+    public void RemoveAllDeposits()
+    {
+        _deposits.Clear();
+    }
     private readonly List<BrandShippingMethod> _shippingMethods = new();
     public IReadOnlyCollection<BrandShippingMethod> ShippingMethods => _shippingMethods;
 

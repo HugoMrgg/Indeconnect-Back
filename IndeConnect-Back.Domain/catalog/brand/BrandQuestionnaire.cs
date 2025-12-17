@@ -7,18 +7,44 @@ public class BrandQuestionnaire
     public long Id { get; private set; }
     public long BrandId { get; private set; }
     public Brand Brand { get; private set; } = default!;
-    public DateTimeOffset SubmittedAt { get; private set; }
-    public bool IsApproved { get; private set; }
-    public DateTimeOffset? ApprovedAt { get; private set; }
+    
+    public QuestionnaireStatus Status { get; private set; } = QuestionnaireStatus.Draft;
+    public DateTimeOffset CreatedAt { get; private set; }
+    public DateTimeOffset? SubmittedAt { get; private set; }
+    public DateTimeOffset? ReviewedAt { get; private set; }
+    public long? ReviewerAdminUserId { get; private set; }
+    public string? RejectionReason { get; private set; }
 
     private readonly List<BrandQuestionResponse> _responses = new();
     public IReadOnlyCollection<BrandQuestionResponse> Responses => _responses;
 
     private BrandQuestionnaire() { }
 
-    public BrandQuestionnaire(long brandId, DateTimeOffset submittedAt)
+    public BrandQuestionnaire(long brandId)
     {
         BrandId = brandId;
-        SubmittedAt = submittedAt;
+        CreatedAt = DateTimeOffset.UtcNow;
+        Status = QuestionnaireStatus.Draft;
+    }
+    
+    public void MarkSubmitted()
+    {
+        Status = QuestionnaireStatus.Submitted;
+        SubmittedAt = DateTimeOffset.UtcNow;
+    }
+    public void ReviewApproved(long reviewerAdminUserId)
+    {
+        Status = QuestionnaireStatus.Approved;
+        ReviewerAdminUserId = reviewerAdminUserId;
+        ReviewedAt = DateTimeOffset.UtcNow;
+        RejectionReason = null;
+    }
+
+    public void ReviewRejected(long reviewerAdminUserId, string reason)
+    {
+        Status = QuestionnaireStatus.Rejected;
+        ReviewerAdminUserId = reviewerAdminUserId;
+        ReviewedAt = DateTimeOffset.UtcNow;
+        RejectionReason = reason?.Trim();
     }
 }

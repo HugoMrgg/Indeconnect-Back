@@ -4,20 +4,20 @@ namespace IndeConnect_Back.Domain;
 
 public class BrandEthicsScorer
 {
-    public decimal ComputeScore(
-        IEnumerable<BrandQuestionResponse> responses,
-        EthicsCategory category)
+    public decimal ComputeRawScore(IEnumerable<BrandQuestionResponse> responses, long categoryId)
     {
-        // Filtre : récupère juste les réponses dans la bonne catégorie
-        var validResponses = responses
-            .Where(r => r.Question.Category == category);
+        if (responses == null)
+            return 0m;
 
-        // Additionne les scores des options choisies (pondérées !)
-        decimal totalScore = 0;
-        foreach (var response in validResponses)
-        {
-            totalScore += response.Option.Score;
-        }
+        var validResponses = responses
+            .Where(r => r?.Question != null 
+                        && r.Question.CategoryId == categoryId);
+
+        decimal totalScore = 0m;
+        foreach (var r in validResponses)
+            totalScore += r.SelectedOptions.Sum(so => so.Option.Score);
+
         return totalScore;
     }
+
 }
