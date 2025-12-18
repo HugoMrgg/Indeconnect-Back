@@ -15,7 +15,7 @@ public class ProductReview
     public string? Comment { get; private set; }
     public DateTimeOffset CreatedAt { get; private set; }
     public DateTimeOffset? UpdatedAt { get; private set; }
-    public ReviewStatus Status { get; private set; } = ReviewStatus.Pending;
+    public ReviewStatus Status { get; private set; } = ReviewStatus.Enabled;
 
     private ProductReview() { }
 
@@ -29,18 +29,12 @@ public class ProductReview
         Rating = rating;
         Comment = string.IsNullOrWhiteSpace(comment) ? null : comment.Trim();
         CreatedAt = DateTimeOffset.UtcNow;
-        Status = ReviewStatus.Pending;
-    }
-    
-    public void Approve()
-    {
-        if (Status == ReviewStatus.Approved) return;
-        Status = ReviewStatus.Approved;
+        Status = ReviewStatus.Enabled;
     }
 
     public void Reject()
     {
-        if (Status == ReviewStatus.Rejected) return;
-        Status = ReviewStatus.Rejected;
+        if (Status == ReviewStatus.Disabled) return;
+        Status = ReviewStatus.Disabled;
     }
 }
