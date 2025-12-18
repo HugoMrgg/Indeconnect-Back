@@ -11,44 +11,46 @@ public class EthicsQuestionConfiguration : IEntityTypeConfiguration<EthicsQuesti
     {
         // Primary Key
         builder.HasKey(eq => eq.Id);
-        
+
         // Properties
-        builder.Property(eq => eq.CategoryId).IsRequired();
-        builder.HasOne(eq => eq.Category)
-               .WithMany()
-               .HasForeignKey(eq => eq.CategoryId)
-               .OnDelete(DeleteBehavior.Restrict);
-        
+        builder.Property(eq => eq.CatalogVersionId).IsRequired();
+        builder.HasOne(eq => eq.CatalogVersion)
+               .WithMany(cv => cv.Questions)
+               .HasForeignKey(eq => eq.CatalogVersionId)
+               .OnDelete(DeleteBehavior.Cascade);
+
+        builder.Property(eq => eq.Category).IsRequired();
+
         builder.Property(eq => eq.AnswerType).IsRequired();
         builder.Property(eq => eq.IsActive).IsRequired().HasDefaultValue(true);
-        
+
         builder.Property(eq => eq.Key)
                .IsRequired()
-               .HasMaxLength(100); 
-        
+               .HasMaxLength(100);
+
         builder.Property(eq => eq.Label)
                .IsRequired()
-               .HasMaxLength(500); 
-        
+               .HasMaxLength(500);
+
         builder.Property(eq => eq.Order)
                .IsRequired()
                .HasDefaultValue(0);
-        
+
         // Relation with EthicsOption
         builder.HasMany(eq => eq.Options)
                .WithOne(eo => eo.Question)
                .HasForeignKey(eo => eo.QuestionId)
                .OnDelete(DeleteBehavior.Cascade)
                .IsRequired();
-        
-        builder.HasIndex(eq => eq.Key)
+
+        builder.HasIndex(eq => new { eq.CatalogVersionId, eq.Category, eq.Key })
                .IsUnique()
                .HasDatabaseName("IX_EthicsQuestion_UniqueKey");
-        
-        builder.HasIndex(eq => eq.CategoryId)
-               .HasDatabaseName("IX_EthicsQuestion_Category");
-        
-        builder.HasIndex(eq => new { eq.CategoryId, eq.Order })
+
+        builder.HasIndex(eq => eq.CatalogVersionId)
+               .HasDatabaseName("IX_EthicsQuestion_CatalogVersion");
+
+        builder.HasIndex(eq => new { eq.CatalogVersionId, eq.Category, eq.Order })
                .HasDatabaseName("IX_EthicsQuestion_CategoryOrder");
     }
 }
