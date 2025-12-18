@@ -456,12 +456,11 @@ public class BrandService : IBrandService
         // OFFICIEL uniquement : provient du dernier questionnaire Approved (après review admin)
         var rows = await _context.BrandEthicScores
             .AsNoTracking()
-            .Include(s => s.Category)
             .Where(s => s.IsOfficial && ids.Contains(s.BrandId))
             .Select(s => new
             {
                 s.BrandId,
-                CategoryKey = s.Category.Key,
+                CategoryKey = s.Category.ToString(),
                 FinalScore = (double)s.FinalScore
             })
             .ToListAsync();

@@ -59,7 +59,7 @@ public class EthicsQuestionnaireService : IEthicsQuestionnaireService
 
         if (questionnaire == null)
         {
-            questionnaire = new BrandQuestionnaire(brandId);
+            questionnaire = new BrandQuestionnaire(brandId, catalog.Version.Id);
             _context.BrandQuestionnaires.Add(questionnaire);
         }
 
@@ -152,7 +152,7 @@ public class EthicsQuestionnaireService : IEthicsQuestionnaireService
         // Calcul + persistance des scores
         if (request.Submit)
         {
-            await UpsertPendingScoresAsync(brandId, questionnaire, catalog.ActiveCategories);
+            await UpsertPendingScoresAsync(brandId, questionnaire, catalog.ActiveQuestions);
             await _context.SaveChangesAsync();
         }
 
@@ -177,7 +177,7 @@ public class EthicsQuestionnaireService : IEthicsQuestionnaireService
     }
 
     private sealed record ActiveCatalog(
-        IReadOnlyList<EthicsCategoryEntity> ActiveCategories,
+        CatalogVersion Version,
         IReadOnlyList<EthicsQuestion> ActiveQuestions,
         IReadOnlyList<EthicsOption> ActiveOptions,
         Dictionary<long, EthicsQuestion> QuestionsById,
@@ -186,24 +186,26 @@ public class EthicsQuestionnaireService : IEthicsQuestionnaireService
 
     private async Task<ActiveCatalog> LoadActiveCatalogAsync()
     {
-        var categories = await _context.EthicsCategories
+        var version = await _context.CatalogVersions
             .AsNoTracking()
-            .Where(c => c.IsActive)
-            .OrderBy(c => c.Order)
-            .ThenBy(c => c.Id)
-            .ToListAsync();
+            .Where(v => v.IsActive && !v.IsDraft)
+            .FirstOrDefaultAsync();
+
+        if (version == null)
+            throw new InvalidOperationException("Aucune version active du catalogue n'a été trouvée. Veuillez contacter l'administrateur.");
 
         var questions = await _context.EthicsQuestions
             .AsNoTracking()
-            .Where(q => q.IsActive)
-            .OrderBy(q => q.CategoryId)
+            .Include(q => q.Options.Where(o => o.IsActive))
+            .Where(q => q.CatalogVersionId == version.Id && q.IsActive)
+            .OrderBy(q => q.Category)
             .ThenBy(q => q.Order)
             .ThenBy(q => q.Id)
             .ToListAsync();
 
         var options = await _context.EthicsOptions
             .AsNoTracking()
-            .Where(o => o.IsActive)
+            .Where(o => o.IsActive && questions.Select(q => q.Id).Contains(o.QuestionId))
             .OrderBy(o => o.QuestionId)
             .ThenBy(o => o.Order)
             .ThenBy(o => o.Id)
@@ -212,7 +214,7 @@ public class EthicsQuestionnaireService : IEthicsQuestionnaireService
         var questionsById = questions.ToDictionary(q => q.Id, q => q);
         var optionsById = options.ToDictionary(o => o.Id, o => o);
 
-        return new ActiveCatalog(categories, questions, options, questionsById, optionsById);
+        return new ActiveCatalog(version, questions, options, questionsById, optionsById);
     }
 
     private EthicsFormDto BuildFormDto(ActiveCatalog catalog, BrandQuestionnaire? questionnaire)
@@ -231,10 +233,11 @@ public class EthicsQuestionnaireService : IEthicsQuestionnaireService
             }
         }
 
-        var categoriesDto = catalog.ActiveCategories.Select(c =>
+        var categories = Enum.GetValues<EthicsCategory>();
+        var categoriesDto = categories.Select(category =>
         {
             var questionsDto = catalog.ActiveQuestions
-                .Where(q => q.CategoryId == c.Id)
+                .Where(q => q.Category == category)
                 .OrderBy(q => q.Order)
                 .ThenBy(q => q.Id)
                 .Select(q =>
@@ -262,7 +265,7 @@ public class EthicsQuestionnaireService : IEthicsQuestionnaireService
                 })
                 .ToList();
 
-            return new EthicsCategoryDto(c.Id, c.Key, c.Label, c.Order, questionsDto);
+            return new EthicsCategoryDto((long)category, category.ToString(), category.ToString(), (int)category, questionsDto);
         }).ToList();
 
         return new EthicsFormDto(
@@ -272,7 +275,7 @@ public class EthicsQuestionnaireService : IEthicsQuestionnaireService
         );
     }
 
-    private async Task UpsertPendingScoresAsync(long brandId, BrandQuestionnaire questionnaire, IReadOnlyList<EthicsCategoryEntity> activeCategories)
+    private async Task UpsertPendingScoresAsync(long brandId, BrandQuestionnaire questionnaire, IReadOnlyList<EthicsQuestion> activeQuestions)
     {
         // Nettoyer les scores déjà calculés pour CE questionnaire
         var existing = await _context.BrandEthicScores
@@ -283,15 +286,21 @@ public class EthicsQuestionnaireService : IEthicsQuestionnaireService
             _context.BrandEthicScores.RemoveRange(existing);
 
         // Calcul par catégorie
-        foreach (var cat in activeCategories)
+        var categories = Enum.GetValues<EthicsCategory>();
+        foreach (var category in categories)
         {
-            var raw = _scorer.ComputeRawScore(questionnaire.Responses, cat.Id);
+            var raw = _scorer.ComputeRawScore(questionnaire.Responses, category);
 
-            var final = raw;
+            // Calculer le score max possible pour cette catégorie
+            var maxPossibleScore = activeQuestions
+                .Where(q => q.Category == category)
+                .Sum(q => q.Options.Max(o => o.Score));
+
+            var final = _scorer.ComputeFinalScore(raw, maxPossibleScore);
 
             _context.BrandEthicScores.Add(new BrandEthicScore(
                 brandId: brandId,
-                categoryId: cat.Id,
+                category: category,
                 questionnaireId: questionnaire.Id,
                 rawScore: raw,
                 finalScore: final,
