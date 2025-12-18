@@ -80,6 +80,46 @@ namespace IndeConnect_Back.Infrastructure.Migrations
                     b.ToTable("Brands");
                 });
 
+            modelBuilder.Entity("IndeConnect_Back.Domain.catalog.brand.BrandEthicScore", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("Id"));
+
+                    b.Property<long>("BrandId")
+                        .HasColumnType("bigint");
+
+                    b.Property<long>("CategoryId")
+                        .HasColumnType("bigint");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<decimal>("FinalScore")
+                        .HasColumnType("numeric");
+
+                    b.Property<bool>("IsOfficial")
+                        .HasColumnType("boolean");
+
+                    b.Property<long>("QuestionnaireId")
+                        .HasColumnType("bigint");
+
+                    b.Property<decimal>("RawScore")
+                        .HasColumnType("numeric");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CategoryId");
+
+                    b.HasIndex("QuestionnaireId");
+
+                    b.HasIndex("BrandId", "CategoryId", "IsOfficial");
+
+                    b.ToTable("BrandEthicScores");
+                });
+
             modelBuilder.Entity("IndeConnect_Back.Domain.catalog.brand.BrandEthicTag", b =>
                 {
                     b.Property<long>("Id")
@@ -176,8 +216,8 @@ namespace IndeConnect_Back.Infrastructure.Migrations
 
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("Id"));
 
-                    b.Property<long>("OptionId")
-                        .HasColumnType("bigint");
+                    b.Property<decimal?>("CalculatedScore")
+                        .HasColumnType("numeric");
 
                     b.Property<long>("QuestionId")
                         .HasColumnType("bigint");
@@ -186,9 +226,6 @@ namespace IndeConnect_Back.Infrastructure.Migrations
                         .HasColumnType("bigint");
 
                     b.HasKey("Id");
-
-                    b.HasIndex("OptionId")
-                        .HasDatabaseName("IX_BrandQuestionResponse_OptionId");
 
                     b.HasIndex("QuestionId")
                         .HasDatabaseName("IX_BrandQuestionResponse_QuestionId");
@@ -203,6 +240,21 @@ namespace IndeConnect_Back.Infrastructure.Migrations
                     b.ToTable("BrandQuestionResponses");
                 });
 
+            modelBuilder.Entity("IndeConnect_Back.Domain.catalog.brand.BrandQuestionResponseOption", b =>
+                {
+                    b.Property<long>("ResponseId")
+                        .HasColumnType("bigint");
+
+                    b.Property<long>("OptionId")
+                        .HasColumnType("bigint");
+
+                    b.HasKey("ResponseId", "OptionId");
+
+                    b.HasIndex("OptionId");
+
+                    b.ToTable("BrandQuestionResponseOptions");
+                });
+
             modelBuilder.Entity("IndeConnect_Back.Domain.catalog.brand.BrandQuestionnaire", b =>
                 {
                     b.Property<long>("Id")
@@ -211,27 +263,35 @@ namespace IndeConnect_Back.Infrastructure.Migrations
 
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("Id"));
 
-                    b.Property<DateTimeOffset?>("ApprovedAt")
-                        .HasColumnType("timestamp with time zone");
-
                     b.Property<long>("BrandId")
                         .HasColumnType("bigint");
 
-                    b.Property<bool>("IsApproved")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("boolean")
-                        .HasDefaultValue(false);
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
 
-                    b.Property<DateTimeOffset>("SubmittedAt")
+                    b.Property<string>("RejectionReason")
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)");
+
+                    b.Property<DateTimeOffset?>("ReviewedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<long?>("ReviewerAdminUserId")
+                        .HasColumnType("bigint");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTimeOffset?>("SubmittedAt")
                         .HasColumnType("timestamp with time zone");
 
                     b.HasKey("Id");
 
-                    b.HasIndex("IsApproved")
-                        .HasDatabaseName("IX_BrandQuestionnaire_IsApproved");
+                    b.HasIndex("Status")
+                        .HasDatabaseName("IX_BrandQuestionnaire_Status");
 
-                    b.HasIndex("BrandId", "IsApproved")
-                        .HasDatabaseName("IX_BrandQuestionnaire_BrandApproval");
+                    b.HasIndex("BrandId", "Status")
+                        .HasDatabaseName("IX_BrandQuestionnaire_BrandStatus");
 
                     b.HasIndex("BrandId", "SubmittedAt")
                         .HasDatabaseName("IX_BrandQuestionnaire_BrandHistory");
@@ -262,6 +322,64 @@ namespace IndeConnect_Back.Infrastructure.Migrations
                     b.HasIndex("SellerId");
 
                     b.ToTable("BrandSellers");
+                });
+
+            modelBuilder.Entity("IndeConnect_Back.Domain.catalog.brand.BrandShippingMethod", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("Id"));
+
+                    b.Property<long>("BrandId")
+                        .HasColumnType("bigint");
+
+                    b.Property<string>("DisplayName")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<int>("EstimatedMaxDays")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("EstimatedMinDays")
+                        .HasColumnType("integer");
+
+                    b.Property<bool>("IsEnabled")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(true);
+
+                    b.Property<decimal?>("MaxWeight")
+                        .HasPrecision(10, 2)
+                        .HasColumnType("numeric(10,2)");
+
+                    b.Property<string>("MethodType")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<decimal>("Price")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("numeric(18,2)");
+
+                    b.Property<string>("ProviderConfig")
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)");
+
+                    b.Property<string>("ProviderName")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("BrandId");
+
+                    b.HasIndex("BrandId", "IsEnabled");
+
+                    b.ToTable("BrandShippingMethods", (string)null);
                 });
 
             modelBuilder.Entity("IndeConnect_Back.Domain.catalog.brand.Deposit", b =>
@@ -315,6 +433,44 @@ namespace IndeConnect_Back.Infrastructure.Migrations
                     b.ToTable("Deposits");
                 });
 
+            modelBuilder.Entity("IndeConnect_Back.Domain.catalog.brand.EthicsCategoryEntity", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("Id"));
+
+                    b.Property<bool>("IsActive")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(true);
+
+                    b.Property<string>("Key")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<string>("Label")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<int>("Order")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasDefaultValue(0);
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Key")
+                        .IsUnique();
+
+                    b.HasIndex("IsActive", "Order");
+
+                    b.ToTable("EthicsCategories");
+                });
+
             modelBuilder.Entity("IndeConnect_Back.Domain.catalog.brand.EthicsOption", b =>
                 {
                     b.Property<long>("Id")
@@ -322,6 +478,11 @@ namespace IndeConnect_Back.Infrastructure.Migrations
                         .HasColumnType("bigint");
 
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("Id"));
+
+                    b.Property<bool>("IsActive")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(true);
 
                     b.Property<string>("Key")
                         .IsRequired()
@@ -332,6 +493,11 @@ namespace IndeConnect_Back.Infrastructure.Migrations
                         .IsRequired()
                         .HasMaxLength(500)
                         .HasColumnType("character varying(500)");
+
+                    b.Property<int>("Order")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasDefaultValue(0);
 
                     b.Property<long>("QuestionId")
                         .HasColumnType("bigint");
@@ -352,6 +518,9 @@ namespace IndeConnect_Back.Infrastructure.Migrations
                         .IsUnique()
                         .HasDatabaseName("IX_EthicsOption_UniqueKeyPerQuestion");
 
+                    b.HasIndex("QuestionId", "IsActive", "Order")
+                        .HasDatabaseName("IX_EthicsOption_Question_Order");
+
                     b.ToTable("EthicsOptions");
                 });
 
@@ -363,10 +532,16 @@ namespace IndeConnect_Back.Infrastructure.Migrations
 
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("Id"));
 
-                    b.Property<string>("Category")
-                        .IsRequired()
-                        .HasMaxLength(50)
-                        .HasColumnType("character varying(50)");
+                    b.Property<int>("AnswerType")
+                        .HasColumnType("integer");
+
+                    b.Property<long>("CategoryId")
+                        .HasColumnType("bigint");
+
+                    b.Property<bool>("IsActive")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(true);
 
                     b.Property<string>("Key")
                         .IsRequired()
@@ -385,14 +560,14 @@ namespace IndeConnect_Back.Infrastructure.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("Category")
+                    b.HasIndex("CategoryId")
                         .HasDatabaseName("IX_EthicsQuestion_Category");
 
                     b.HasIndex("Key")
                         .IsUnique()
                         .HasDatabaseName("IX_EthicsQuestion_UniqueKey");
 
-                    b.HasIndex("Category", "Order")
+                    b.HasIndex("CategoryId", "Order")
                         .HasDatabaseName("IX_EthicsQuestion_CategoryOrder");
 
                     b.ToTable("EthicsQuestions");
@@ -958,6 +1133,89 @@ namespace IndeConnect_Back.Infrastructure.Migrations
                         });
                 });
 
+            modelBuilder.Entity("IndeConnect_Back.Domain.order.BrandDelivery", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("Id"));
+
+                    b.Property<long>("BrandId")
+                        .HasColumnType("bigint");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTimeOffset?>("DeliveredAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Description")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<DateTimeOffset?>("EstimatedDelivery")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<long>("OrderId")
+                        .HasColumnType("bigint");
+
+                    b.Property<DateTimeOffset?>("ShippedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<decimal>("ShippingFee")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("decimal(18,2)")
+                        .HasDefaultValue(0m);
+
+                    b.Property<long?>("ShippingMethodId")
+                        .HasColumnType("bigint");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasDefaultValue("Pending");
+
+                    b.Property<string>("TrackingNumber")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("BrandId");
+
+                    b.HasIndex("DeliveredAt")
+                        .HasDatabaseName("IX_BrandDelivery_DeliveredAt");
+
+                    b.HasIndex("ShippedAt")
+                        .HasDatabaseName("IX_BrandDelivery_ShippedAt");
+
+                    b.HasIndex("ShippingMethodId");
+
+                    b.HasIndex("Status")
+                        .HasDatabaseName("IX_BrandDelivery_Status");
+
+                    b.HasIndex("TrackingNumber")
+                        .IsUnique()
+                        .HasDatabaseName("IX_BrandDelivery_UniqueTrackingNumber")
+                        .HasFilter("\"TrackingNumber\" IS NOT NULL");
+
+                    b.HasIndex("OrderId", "BrandId")
+                        .IsUnique()
+                        .HasDatabaseName("IX_BrandDelivery_OrderBrand");
+
+                    b.HasIndex("OrderId", "Status")
+                        .HasDatabaseName("IX_BrandDelivery_OrderStatus");
+
+                    b.ToTable("BrandDeliveries");
+                });
+
             modelBuilder.Entity("IndeConnect_Back.Domain.order.Invoice", b =>
                 {
                     b.Property<long>("Id")
@@ -986,13 +1244,15 @@ namespace IndeConnect_Back.Infrastructure.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("BrandId");
+                    b.HasIndex("BrandId")
+                        .HasDatabaseName("IX_Invoices_BrandId");
 
                     b.HasIndex("InvoiceNumber")
                         .IsUnique()
                         .HasDatabaseName("IX_Invoice_UniqueNumber");
 
-                    b.HasIndex("OrderId");
+                    b.HasIndex("OrderId")
+                        .HasDatabaseName("IX_Invoices_OrderId");
 
                     b.ToTable("Invoices", (string)null);
                 });
@@ -1065,6 +1325,9 @@ namespace IndeConnect_Back.Infrastructure.Migrations
 
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("Id"));
 
+                    b.Property<long?>("BrandDeliveryId")
+                        .HasColumnType("bigint");
+
                     b.Property<long>("OrderId")
                         .HasColumnType("bigint");
 
@@ -1087,6 +1350,8 @@ namespace IndeConnect_Back.Infrastructure.Migrations
                         .HasColumnType("bigint");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("BrandDeliveryId");
 
                     b.HasIndex("OrderId")
                         .HasDatabaseName("IX_OrderItem_OrderId");
@@ -1439,6 +1704,12 @@ namespace IndeConnect_Back.Infrastructure.Migrations
 
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("Id"));
 
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTimeOffset?>("DeliveredAt")
+                        .HasColumnType("timestamp with time zone");
+
                     b.Property<string>("Description")
                         .IsRequired()
                         .HasMaxLength(500)
@@ -1460,6 +1731,9 @@ namespace IndeConnect_Back.Infrastructure.Migrations
                     b.Property<string>("TrackingNumber")
                         .HasMaxLength(100)
                         .HasColumnType("character varying(100)");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
 
                     b.HasKey("Id");
 
@@ -1630,6 +1904,9 @@ namespace IndeConnect_Back.Infrastructure.Migrations
                         .IsRequired()
                         .HasColumnType("text");
 
+                    b.Property<string>("StripeCustomerId")
+                        .HasColumnType("text");
+
                     b.Property<long?>("WishlistId")
                         .HasColumnType("bigint");
 
@@ -1735,6 +2012,33 @@ namespace IndeConnect_Back.Infrastructure.Migrations
                     b.ToTable("WishlistItems");
                 });
 
+            modelBuilder.Entity("IndeConnect_Back.Domain.catalog.brand.BrandEthicScore", b =>
+                {
+                    b.HasOne("IndeConnect_Back.Domain.catalog.brand.Brand", "Brand")
+                        .WithMany()
+                        .HasForeignKey("BrandId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("IndeConnect_Back.Domain.catalog.brand.EthicsCategoryEntity", "Category")
+                        .WithMany()
+                        .HasForeignKey("CategoryId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("IndeConnect_Back.Domain.catalog.brand.BrandQuestionnaire", "Questionnaire")
+                        .WithMany()
+                        .HasForeignKey("QuestionnaireId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Brand");
+
+                    b.Navigation("Category");
+
+                    b.Navigation("Questionnaire");
+                });
+
             modelBuilder.Entity("IndeConnect_Back.Domain.catalog.brand.BrandEthicTag", b =>
                 {
                     b.HasOne("IndeConnect_Back.Domain.catalog.brand.Brand", "Brand")
@@ -1759,12 +2063,6 @@ namespace IndeConnect_Back.Infrastructure.Migrations
 
             modelBuilder.Entity("IndeConnect_Back.Domain.catalog.brand.BrandQuestionResponse", b =>
                 {
-                    b.HasOne("IndeConnect_Back.Domain.catalog.brand.EthicsOption", "Option")
-                        .WithMany()
-                        .HasForeignKey("OptionId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
                     b.HasOne("IndeConnect_Back.Domain.catalog.brand.EthicsQuestion", "Question")
                         .WithMany()
                         .HasForeignKey("QuestionId")
@@ -1777,11 +2075,28 @@ namespace IndeConnect_Back.Infrastructure.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.Navigation("Option");
-
                     b.Navigation("Question");
 
                     b.Navigation("Questionnaire");
+                });
+
+            modelBuilder.Entity("IndeConnect_Back.Domain.catalog.brand.BrandQuestionResponseOption", b =>
+                {
+                    b.HasOne("IndeConnect_Back.Domain.catalog.brand.EthicsOption", "Option")
+                        .WithMany()
+                        .HasForeignKey("OptionId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("IndeConnect_Back.Domain.catalog.brand.BrandQuestionResponse", "Response")
+                        .WithMany("SelectedOptions")
+                        .HasForeignKey("ResponseId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Option");
+
+                    b.Navigation("Response");
                 });
 
             modelBuilder.Entity("IndeConnect_Back.Domain.catalog.brand.BrandQuestionnaire", b =>
@@ -1814,6 +2129,17 @@ namespace IndeConnect_Back.Infrastructure.Migrations
                     b.Navigation("Seller");
                 });
 
+            modelBuilder.Entity("IndeConnect_Back.Domain.catalog.brand.BrandShippingMethod", b =>
+                {
+                    b.HasOne("IndeConnect_Back.Domain.catalog.brand.Brand", "Brand")
+                        .WithMany("ShippingMethods")
+                        .HasForeignKey("BrandId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Brand");
+                });
+
             modelBuilder.Entity("IndeConnect_Back.Domain.catalog.brand.Deposit", b =>
                 {
                     b.HasOne("IndeConnect_Back.Domain.catalog.brand.Brand", "Brand")
@@ -1834,6 +2160,17 @@ namespace IndeConnect_Back.Infrastructure.Migrations
                         .IsRequired();
 
                     b.Navigation("Question");
+                });
+
+            modelBuilder.Entity("IndeConnect_Back.Domain.catalog.brand.EthicsQuestion", b =>
+                {
+                    b.HasOne("IndeConnect_Back.Domain.catalog.brand.EthicsCategoryEntity", "Category")
+                        .WithMany()
+                        .HasForeignKey("CategoryId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Category");
                 });
 
             modelBuilder.Entity("IndeConnect_Back.Domain.catalog.product.Product", b =>
@@ -1973,6 +2310,32 @@ namespace IndeConnect_Back.Infrastructure.Migrations
                     b.Navigation("Size");
                 });
 
+            modelBuilder.Entity("IndeConnect_Back.Domain.order.BrandDelivery", b =>
+                {
+                    b.HasOne("IndeConnect_Back.Domain.catalog.brand.Brand", "Brand")
+                        .WithMany()
+                        .HasForeignKey("BrandId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("IndeConnect_Back.Domain.order.Order", "Order")
+                        .WithMany("BrandDeliveries")
+                        .HasForeignKey("OrderId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("IndeConnect_Back.Domain.catalog.brand.BrandShippingMethod", "ShippingMethod")
+                        .WithMany()
+                        .HasForeignKey("ShippingMethodId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.Navigation("Brand");
+
+                    b.Navigation("Order");
+
+                    b.Navigation("ShippingMethod");
+                });
+
             modelBuilder.Entity("IndeConnect_Back.Domain.order.Invoice", b =>
                 {
                     b.HasOne("IndeConnect_Back.Domain.catalog.brand.Brand", "Brand")
@@ -2013,6 +2376,11 @@ namespace IndeConnect_Back.Infrastructure.Migrations
 
             modelBuilder.Entity("IndeConnect_Back.Domain.order.OrderItem", b =>
                 {
+                    b.HasOne("IndeConnect_Back.Domain.order.BrandDelivery", "BrandDelivery")
+                        .WithMany("Items")
+                        .HasForeignKey("BrandDeliveryId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
                     b.HasOne("IndeConnect_Back.Domain.order.Order", "Order")
                         .WithMany("Items")
                         .HasForeignKey("OrderId")
@@ -2029,6 +2397,8 @@ namespace IndeConnect_Back.Infrastructure.Migrations
                         .WithMany()
                         .HasForeignKey("VariantId")
                         .OnDelete(DeleteBehavior.Restrict);
+
+                    b.Navigation("BrandDelivery");
 
                     b.Navigation("Order");
 
@@ -2154,7 +2524,7 @@ namespace IndeConnect_Back.Infrastructure.Migrations
             modelBuilder.Entity("IndeConnect_Back.Domain.user.Delivery", b =>
                 {
                     b.HasOne("IndeConnect_Back.Domain.order.Order", "Order")
-                        .WithMany("Deliveries")
+                        .WithMany()
                         .HasForeignKey("OrderId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
@@ -2257,7 +2627,14 @@ namespace IndeConnect_Back.Infrastructure.Migrations
 
                     b.Navigation("Sellers");
 
+                    b.Navigation("ShippingMethods");
+
                     b.Navigation("SuperVendorUser");
+                });
+
+            modelBuilder.Entity("IndeConnect_Back.Domain.catalog.brand.BrandQuestionResponse", b =>
+                {
+                    b.Navigation("SelectedOptions");
                 });
 
             modelBuilder.Entity("IndeConnect_Back.Domain.catalog.brand.BrandQuestionnaire", b =>
@@ -2293,9 +2670,14 @@ namespace IndeConnect_Back.Infrastructure.Migrations
                     b.Navigation("Products");
                 });
 
+            modelBuilder.Entity("IndeConnect_Back.Domain.order.BrandDelivery", b =>
+                {
+                    b.Navigation("Items");
+                });
+
             modelBuilder.Entity("IndeConnect_Back.Domain.order.Order", b =>
                 {
-                    b.Navigation("Deliveries");
+                    b.Navigation("BrandDeliveries");
 
                     b.Navigation("Invoices");
 

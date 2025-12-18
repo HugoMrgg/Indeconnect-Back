@@ -38,7 +38,7 @@ public class ReturnRequestConfiguration : IEntityTypeConfiguration<ReturnRequest
         
         // Relation with User
         builder.HasOne(rr => rr.User)
-               .WithMany()
+               .WithMany(u => u.Returns) 
                .HasForeignKey(rr => rr.UserId)
                .OnDelete(DeleteBehavior.Restrict)
                .IsRequired();

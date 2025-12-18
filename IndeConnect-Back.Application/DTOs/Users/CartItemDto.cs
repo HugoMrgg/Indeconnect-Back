@@ -6,6 +6,7 @@ public record CartItemDto(
     long ProductId,
     string ProductName,
     string BrandName,
+    long BrandId,
     string? PrimaryImageUrl,
     ColorDto? Color,
     SizeDto? Size,

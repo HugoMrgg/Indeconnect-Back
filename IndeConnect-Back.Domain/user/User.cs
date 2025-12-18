@@ -65,7 +65,7 @@ public class User
     // Payment methods
     private readonly List<UserPaymentMethod> _paymentMethods = new();
     public IReadOnlyCollection<UserPaymentMethod> PaymentMethods => _paymentMethods;
-    
+    public string? StripeCustomerId { get; private set; }
     private User() { }
 
     public User(string email, string firstName, string lastName, Role role)
@@ -130,5 +130,78 @@ public class User
     public void SetBrand(long brandId)
     {
         BrandId = brandId;
+    }
+    
+    /// <summary>
+    /// Ajoute une nouvelle adresse de livraison
+    /// </summary>
+    public ShippingAddress AddShippingAddress(
+        string street,
+        string number,
+        string postalCode,
+        string city,
+        string country = "BE",
+        bool isDefault = false,
+        string? extra = null)
+    {
+        // Si cette adresse doit être par défaut, on retire le flag des autres
+        if (isDefault)
+        {
+            foreach (var addr in _shippingAddresses)
+            {
+                addr.UnsetAsDefault();
+            }
+        }
+
+        var address = new ShippingAddress(
+            userId: Id,
+            street: street,
+            number: number,
+            postalCode: postalCode,
+            city: city,
+            country: country,
+            isDefault: isDefault,
+            extra: extra
+        );
+
+        _shippingAddresses.Add(address);
+        return address;
+    }
+
+    /// <summary>
+    /// Définit une adresse comme adresse par défaut
+    /// </summary>
+    public void SetDefaultShippingAddress(long addressId)
+    {
+        var targetAddress = _shippingAddresses.FirstOrDefault(a => a.Id == addressId);
+        if (targetAddress == null)
+            throw new InvalidOperationException("Adresse non trouvée");
+
+        // Retirer le flag des autres adresses
+        foreach (var addr in _shippingAddresses)
+        {
+            addr.UnsetAsDefault();
+        }
+
+        targetAddress.SetAsDefault();
+    }
+
+    /// <summary>
+    /// Supprime une adresse de livraison
+    /// </summary>
+    public void RemoveShippingAddress(long addressId)
+    {
+        var address = _shippingAddresses.FirstOrDefault(a => a.Id == addressId);
+        if (address == null)
+            throw new InvalidOperationException("Adresse non trouvée");
+
+        _shippingAddresses.Remove(address);
+    }
+    public void SetStripeCustomerId(string customerId)
+    {
+        if (string.IsNullOrWhiteSpace(customerId))
+            throw new ArgumentException("Stripe Customer ID cannot be empty");
+            
+        StripeCustomerId = customerId;
     }
 }

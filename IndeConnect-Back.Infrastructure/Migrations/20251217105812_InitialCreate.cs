@@ -82,19 +82,19 @@ namespace IndeConnect_Back.Infrastructure.Migrations
                 });
 
             migrationBuilder.CreateTable(
-                name: "EthicsQuestions",
+                name: "EthicsCategories",
                 columns: table => new
                 {
                     Id = table.Column<long>(type: "bigint", nullable: false)
                         .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
-                    Category = table.Column<string>(type: "character varying(50)", maxLength: 50, nullable: false),
                     Key = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: false),
-                    Label = table.Column<string>(type: "character varying(500)", maxLength: 500, nullable: false),
-                    Order = table.Column<int>(type: "integer", nullable: false, defaultValue: 0)
+                    Label = table.Column<string>(type: "character varying(200)", maxLength: 200, nullable: false),
+                    Order = table.Column<int>(type: "integer", nullable: false, defaultValue: 0),
+                    IsActive = table.Column<bool>(type: "boolean", nullable: false, defaultValue: true)
                 },
                 constraints: table =>
                 {
-                    table.PrimaryKey("PK_EthicsQuestions", x => x.Id);
+                    table.PrimaryKey("PK_EthicsCategories", x => x.Id);
                 });
 
             migrationBuilder.CreateTable(
@@ -209,15 +209,46 @@ namespace IndeConnect_Back.Infrastructure.Migrations
                     Id = table.Column<long>(type: "bigint", nullable: false)
                         .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
                     BrandId = table.Column<long>(type: "bigint", nullable: false),
-                    SubmittedAt = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: false),
-                    IsApproved = table.Column<bool>(type: "boolean", nullable: false, defaultValue: false),
-                    ApprovedAt = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: true)
+                    Status = table.Column<int>(type: "integer", nullable: false),
+                    CreatedAt = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: false),
+                    SubmittedAt = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: true),
+                    ReviewedAt = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: true),
+                    ReviewerAdminUserId = table.Column<long>(type: "bigint", nullable: true),
+                    RejectionReason = table.Column<string>(type: "character varying(1000)", maxLength: 1000, nullable: true)
                 },
                 constraints: table =>
                 {
                     table.PrimaryKey("PK_BrandQuestionnaires", x => x.Id);
                     table.ForeignKey(
                         name: "FK_BrandQuestionnaires_Brands_BrandId",
+                        column: x => x.BrandId,
+                        principalTable: "Brands",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "BrandShippingMethods",
+                columns: table => new
+                {
+                    Id = table.Column<long>(type: "bigint", nullable: false)
+                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
+                    BrandId = table.Column<long>(type: "bigint", nullable: false),
+                    ProviderName = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: false),
+                    MethodType = table.Column<string>(type: "character varying(50)", maxLength: 50, nullable: false),
+                    DisplayName = table.Column<string>(type: "character varying(200)", maxLength: 200, nullable: false),
+                    Price = table.Column<decimal>(type: "numeric(18,2)", precision: 18, scale: 2, nullable: false),
+                    EstimatedMinDays = table.Column<int>(type: "integer", nullable: false),
+                    EstimatedMaxDays = table.Column<int>(type: "integer", nullable: false),
+                    MaxWeight = table.Column<decimal>(type: "numeric(10,2)", precision: 10, scale: 2, nullable: true),
+                    ProviderConfig = table.Column<string>(type: "character varying(2000)", maxLength: 2000, nullable: true),
+                    IsEnabled = table.Column<bool>(type: "boolean", nullable: false, defaultValue: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_BrandShippingMethods", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_BrandShippingMethods_Brands_BrandId",
                         column: x => x.BrandId,
                         principalTable: "Brands",
                         principalColumn: "Id",
@@ -266,7 +297,8 @@ namespace IndeConnect_Back.Infrastructure.Migrations
                     InvitationExpiresAt = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: true),
                     Role = table.Column<string>(type: "text", nullable: false),
                     WishlistId = table.Column<long>(type: "bigint", nullable: true),
-                    BrandId = table.Column<long>(type: "bigint", nullable: true)
+                    BrandId = table.Column<long>(type: "bigint", nullable: true),
+                    StripeCustomerId = table.Column<string>(type: "text", nullable: true)
                 },
                 constraints: table =>
                 {
@@ -308,25 +340,64 @@ namespace IndeConnect_Back.Infrastructure.Migrations
                 });
 
             migrationBuilder.CreateTable(
-                name: "EthicsOptions",
+                name: "EthicsQuestions",
                 columns: table => new
                 {
                     Id = table.Column<long>(type: "bigint", nullable: false)
                         .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
-                    QuestionId = table.Column<long>(type: "bigint", nullable: false),
+                    CategoryId = table.Column<long>(type: "bigint", nullable: false),
                     Key = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: false),
                     Label = table.Column<string>(type: "character varying(500)", maxLength: 500, nullable: false),
-                    Score = table.Column<decimal>(type: "numeric(5,2)", precision: 5, scale: 2, nullable: false)
+                    Order = table.Column<int>(type: "integer", nullable: false, defaultValue: 0),
+                    AnswerType = table.Column<int>(type: "integer", nullable: false),
+                    IsActive = table.Column<bool>(type: "boolean", nullable: false, defaultValue: true)
                 },
                 constraints: table =>
                 {
-                    table.PrimaryKey("PK_EthicsOptions", x => x.Id);
+                    table.PrimaryKey("PK_EthicsQuestions", x => x.Id);
                     table.ForeignKey(
-                        name: "FK_EthicsOptions_EthicsQuestions_QuestionId",
-                        column: x => x.QuestionId,
-                        principalTable: "EthicsQuestions",
+                        name: "FK_EthicsQuestions_EthicsCategories_CategoryId",
+                        column: x => x.CategoryId,
+                        principalTable: "EthicsCategories",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Restrict);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "BrandEthicScores",
+                columns: table => new
+                {
+                    Id = table.Column<long>(type: "bigint", nullable: false)
+                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
+                    BrandId = table.Column<long>(type: "bigint", nullable: false),
+                    CategoryId = table.Column<long>(type: "bigint", nullable: false),
+                    QuestionnaireId = table.Column<long>(type: "bigint", nullable: false),
+                    RawScore = table.Column<decimal>(type: "numeric", nullable: false),
+                    FinalScore = table.Column<decimal>(type: "numeric", nullable: false),
+                    IsOfficial = table.Column<bool>(type: "boolean", nullable: false),
+                    CreatedAt = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_BrandEthicScores", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_BrandEthicScores_BrandQuestionnaires_QuestionnaireId",
+                        column: x => x.QuestionnaireId,
+                        principalTable: "BrandQuestionnaires",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
+                    table.ForeignKey(
+                        name: "FK_BrandEthicScores_Brands_BrandId",
+                        column: x => x.BrandId,
+                        principalTable: "Brands",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                    table.ForeignKey(
+                        name: "FK_BrandEthicScores_EthicsCategories_CategoryId",
+                        column: x => x.CategoryId,
+                        principalTable: "EthicsCategories",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Restrict);
                 });
 
             migrationBuilder.CreateTable(
@@ -589,7 +660,7 @@ namespace IndeConnect_Back.Infrastructure.Migrations
                         .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
                     QuestionnaireId = table.Column<long>(type: "bigint", nullable: false),
                     QuestionId = table.Column<long>(type: "bigint", nullable: false),
-                    OptionId = table.Column<long>(type: "bigint", nullable: false)
+                    CalculatedScore = table.Column<decimal>(type: "numeric", nullable: true)
                 },
                 constraints: table =>
                 {
@@ -601,17 +672,35 @@ namespace IndeConnect_Back.Infrastructure.Migrations
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
                     table.ForeignKey(
-                        name: "FK_BrandQuestionResponses_EthicsOptions_OptionId",
-                        column: x => x.OptionId,
-                        principalTable: "EthicsOptions",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Restrict);
-                    table.ForeignKey(
                         name: "FK_BrandQuestionResponses_EthicsQuestions_QuestionId",
                         column: x => x.QuestionId,
                         principalTable: "EthicsQuestions",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Restrict);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "EthicsOptions",
+                columns: table => new
+                {
+                    Id = table.Column<long>(type: "bigint", nullable: false)
+                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
+                    QuestionId = table.Column<long>(type: "bigint", nullable: false),
+                    Key = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: false),
+                    Label = table.Column<string>(type: "character varying(500)", maxLength: 500, nullable: false),
+                    Score = table.Column<decimal>(type: "numeric(5,2)", precision: 5, scale: 2, nullable: false),
+                    Order = table.Column<int>(type: "integer", nullable: false, defaultValue: 0),
+                    IsActive = table.Column<bool>(type: "boolean", nullable: false, defaultValue: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_EthicsOptions", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_EthicsOptions_EthicsQuestions_QuestionId",
+                        column: x => x.QuestionId,
+                        principalTable: "EthicsQuestions",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
                 });
 
             migrationBuilder.CreateTable(
@@ -752,8 +841,8 @@ namespace IndeConnect_Back.Infrastructure.Migrations
                     Id = table.Column<long>(type: "bigint", nullable: false)
                         .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
                     ProductId = table.Column<long>(type: "bigint", nullable: false),
-                    SizeId = table.Column<long>(type: "bigint", nullable: true),
                     SKU = table.Column<string>(type: "character varying(50)", maxLength: 50, nullable: false),
+                    SizeId = table.Column<long>(type: "bigint", nullable: true),
                     StockCount = table.Column<int>(type: "integer", nullable: false, defaultValue: 0),
                     PriceOverride = table.Column<decimal>(type: "numeric(18,2)", precision: 18, scale: 2, nullable: true)
                 },
@@ -800,6 +889,72 @@ namespace IndeConnect_Back.Infrastructure.Migrations
                 });
 
             migrationBuilder.CreateTable(
+                name: "BrandQuestionResponseOptions",
+                columns: table => new
+                {
+                    ResponseId = table.Column<long>(type: "bigint", nullable: false),
+                    OptionId = table.Column<long>(type: "bigint", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_BrandQuestionResponseOptions", x => new { x.ResponseId, x.OptionId });
+                    table.ForeignKey(
+                        name: "FK_BrandQuestionResponseOptions_BrandQuestionResponses_Respons~",
+                        column: x => x.ResponseId,
+                        principalTable: "BrandQuestionResponses",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                    table.ForeignKey(
+                        name: "FK_BrandQuestionResponseOptions_EthicsOptions_OptionId",
+                        column: x => x.OptionId,
+                        principalTable: "EthicsOptions",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Restrict);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "BrandDeliveries",
+                columns: table => new
+                {
+                    Id = table.Column<long>(type: "bigint", nullable: false)
+                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
+                    BrandId = table.Column<long>(type: "bigint", nullable: false),
+                    OrderId = table.Column<long>(type: "bigint", nullable: false),
+                    ShippingMethodId = table.Column<long>(type: "bigint", nullable: true),
+                    ShippingFee = table.Column<decimal>(type: "numeric(18,2)", nullable: false, defaultValue: 0m),
+                    Description = table.Column<string>(type: "character varying(500)", maxLength: 500, nullable: false),
+                    TrackingNumber = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: true),
+                    Status = table.Column<string>(type: "character varying(50)", maxLength: 50, nullable: false, defaultValue: "Pending"),
+                    CreatedAt = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: false),
+                    ShippedAt = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: true),
+                    DeliveredAt = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: true),
+                    UpdatedAt = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: false),
+                    EstimatedDelivery = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_BrandDeliveries", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_BrandDeliveries_BrandShippingMethods_ShippingMethodId",
+                        column: x => x.ShippingMethodId,
+                        principalTable: "BrandShippingMethods",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Restrict);
+                    table.ForeignKey(
+                        name: "FK_BrandDeliveries_Brands_BrandId",
+                        column: x => x.BrandId,
+                        principalTable: "Brands",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Restrict);
+                    table.ForeignKey(
+                        name: "FK_BrandDeliveries_Orders_OrderId",
+                        column: x => x.OrderId,
+                        principalTable: "Orders",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
                 name: "Deliveries",
                 columns: table => new
                 {
@@ -807,7 +962,10 @@ namespace IndeConnect_Back.Infrastructure.Migrations
                         .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
                     Description = table.Column<string>(type: "character varying(500)", maxLength: 500, nullable: false),
                     TrackingNumber = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: true),
+                    CreatedAt = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: false),
                     ShippedAt = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: true),
+                    DeliveredAt = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: true),
+                    UpdatedAt = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: false),
                     Status = table.Column<string>(type: "character varying(50)", maxLength: 50, nullable: false, defaultValue: "Pending"),
                     OrderId = table.Column<long>(type: "bigint", nullable: false)
                 },
@@ -956,6 +1114,7 @@ namespace IndeConnect_Back.Infrastructure.Migrations
                     OrderId = table.Column<long>(type: "bigint", nullable: false),
                     ProductId = table.Column<long>(type: "bigint", nullable: false),
                     VariantId = table.Column<long>(type: "bigint", nullable: true),
+                    BrandDeliveryId = table.Column<long>(type: "bigint", nullable: true),
                     ProductName = table.Column<string>(type: "character varying(200)", maxLength: 200, nullable: false),
                     Quantity = table.Column<int>(type: "integer", nullable: false),
                     UnitPrice = table.Column<decimal>(type: "numeric(18,2)", precision: 18, scale: 2, nullable: false)
@@ -963,6 +1122,12 @@ namespace IndeConnect_Back.Infrastructure.Migrations
                 constraints: table =>
                 {
                     table.PrimaryKey("PK_OrderItems", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_OrderItems_BrandDeliveries_BrandDeliveryId",
+                        column: x => x.BrandDeliveryId,
+                        principalTable: "BrandDeliveries",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.SetNull);
                     table.ForeignKey(
                         name: "FK_OrderItems_Orders_OrderId",
                         column: x => x.OrderId,
@@ -1019,6 +1184,64 @@ namespace IndeConnect_Back.Infrastructure.Migrations
                 });
 
             migrationBuilder.CreateIndex(
+                name: "IX_BrandDeliveries_BrandId",
+                table: "BrandDeliveries",
+                column: "BrandId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_BrandDeliveries_ShippingMethodId",
+                table: "BrandDeliveries",
+                column: "ShippingMethodId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_BrandDelivery_DeliveredAt",
+                table: "BrandDeliveries",
+                column: "DeliveredAt");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_BrandDelivery_OrderBrand",
+                table: "BrandDeliveries",
+                columns: new[] { "OrderId", "BrandId" },
+                unique: true);
+
+            migrationBuilder.CreateIndex(
+                name: "IX_BrandDelivery_OrderStatus",
+                table: "BrandDeliveries",
+                columns: new[] { "OrderId", "Status" });
+
+            migrationBuilder.CreateIndex(
+                name: "IX_BrandDelivery_ShippedAt",
+                table: "BrandDeliveries",
+                column: "ShippedAt");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_BrandDelivery_Status",
+                table: "BrandDeliveries",
+                column: "Status");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_BrandDelivery_UniqueTrackingNumber",
+                table: "BrandDeliveries",
+                column: "TrackingNumber",
+                unique: true,
+                filter: "\"TrackingNumber\" IS NOT NULL");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_BrandEthicScores_BrandId_CategoryId_IsOfficial",
+                table: "BrandEthicScores",
+                columns: new[] { "BrandId", "CategoryId", "IsOfficial" });
+
+            migrationBuilder.CreateIndex(
+                name: "IX_BrandEthicScores_CategoryId",
+                table: "BrandEthicScores",
+                column: "CategoryId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_BrandEthicScores_QuestionnaireId",
+                table: "BrandEthicScores",
+                column: "QuestionnaireId");
+
+            migrationBuilder.CreateIndex(
                 name: "IX_BrandEthicTag_Category",
                 table: "BrandEthicTags",
                 column: "Category");
@@ -1057,23 +1280,23 @@ namespace IndeConnect_Back.Infrastructure.Migrations
                 filter: "\"IsActive\" = true");
 
             migrationBuilder.CreateIndex(
-                name: "IX_BrandQuestionnaire_BrandApproval",
-                table: "BrandQuestionnaires",
-                columns: new[] { "BrandId", "IsApproved" });
-
-            migrationBuilder.CreateIndex(
                 name: "IX_BrandQuestionnaire_BrandHistory",
                 table: "BrandQuestionnaires",
                 columns: new[] { "BrandId", "SubmittedAt" });
 
             migrationBuilder.CreateIndex(
-                name: "IX_BrandQuestionnaire_IsApproved",
+                name: "IX_BrandQuestionnaire_BrandStatus",
                 table: "BrandQuestionnaires",
-                column: "IsApproved");
+                columns: new[] { "BrandId", "Status" });
 
             migrationBuilder.CreateIndex(
-                name: "IX_BrandQuestionResponse_OptionId",
-                table: "BrandQuestionResponses",
+                name: "IX_BrandQuestionnaire_Status",
+                table: "BrandQuestionnaires",
+                column: "Status");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_BrandQuestionResponseOptions_OptionId",
+                table: "BrandQuestionResponseOptions",
                 column: "OptionId");
 
             migrationBuilder.CreateIndex(
@@ -1101,6 +1324,16 @@ namespace IndeConnect_Back.Infrastructure.Migrations
                 name: "IX_BrandSellers_SellerId",
                 table: "BrandSellers",
                 column: "SellerId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_BrandShippingMethods_BrandId",
+                table: "BrandShippingMethods",
+                column: "BrandId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_BrandShippingMethods_BrandId_IsEnabled",
+                table: "BrandShippingMethods",
+                columns: new[] { "BrandId", "IsEnabled" });
 
             migrationBuilder.CreateIndex(
                 name: "IX_BrandSubscription_UserId_BrandId",
@@ -1201,6 +1434,22 @@ namespace IndeConnect_Back.Infrastructure.Migrations
                 unique: true);
 
             migrationBuilder.CreateIndex(
+                name: "IX_EthicsCategories_IsActive_Order",
+                table: "EthicsCategories",
+                columns: new[] { "IsActive", "Order" });
+
+            migrationBuilder.CreateIndex(
+                name: "IX_EthicsCategories_Key",
+                table: "EthicsCategories",
+                column: "Key",
+                unique: true);
+
+            migrationBuilder.CreateIndex(
+                name: "IX_EthicsOption_Question_Order",
+                table: "EthicsOptions",
+                columns: new[] { "QuestionId", "IsActive", "Order" });
+
+            migrationBuilder.CreateIndex(
                 name: "IX_EthicsOption_QuestionId",
                 table: "EthicsOptions",
                 column: "QuestionId");
@@ -1219,12 +1468,12 @@ namespace IndeConnect_Back.Infrastructure.Migrations
             migrationBuilder.CreateIndex(
                 name: "IX_EthicsQuestion_Category",
                 table: "EthicsQuestions",
-                column: "Category");
+                column: "CategoryId");
 
             migrationBuilder.CreateIndex(
                 name: "IX_EthicsQuestion_CategoryOrder",
                 table: "EthicsQuestions",
-                columns: new[] { "Category", "Order" });
+                columns: new[] { "CategoryId", "Order" });
 
             migrationBuilder.CreateIndex(
                 name: "IX_EthicsQuestion_UniqueKey",
@@ -1268,6 +1517,11 @@ namespace IndeConnect_Back.Infrastructure.Migrations
                 name: "IX_OrderItem_VariantId",
                 table: "OrderItems",
                 column: "VariantId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_OrderItems_BrandDeliveryId",
+                table: "OrderItems",
+                column: "BrandDeliveryId");
 
             migrationBuilder.CreateIndex(
                 name: "IX_Order_PlacedAt",
@@ -1633,13 +1887,16 @@ namespace IndeConnect_Back.Infrastructure.Migrations
                 name: "AuditLogs");
 
             migrationBuilder.DropTable(
+                name: "BrandEthicScores");
+
+            migrationBuilder.DropTable(
                 name: "BrandEthicTags");
 
             migrationBuilder.DropTable(
                 name: "BrandPolicies");
 
             migrationBuilder.DropTable(
-                name: "BrandQuestionResponses");
+                name: "BrandQuestionResponseOptions");
 
             migrationBuilder.DropTable(
                 name: "BrandSellers");
@@ -1693,7 +1950,7 @@ namespace IndeConnect_Back.Infrastructure.Migrations
                 name: "WishlistItems");
 
             migrationBuilder.DropTable(
-                name: "BrandQuestionnaires");
+                name: "BrandQuestionResponses");
 
             migrationBuilder.DropTable(
                 name: "EthicsOptions");
@@ -1702,13 +1959,13 @@ namespace IndeConnect_Back.Infrastructure.Migrations
                 name: "Carts");
 
             migrationBuilder.DropTable(
+                name: "BrandDeliveries");
+
+            migrationBuilder.DropTable(
                 name: "ProductVariants");
 
             migrationBuilder.DropTable(
                 name: "Keywords");
-
-            migrationBuilder.DropTable(
-                name: "Orders");
 
             migrationBuilder.DropTable(
                 name: "PaymentProviders");
@@ -1717,13 +1974,25 @@ namespace IndeConnect_Back.Infrastructure.Migrations
                 name: "Wishlists");
 
             migrationBuilder.DropTable(
+                name: "BrandQuestionnaires");
+
+            migrationBuilder.DropTable(
                 name: "EthicsQuestions");
+
+            migrationBuilder.DropTable(
+                name: "BrandShippingMethods");
+
+            migrationBuilder.DropTable(
+                name: "Orders");
 
             migrationBuilder.DropTable(
                 name: "Products");
 
             migrationBuilder.DropTable(
                 name: "Sizes");
+
+            migrationBuilder.DropTable(
+                name: "EthicsCategories");
 
             migrationBuilder.DropTable(
                 name: "ShippingAddresses");

@@ -18,6 +18,7 @@ public class AppDbContext : DbContext
     public DbSet<WishlistItem> WishlistItems { get; set; }
     public DbSet<ShippingAddress> ShippingAddresses { get; set; }
     public DbSet<Delivery> Deliveries { get; set; }
+    public DbSet<BrandDelivery> BrandDeliveries { get; set; }
     public DbSet<UserReview> UserReviews { get; set; }
     public DbSet<AuditLog> AuditLogs { get; set; }
     public DbSet<PasswordResetToken> PasswordResetTokens { get; set; }
@@ -36,6 +37,7 @@ public class AppDbContext : DbContext
     public DbSet<EthicsCategoryEntity> EthicsCategories { get; set; }
     public DbSet<EthicsQuestion> EthicsQuestions { get; set; } 
     public DbSet<EthicsOption> EthicsOptions { get; set; }
+    public DbSet<BrandShippingMethod> BrandShippingMethods { get; set; }
     
     // CATALOG - PRODUCT DOMAIN
     public DbSet<Category> Categories { get; set; }

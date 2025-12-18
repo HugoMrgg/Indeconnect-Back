@@ -32,9 +32,9 @@ var postgresUser     = Environment.GetEnvironmentVariable("POSTGRES_USER");
 var postgresPassword = Environment.GetEnvironmentVariable("POSTGRES_PASSWORD");
 var postgresHost     = Environment.GetEnvironmentVariable("POSTGRES_HOST");
 var postgresPort     = Environment.GetEnvironmentVariable("POSTGRES_PORT");
-
 var connectionString =
     $"Host={postgresHost};Port={postgresPort};Database={postgresDb};Username={postgresUser};Password={postgresPassword}";
+Console.WriteLine("postgresDb = " + connectionString);
 
 builder.Services.AddDbContext<AppDbContext>(options =>
 {
@@ -57,10 +57,19 @@ builder.Services.AddScoped<IEthicsService, EthicsService>();
 builder.Services.AddScoped<IEthicsQuestionnaireService, EthicsQuestionnaireService>();
 builder.Services.AddScoped<IEthicsAdminService, EthicsAdminService>();
 builder.Services.AddScoped<ICartService, CartService>();
-builder.Services.AddScoped<IEmailService, SendGridEmailService>();           
+builder.Services.AddScoped<IEmailService, SendGridEmailService>();
+builder.Services.AddScoped<IOrderEmailTemplateService, OrderEmailTemplateService>();
 builder.Services.AddScoped<IPasswordResetTokenService, PasswordResetTokenService>(); 
+builder.Services.AddScoped<IShippingAddressService, ShippingAddressService>();
+builder.Services.AddScoped<IShippingService, ShippingService>();
+builder.Services.AddScoped<IOrderService, OrderService>();
+builder.Services.AddScoped<IPaymentService, PaymentService>();
+builder.Services.AddScoped<IPaymentMethodService, PaymentMethodService>();
 
-builder.Services.AddHttpClient(); // pour Nominatim
+// Background service for automatic order progression
+builder.Services.AddHostedService<OrderProgressionService>();
+
+builder.Services.AddHttpClient();
 builder.Services.AddMemoryCache();
 
 builder.Services.AddAutoMapper(typeof(DomainAssemblyMarker).Assembly);
