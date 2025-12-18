@@ -682,6 +682,17 @@ public async Task<UpdateProductResponse> UpdateProductAsync(long productId, Upda
         );
     }
     
+    public async Task<bool> CanUserReviewProductAsync(long userId, long productId)
+    {
+        // C'est ici qu'on met la logique "sale" d'accès aux données
+        return await _context.Orders
+            .AnyAsync(o => 
+                o.UserId == userId &&
+                o.Status.ToString() == "Delivered" && // Vérifie que ton enum match bien
+                o.Items.Any(i => i.ProductId == productId)
+            );
+    }
+    
     public async Task<IEnumerable<ProductReviewDto>> GetAllProductReviewsAsync(long productId)
     {
         var reviews = await _context.ProductReviews
