@@ -1,6 +1,7 @@
 ﻿using IndeConnect_Back.Application.DTOs.Brands;
 using IndeConnect_Back.Application.Services.Interfaces;
 using IndeConnect_Back.Domain.catalog.brand;
+using IndeConnect_Back.Domain.order;
 using IndeConnect_Back.Domain.user;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
@@ -148,47 +149,6 @@ public class ShippingService : IShippingService
         await _context.SaveChangesAsync();
     }
 
-    /// <summary>
-    /// Calcule la date estimée avec la MÊME logique que OrderService.CalculateEstimatedDeliveryDate
-    /// </summary>
-    private DateTimeOffset CalculateEstimatedDeliveryDate(
-        Deposit deposit,
-        ShippingAddress deliveryAddress,
-        DateTimeOffset orderPlacedAt,
-        BrandShippingMethod shippingMethod)
-    {
-        // Calculer le délai de base selon la distance (EN HEURES comme OrderService)
-        int baseHours;
-
-        // Même ville : 24h
-        if (deposit.City?.Trim().Equals(deliveryAddress.City?.Trim(), StringComparison.OrdinalIgnoreCase) == true)
-        {
-            baseHours = 24;
-        }
-        // Même pays : 48h
-        else if (deposit.Country?.Trim().Equals(deliveryAddress.Country?.Trim(), StringComparison.OrdinalIgnoreCase) == true)
-        {
-            baseHours = 48;
-        }
-        // Pays différent : 72h
-        else
-        {
-            baseHours = 72;
-        }
-
-        // Ajouter le délai de la méthode de livraison (moyenne entre min et max, convertie en heures)
-        var shippingMethodAvgDays = (shippingMethod.EstimatedMinDays + shippingMethod.EstimatedMaxDays) / 2.0;
-        var shippingMethodHours = (int)(shippingMethodAvgDays * 24);
-
-        var totalHours = baseHours + shippingMethodHours;
-        var estimatedDate = orderPlacedAt.AddHours(totalHours);
-
-        _logger.LogInformation(
-            "Calculated delivery: baseHours={BaseHours} + methodHours={MethodHours} = {TotalHours}h => {EstimatedDate}",
-            baseHours, shippingMethodHours, totalHours, estimatedDate);
-
-        return estimatedDate;
-    }
 
     private static ShippingMethodDto MapToDto(BrandShippingMethod method)
     {
@@ -215,15 +175,18 @@ public class ShippingService : IShippingService
         ShippingAddress shippingAddress,
         DateTimeOffset now)
     {
-
-        // Calculer la date estimée avec la MÊME logique que OrderService
-        var estimatedDate = CalculateEstimatedDeliveryDate(deposit, shippingAddress, now, method);
+        // Utiliser le DeliveryEstimator du domaine pour calculer la date estimée
+        var estimatedDate = DeliveryEstimator.CalculateEstimatedDeliveryDate(deposit, shippingAddress, now, method);
 
         // Calculer les délais totaux en jours à partir de maintenant
         var totalDays = (estimatedDate - now).TotalDays;
         var totalMinDays = (int)Math.Floor(totalDays);
         var totalMaxDays = (int)Math.Ceiling(totalDays);
-        
+
+        _logger.LogInformation(
+            "Calculated delivery for method {MethodId}: {EstimatedDate} (Total: {TotalDays} days)",
+            method.Id, estimatedDate, totalDays);
+
         return new ShippingMethodDto
         {
             Id = method.Id,

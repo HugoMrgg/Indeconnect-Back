@@ -21,6 +21,24 @@ public class BrandQuestionResponse
         QuestionnaireId = questionnaireId;
         QuestionId = questionId;
     }
-    
+
     public void SetCalculatedScore(decimal score) => CalculatedScore = score;
+
+    /// <summary>
+    /// Calcule le score de cette réponse en sommant les scores des options sélectionnées.
+    /// </summary>
+    /// <param name="optionsById">Dictionnaire des options par ID</param>
+    /// <param name="selectedOptionIds">IDs des options sélectionnées</param>
+    /// <returns>Le score total calculé (0 si aucune option sélectionnée)</returns>
+    public static decimal CalculateScore(
+        IReadOnlyDictionary<long, EthicsOption> optionsById,
+        IEnumerable<long> selectedOptionIds)
+    {
+        var optionIdsList = selectedOptionIds.ToList();
+
+        if (optionIdsList.Count == 0)
+            return 0m;
+
+        return optionIdsList.Sum(id => optionsById[id].Score);
+    }
 }

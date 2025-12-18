@@ -152,4 +152,40 @@ public class Brand
     {
         _shippingMethods.Remove(method);
     }
+
+    /// <summary>
+    /// Calcule la note moyenne basée sur les avis clients.
+    /// </summary>
+    /// <returns>La moyenne des ratings, ou 0 si aucun avis</returns>
+    public double GetAverageRating()
+    {
+        if (Reviews == null || !Reviews.Any())
+            return 0.0;
+
+        return Reviews.Average(r => (double)r.Rating);
+    }
+
+    /// <summary>
+    /// Calcule la distance minimale entre l'utilisateur et les dépôts de la marque.
+    /// </summary>
+    /// <param name="userLatitude">Latitude de l'utilisateur</param>
+    /// <param name="userLongitude">Longitude de l'utilisateur</param>
+    /// <returns>La distance minimale en kilomètres, ou double.MaxValue si aucun dépôt valide</returns>
+    public double GetClosestDepositDistance(double userLatitude, double userLongitude)
+    {
+        // Filtrer les dépôts avec des coordonnées valides
+        var validDeposits = _deposits
+            .Where(d => d.Latitude != 0 && d.Longitude != 0)
+            .ToList();
+
+        if (!validDeposits.Any())
+            return double.MaxValue;
+
+        // Calculer la distance minimale
+        var distances = validDeposits
+            .Select(d => GeographicDistance.CalculateKm(userLatitude, userLongitude, d.Latitude, d.Longitude))
+            .ToList();
+
+        return distances.Min();
+    }
 }
