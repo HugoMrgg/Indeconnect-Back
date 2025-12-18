@@ -25,6 +25,9 @@ public interface IProductService
     
     // Création d’un review par un client
     Task<ProductReviewDto> AddProductReviewAsync(long productId, long userId, int rating, string? comment);
+    
+    // Si un client peut faire une review d'un produit
+    Task<bool> CanUserReviewProductAsync(long userId, long productId);
 
     // Pour le vendeur : voir toutes les reviews (tous statuts)
     Task<IEnumerable<ProductReviewDto>> GetAllProductReviewsAsync(long productId);

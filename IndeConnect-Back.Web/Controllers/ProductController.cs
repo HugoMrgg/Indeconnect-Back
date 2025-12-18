@@ -232,5 +232,22 @@ public class ProductController : ControllerBase
         }
     }
 
+    [Authorize]
+    [HttpGet("{productId}/can-review")]
+    public async Task<ActionResult<bool>> CanReviewProduct(
+        [FromRoute] long productId,
+        [FromServices] UserHelper userHelper)
+    {
+        var userIdNullable = userHelper.GetUserId();
+
+        if (userIdNullable == null)
+        {
+            return Unauthorized();
+        }
+
+        var canReview = await _productService.CanUserReviewProductAsync(userIdNullable.Value, productId);
+
+        return Ok(canReview);
+    }
 
 }
