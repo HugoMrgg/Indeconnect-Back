@@ -48,16 +48,34 @@ public class DeliveryEstimator
 
     /// <summary>
     /// Calcule le délai de base en heures selon la distance géographique.
-    /// - Même ville : 24h
+    /// - Même zone (même code postal) : 24h
     /// - Même pays : 48h
     /// - Pays différent : 72h
+    ///
+    /// Utilise une approche hybride :
+    /// 1. Privilégie la comparaison par code postal (plus précis, évite homonymies)
+    /// 2. Fallback sur la comparaison de ville si code postal manquant (robustesse internationale)
     /// </summary>
     private static int CalculateBaseDeliveryHours(Deposit deposit, ShippingAddress deliveryAddress)
     {
-        // Même ville : 24h
-        if (deposit.City?.Trim().Equals(deliveryAddress.City?.Trim(), StringComparison.OrdinalIgnoreCase) == true)
+        // Même zone locale : comparer les codes postaux d'abord (plus fiable)
+        var depositPostalCode = deposit.PostalCode?.Trim();
+        var deliveryPostalCode = deliveryAddress.PostalCode?.Trim();
+
+        if (!string.IsNullOrEmpty(depositPostalCode) &&
+            !string.IsNullOrEmpty(deliveryPostalCode) &&
+            depositPostalCode.Equals(deliveryPostalCode, StringComparison.OrdinalIgnoreCase))
         {
             return 24;
+        }
+
+        // Fallback : même ville (pour pays sans codes postaux ou données incomplètes)
+        if (string.IsNullOrEmpty(depositPostalCode) || string.IsNullOrEmpty(deliveryPostalCode))
+        {
+            if (deposit.City?.Trim().Equals(deliveryAddress.City?.Trim(), StringComparison.OrdinalIgnoreCase) == true)
+            {
+                return 24;
+            }
         }
 
         // Même pays : 48h
