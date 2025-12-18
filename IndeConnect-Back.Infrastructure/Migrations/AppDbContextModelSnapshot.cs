@@ -723,7 +723,7 @@ namespace IndeConnect_Back.Infrastructure.Migrations
                         .ValueGeneratedOnAdd()
                         .HasMaxLength(20)
                         .HasColumnType("character varying(20)")
-                        .HasDefaultValue("Pending");
+                        .HasDefaultValue("Enabled");
 
                     b.Property<DateTimeOffset?>("UpdatedAt")
                         .HasColumnType("timestamp with time zone");

@@ -726,7 +726,7 @@ namespace IndeConnect_Back.Infrastructure.Migrations
                     Comment = table.Column<string>(type: "character varying(2000)", maxLength: 2000, nullable: true),
                     CreatedAt = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: false),
                     UpdatedAt = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: true),
-                    Status = table.Column<string>(type: "character varying(20)", maxLength: 20, nullable: false, defaultValue: "Pending")
+                    Status = table.Column<string>(type: "character varying(20)", maxLength: 20, nullable: false, defaultValue: "Enabled")
                 },
                 constraints: table =>
                 {

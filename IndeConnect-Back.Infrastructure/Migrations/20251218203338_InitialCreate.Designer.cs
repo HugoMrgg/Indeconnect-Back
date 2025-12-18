@@ -12,7 +12,7 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace IndeConnect_Back.Infrastructure.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    [Migration("20251212175839_InitialCreate")]
+    [Migration("20251218203338_InitialCreate")]
     partial class InitialCreate
     {
         /// <inheritdoc />
@@ -726,7 +726,7 @@ namespace IndeConnect_Back.Infrastructure.Migrations
                         .ValueGeneratedOnAdd()
                         .HasMaxLength(20)
                         .HasColumnType("character varying(20)")
-                        .HasDefaultValue("Pending");
+                        .HasDefaultValue("Enabled");
 
                     b.Property<DateTimeOffset?>("UpdatedAt")
                         .HasColumnType("timestamp with time zone");

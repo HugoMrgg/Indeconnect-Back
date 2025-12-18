@@ -43,7 +43,7 @@ public class ProductService : IProductService
             .Include(p => p.Details)
             .Include(p => p.Keywords)
                 .ThenInclude(pk => pk.Keyword)
-            .Include(p => p.Reviews.Where(r => r.Status == ReviewStatus.Approved))
+            .Include(p => p.Reviews.Where(r => r.Status == ReviewStatus.Enabled))
                 .ThenInclude(r => r.User)
             .FirstOrDefaultAsync(p => p.Id == productId && p.IsEnabled);
 
@@ -66,7 +66,7 @@ public class ProductService : IProductService
         var isAvailable = totalStock > 0 && product.Status == ProductStatus.Online;
 
         // Calculate average rating
-        var approvedReviews = product.Reviews.Where(r => r.Status == ReviewStatus.Approved).ToList();
+        var approvedReviews = product.Reviews.Where(r => r.Status == ReviewStatus.Enabled).ToList();
         var avgRating = approvedReviews.Any() ? approvedReviews.Average(r => (double)r.Rating) : 0.0;
 
         // NOUVEAU : Récupérer les autres couleurs disponibles
@@ -260,7 +260,7 @@ public class ProductService : IProductService
 
         var query = _context.ProductReviews
             .Include(r => r.User)
-            .Where(r => r.ProductId == productId && r.Status == ReviewStatus.Approved)
+            .Where(r => r.ProductId == productId && r.Status == ReviewStatus.Enabled)
             .OrderByDescending(r => r.CreatedAt);
 
         var reviews = await query
@@ -644,25 +644,6 @@ public class ProductService : IProductService
 
         return (brand.SuperVendorUserId == sellerUserId)
                || brand.Sellers.Any(s => s.SellerId == sellerUserId && s.IsActive);
-    }
-
-    public async Task ApproveProductReviewAsync(long reviewId, long sellerUserId)
-    {
-        var review = await _context.ProductReviews
-            .Include(r => r.Product)
-            .ThenInclude(p => p.Brand)
-            .ThenInclude(b => b.Sellers)
-            .FirstOrDefaultAsync(r => r.Id == reviewId);
-
-        if (review == null)
-            throw new KeyNotFoundException("Review not found");
-
-        var isSeller = await IsSellerOfProductAsync(sellerUserId, review.ProductId);
-        if (!isSeller)
-            throw new UnauthorizedAccessException("User is not seller of this product");
-
-        review.Approve();
-        await _context.SaveChangesAsync();
     }
 
     public async Task RejectProductReviewAsync(long reviewId, long sellerUserId)
