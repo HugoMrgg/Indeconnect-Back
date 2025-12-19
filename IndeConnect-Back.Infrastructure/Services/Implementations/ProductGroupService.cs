@@ -120,6 +120,11 @@ public class ProductGroupService : IProductGroupService
         if (!categoryExists)
             throw new InvalidOperationException($"Category with id {request.CategoryId} not found.");
 
+        // Mettre à jour (pas de méthode Update sur ProductGroup, on utilise les setters privés via reflection ou on ajoute une méthode Update)
+        // Pour l'instant, je vais accéder directement aux propriétés (EF Core le permet)
+        _context.Entry(productGroup).Property("Name").CurrentValue = request.Name.Trim();
+        _context.Entry(productGroup).Property("BaseDescription").CurrentValue = request.BaseDescription.Trim();
+        _context.Entry(productGroup).Property("CategoryId").CurrentValue = request.CategoryId;
         // Utiliser la méthode métier du Domain
         productGroup.UpdateInfo(request.Name, request.BaseDescription, request.CategoryId);
 
@@ -156,6 +161,8 @@ public class ProductGroupService : IProductGroupService
 
         // Utiliser la méthode du Domain pour vérifier s'il y a des produits
         if (productGroup.HasProducts())
+        // Vérifier qu'il n'y a pas de produits
+        if (productGroup.Products.Any())
             throw new InvalidOperationException("Cannot delete a product group that contains products. Delete all products first.");
 
         _context.ProductGroups.Remove(productGroup);
@@ -179,6 +186,8 @@ public class ProductGroupService : IProductGroupService
             new CategoryDto(productGroup.Category.Id, productGroup.Category.Name),
             // Utiliser les méthodes du Domain
             productGroup.GetOnlineProducts()
+            productGroup.Products
+                .Where(p => p.IsEnabled && p.Status == ProductStatus.Online)
                 .Select(p => new ProductColorVariantDto(
                     p.Id,
                     p.PrimaryColor?.Id,
@@ -186,6 +195,9 @@ public class ProductGroupService : IProductGroupService
                     p.PrimaryColor?.Hexa,
                     p.GetPrimaryImageUrl(),
                     p.IsAvailableForPurchase()
+                    p.Media.FirstOrDefault(m => m.IsPrimary)?.Url
+                        ?? p.Media.OrderBy(m => m.DisplayOrder).FirstOrDefault()?.Url,
+                    p.Variants.Sum(v => v.StockCount) > 0
                 ))
         );
     }

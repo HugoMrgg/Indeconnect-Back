@@ -232,6 +232,27 @@ public class ProductController : ControllerBase
                 Title = "Forbidden",
                 Detail = ex.Message
             });
+        catch (UnauthorizedAccessException ex)
+        {
+            return StatusCode(StatusCodes.Status403Forbidden, new ProblemDetails
+            {
+                Title = "Forbidden",
+                Detail = ex.Message
+            });
+        }
+    }
+
+    [Authorize]
+    [HttpGet("{productId}/can-review")]
+    public async Task<ActionResult<bool>> CanReviewProduct(
+        [FromRoute] long productId,
+        [FromServices] UserHelper userHelper)
+    {
+        var userIdNullable = userHelper.GetUserId();
+
+        if (userIdNullable == null)
+        {
+            return Unauthorized();
         }
     }
 }
