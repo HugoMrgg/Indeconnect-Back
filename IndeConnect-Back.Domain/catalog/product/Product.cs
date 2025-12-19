@@ -94,4 +94,75 @@ public class Product
         Status = status;
         UpdatedAt = DateTimeOffset.UtcNow;
     }
+
+    /// <summary>
+    /// Calcule le prix actuel en tenant compte d'une promotion active
+    /// </summary>
+    /// <param name="at">Date à laquelle vérifier (par défaut: maintenant)</param>
+    /// <returns>Prix avec réduction si promotion active, sinon prix de base</returns>
+    public decimal CalculateCurrentPrice(DateTimeOffset? at = null)
+    {
+        var checkDate = at ?? DateTimeOffset.UtcNow;
+
+        if (Sale == null || !Sale.IsActive
+            || Sale.StartDate > checkDate
+            || Sale.EndDate < checkDate)
+        {
+            return Price;
+        }
+
+        return Price * (1 - Sale.DiscountPercentage / 100);
+    }
+
+    /// <summary>
+    /// Calcule le stock total de toutes les variantes
+    /// </summary>
+    public int GetTotalStock()
+    {
+        return Variants.Sum(v => v.StockCount);
+    }
+
+    /// <summary>
+    /// Vérifie si le produit est disponible à l'achat
+    /// </summary>
+    public bool IsAvailableForPurchase()
+    {
+        return IsEnabled
+            && Status == ProductStatus.Online
+            && GetTotalStock() > 0;
+    }
+
+    /// <summary>
+    /// Calcule la note moyenne des reviews approuvées
+    /// </summary>
+    public double GetAverageRating()
+    {
+        var approvedReviews = Reviews.Where(r => r.Status == ReviewStatus.Approved).ToList();
+        return approvedReviews.Any() ? approvedReviews.Average(r => (double)r.Rating) : 0.0;
+    }
+
+    /// <summary>
+    /// Compte le nombre de reviews approuvées
+    /// </summary>
+    public int GetApprovedReviewsCount()
+    {
+        return Reviews.Count(r => r.Status == ReviewStatus.Approved);
+    }
+
+    /// <summary>
+    /// Obtient l'image principale du produit
+    /// </summary>
+    public ProductMedia? GetPrimaryImage()
+    {
+        return Media.FirstOrDefault(m => m.IsPrimary)
+            ?? Media.OrderBy(m => m.DisplayOrder).FirstOrDefault();
+    }
+
+    /// <summary>
+    /// Obtient l'URL de l'image principale du produit
+    /// </summary>
+    public string? GetPrimaryImageUrl()
+    {
+        return GetPrimaryImage()?.Url;
+    }
 }
