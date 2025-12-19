@@ -154,83 +154,84 @@ public class ProductController : ControllerBase
         }
     }
 
-
-
-    
     /// <summary>
-    /// Create a new product
+    /// Create a new product (SuperVendor only, for their brand)
     /// </summary>
     [HttpPost("create")]
-    //[Authorize(Policy = "CanManageProducts")] // à adapter quand vous aurez la policy
+    [Authorize(Roles = "SuperVendor")]
     [ProducesResponseType(typeof(CreateProductResponse), StatusCodes.Status201Created)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
-    public async Task<ActionResult<CreateProductResponse>> CreateProduct([FromBody] CreateProductQuery query)
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status403Forbidden)]
+    public async Task<ActionResult<CreateProductResponse>> CreateProduct(
+        [FromBody] CreateProductQuery query,
+        [FromServices] UserHelper userHelper)
     {
-        var response = await _productService.CreateProductAsync(query);
-
-        return CreatedAtAction(
-            nameof(GetProductById),
-            new { productId = response.Id },
-            response
-        );
-    }
-    
-    /// <summary>
-    /// Update an existing product
-    /// </summary>
-    [HttpPut("{productId:long}")]
-    //[Authorize(Policy = "CanManageProducts")] // ou à désactiver en dev
-    [ProducesResponseType(typeof(UpdateProductResponse), StatusCodes.Status200OK)]
-    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
-    public async Task<ActionResult<UpdateProductResponse>> UpdateProduct(
-        [FromRoute] long productId,
-        [FromBody] UpdateProductQuery query)
-    {
+        var currentUserId = userHelper.GetUserId();
+        
         try
         {
-            var response = await _productService.UpdateProductAsync(productId, query);
+            var response = await _productService.CreateProductAsync(query, currentUserId);
+            
+            return CreatedAtAction(
+                nameof(GetProductById),
+                new { productId = response.Id },
+                response
+            );
+        }
+        catch (UnauthorizedAccessException ex)
+        {
+            return StatusCode(StatusCodes.Status403Forbidden, new ProblemDetails
+            {
+                Title = "Forbidden",
+                Detail = ex.Message
+            });
+        }
+        catch (ArgumentException ex)
+        {
+            return BadRequest(new ProblemDetails
+            {
+                Title = "Invalid input",
+                Detail = ex.Message
+            });
+        }
+    }
+
+    /// <summary>
+    /// Update an existing product (SuperVendor only, for their brand)
+    /// </summary>
+    [HttpPut("{productId:long}")]
+    [Authorize(Roles = "SuperVendor")]
+    [ProducesResponseType(typeof(UpdateProductResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status403Forbidden)]
+    public async Task<ActionResult<UpdateProductResponse>> UpdateProduct(
+        [FromRoute] long productId,
+        [FromBody] UpdateProductQuery query,
+        [FromServices] UserHelper userHelper)
+    {
+        var currentUserId = userHelper.GetUserId();
+        
+        try
+        {
+            var response = await _productService.UpdateProductAsync(productId, query, currentUserId);
             return Ok(response);
         }
-        catch (KeyNotFoundException)
+        catch (KeyNotFoundException ex)
         {
             return NotFound(new ProblemDetails
             {
                 Title = "Product not found",
                 Status = StatusCodes.Status404NotFound,
-                Detail = $"No product with id {productId}."
+                Detail = ex.Message
+            });
+        }
+        catch (UnauthorizedAccessException ex)
+        {
+            return StatusCode(StatusCodes.Status403Forbidden, new ProblemDetails
+            {
+                Title = "Forbidden",
+                Detail = ex.Message
             });
         }
     }
-    
-    [Authorize] // client authentifié
-    [HttpPost("{productId:long}/reviews")]
-    public async Task<IActionResult> AddReview(
-        long productId,
-        [FromBody] AddProductReviewRequest request,
-        [FromServices] UserHelper userHelper)
-    {
-        var userId = (long) userHelper.GetUserId();
-    
-        try
-        {
-            var review = await _productService.AddProductReviewAsync(
-                productId,
-                userId,
-                request.Rating,
-                request.Comment
-            );
-
-            return CreatedAtAction(nameof(GetProductReviews), new { productId }, review);
-        }
-        catch (KeyNotFoundException)
-        {
-            return NotFound(new { message = "Product not found" });
-        }
-        catch (InvalidOperationException ex)
-        {
-            return BadRequest(new { message = ex.Message });
-        }
-    }
-
-
 }

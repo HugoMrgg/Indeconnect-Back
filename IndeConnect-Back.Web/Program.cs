@@ -46,6 +46,7 @@ builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<IJwtTokenGenerator, JwtTokenGenerator>();
 builder.Services.AddScoped<IBrandService, BrandService>();
 builder.Services.AddScoped<IProductService, ProductService>();
+builder.Services.AddScoped<IProductGroupService, ProductGroupService>();
 builder.Services.AddScoped<IUserService, UserService>();
 builder.Services.AddScoped<IWishlistService, WishlistService>();
 builder.Services.AddScoped<IBrandSubscriptionService, BrandSubscriptionService>();

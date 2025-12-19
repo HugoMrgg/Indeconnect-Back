@@ -14,10 +14,10 @@ public interface IProductService
     Task<ProductsListResponse> GetProductsByBrandAsync(GetProductsQuery query, long? userId);
     
     // Ajouter un nouveau produit
-    Task<CreateProductResponse> CreateProductAsync(CreateProductQuery query);
+    Task<CreateProductResponse> CreateProductAsync(CreateProductQuery query, long? currentUserId);
     
     // Modifier un produit
-    Task<UpdateProductResponse> UpdateProductAsync(long productId, UpdateProductQuery query);
+    Task<UpdateProductResponse> UpdateProductAsync(long productId, UpdateProductQuery query, long? currentUserId);
     
     // NOUVEAUX : pour gérer les couleurs alternatives
     Task<IEnumerable<ProductColorVariantDto>> GetProductColorVariantsAsync(long productId);
