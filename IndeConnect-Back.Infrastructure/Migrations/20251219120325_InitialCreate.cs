@@ -99,22 +99,6 @@ namespace IndeConnect_Back.Infrastructure.Migrations
                 });
 
             migrationBuilder.CreateTable(
-                name: "EthicsCategoryEntity",
-                columns: table => new
-                {
-                    Id = table.Column<long>(type: "bigint", nullable: false)
-                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
-                    Key = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: false),
-                    Label = table.Column<string>(type: "character varying(200)", maxLength: 200, nullable: false),
-                    Order = table.Column<int>(type: "integer", nullable: false, defaultValue: 0),
-                    IsActive = table.Column<bool>(type: "boolean", nullable: false, defaultValue: true)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_EthicsCategoryEntity", x => x.Id);
-                });
-
-            migrationBuilder.CreateTable(
                 name: "Keywords",
                 columns: table => new
                 {
@@ -1469,17 +1453,6 @@ namespace IndeConnect_Back.Infrastructure.Migrations
                 unique: true);
 
             migrationBuilder.CreateIndex(
-                name: "IX_EthicsCategoryEntity_IsActive_Order",
-                table: "EthicsCategoryEntity",
-                columns: new[] { "IsActive", "Order" });
-
-            migrationBuilder.CreateIndex(
-                name: "IX_EthicsCategoryEntity_Key",
-                table: "EthicsCategoryEntity",
-                column: "Key",
-                unique: true);
-
-            migrationBuilder.CreateIndex(
                 name: "IX_EthicsOption_Question_Order",
                 table: "EthicsOptions",
                 columns: new[] { "QuestionId", "IsActive", "Order" });
@@ -1947,9 +1920,6 @@ namespace IndeConnect_Back.Infrastructure.Migrations
 
             migrationBuilder.DropTable(
                 name: "Deposits");
-
-            migrationBuilder.DropTable(
-                name: "EthicsCategoryEntity");
 
             migrationBuilder.DropTable(
                 name: "Invoices");

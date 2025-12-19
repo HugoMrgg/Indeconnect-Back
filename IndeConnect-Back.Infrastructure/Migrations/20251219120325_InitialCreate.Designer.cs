@@ -12,7 +12,7 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace IndeConnect_Back.Infrastructure.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    [Migration("20251217222901_InitialCreate")]
+    [Migration("20251219120325_InitialCreate")]
     partial class InitialCreate
     {
         /// <inheritdoc />
@@ -477,44 +477,6 @@ namespace IndeConnect_Back.Infrastructure.Migrations
                         .HasDatabaseName("IX_Deposit_UniqueBrandId");
 
                     b.ToTable("Deposits");
-                });
-
-            modelBuilder.Entity("IndeConnect_Back.Domain.catalog.brand.EthicsCategoryEntity", b =>
-                {
-                    b.Property<long>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("bigint");
-
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("Id"));
-
-                    b.Property<bool>("IsActive")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("boolean")
-                        .HasDefaultValue(true);
-
-                    b.Property<string>("Key")
-                        .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("character varying(100)");
-
-                    b.Property<string>("Label")
-                        .IsRequired()
-                        .HasMaxLength(200)
-                        .HasColumnType("character varying(200)");
-
-                    b.Property<int>("Order")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("integer")
-                        .HasDefaultValue(0);
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("Key")
-                        .IsUnique();
-
-                    b.HasIndex("IsActive", "Order");
-
-                    b.ToTable("EthicsCategoryEntity");
                 });
 
             modelBuilder.Entity("IndeConnect_Back.Domain.catalog.brand.EthicsOption", b =>
