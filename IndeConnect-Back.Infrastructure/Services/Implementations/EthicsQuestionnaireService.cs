@@ -57,10 +57,15 @@ public class EthicsQuestionnaireService : IEthicsQuestionnaireService
             .OrderByDescending(q => q.CreatedAt)
             .FirstOrDefaultAsync();
 
+        using var tx = await _context.Database.BeginTransactionAsync();
+
         if (questionnaire == null)
         {
             questionnaire = new BrandQuestionnaire(brandId, catalog.Version.Id);
             _context.BrandQuestionnaires.Add(questionnaire);
+
+            // ✅ Important : on doit obtenir questionnaire.Id avant de créer des réponses liées
+            await _context.SaveChangesAsync();
         }
 
         // On refuse toute modification si déjà Approved/Rejected (traçabilité)
@@ -70,8 +75,6 @@ public class EthicsQuestionnaireService : IEthicsQuestionnaireService
         // Validation + upsert réponses
         var answers = (request.Answers ?? Array.Empty<QuestionAnswerDto>()).ToList();
 
-        using var tx = await _context.Database.BeginTransactionAsync();
-
         foreach (var a in answers)
         {
             if (!questionsById.TryGetValue(a.QuestionId, out var q))
@@ -79,21 +82,27 @@ public class EthicsQuestionnaireService : IEthicsQuestionnaireService
 
             var optionIds = (a.OptionIds ?? Array.Empty<long>()).Distinct().ToList();
 
+            var answerType = q.AnswerType;
+            // si valeur hors-enum (ex: 0 ou 99), on fallback sur Single
+            if (!Enum.IsDefined(typeof(EthicsAnswerType), answerType))
+                answerType = EthicsAnswerType.Single;
+
             // Respect radio/checkbox
-            if (q.AnswerType == EthicsAnswerType.Single)
+            if (answerType == EthicsAnswerType.Single)
             {
                 if (optionIds.Count > 1)
                     throw new InvalidOperationException($"Question {q.Id} (Single) : une seule option autorisée.");
                 if (request.Submit && optionIds.Count != 1)
                     throw new InvalidOperationException($"Question {q.Id} (Single) : exactement 1 option est requise à la soumission.");
             }
-            else if (q.AnswerType == EthicsAnswerType.Multiple)
+            else if (answerType == EthicsAnswerType.Multiple)
             {
                 if (request.Submit && optionIds.Count < 1)
                     throw new InvalidOperationException($"Question {q.Id} (Multiple) : au moins 1 option est requise à la soumission.");
             }
             else
             {
+                // normalement inatteignable maintenant
                 throw new InvalidOperationException($"Type de réponse non supporté pour la question {q.Id}.");
             }
 
@@ -112,8 +121,10 @@ public class EthicsQuestionnaireService : IEthicsQuestionnaireService
             if (response == null)
             {
                 response = new BrandQuestionResponse(questionnaire.Id, q.Id);
-                (questionnaire as dynamic).GetType();
                 _context.BrandQuestionResponses.Add(response);
+
+                // ✅ Important : on doit obtenir response.Id avant de créer les lignes de jointure
+                await _context.SaveChangesAsync();
             }
 
             // Remplacer la sélection (join table)
@@ -161,12 +172,11 @@ public class EthicsQuestionnaireService : IEthicsQuestionnaireService
         // Retourner le formulaire (catalogue + réponses)
         return BuildFormDto(catalog, questionnaire);
     }
-    
+
     // -------------------------
     // Helpers
     // -------------------------
-    
-    
+
     private async Task<long> GetBrandIdForSuperVendorOrThrow(long superVendorUserId)
     {
         var user = await _context.Users.FirstOrDefaultAsync(u => u.Id == superVendorUserId);
@@ -308,7 +318,7 @@ public class EthicsQuestionnaireService : IEthicsQuestionnaireService
             ));
         }
     }
-    
+
     private static bool IsNewId(long id) => id <= 0;
 
     private static EthicsAnswerType ParseAnswerType(string s)
@@ -318,12 +328,9 @@ public class EthicsQuestionnaireService : IEthicsQuestionnaireService
         throw new InvalidOperationException($"AnswerType invalide: '{s}'. Attendu: 'Single' ou 'Multiple'.");
     }
 
-
     // Permet de modifier une propriété même si setter privé
     private void Set<TEntity>(TEntity entity, string propName, object? value) where TEntity : class
     {
         _context.Entry(entity).Property(propName).CurrentValue = value;
     }
-
 }
-    

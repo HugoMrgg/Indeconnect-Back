@@ -16,7 +16,7 @@ public record UpsertCategoryDto(
 
 public record UpsertQuestionDto(
     long? Id,
-    string CategoryKey,   // ✅ lien par Key
+    string CategoryKey,
     string Key,
     string Label,
     int Order,
@@ -26,7 +26,7 @@ public record UpsertQuestionDto(
 
 public record UpsertOptionDto(
     long? Id,
-    string QuestionKey,   // ✅ lien par Key
+    string QuestionKey,
     string Key,
     string Label,
     int Order,
