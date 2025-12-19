@@ -159,8 +159,6 @@ public class ProductGroupService : IProductGroupService
         if (productGroup.Brand.SuperVendorUserId != currentUserId)
             throw new UnauthorizedAccessException("You are not the SuperVendor of this brand.");
 
-        // Utiliser la méthode du Domain pour vérifier s'il y a des produits
-        if (productGroup.HasProducts())
         // Vérifier qu'il n'y a pas de produits
         if (productGroup.Products.Any())
             throw new InvalidOperationException("Cannot delete a product group that contains products. Delete all products first.");
@@ -184,8 +182,6 @@ public class ProductGroupService : IProductGroupService
                 0, 0, Enumerable.Empty<string>(), null, null, 0
             ),
             new CategoryDto(productGroup.Category.Id, productGroup.Category.Name),
-            // Utiliser les méthodes du Domain
-            productGroup.GetOnlineProducts()
             productGroup.Products
                 .Where(p => p.IsEnabled && p.Status == ProductStatus.Online)
                 .Select(p => new ProductColorVariantDto(
@@ -193,8 +189,6 @@ public class ProductGroupService : IProductGroupService
                     p.PrimaryColor?.Id,
                     p.PrimaryColor?.Name,
                     p.PrimaryColor?.Hexa,
-                    p.GetPrimaryImageUrl(),
-                    p.IsAvailableForPurchase()
                     p.Media.FirstOrDefault(m => m.IsPrimary)?.Url
                         ?? p.Media.OrderBy(m => m.DisplayOrder).FirstOrDefault()?.Url,
                     p.Variants.Sum(v => v.StockCount) > 0
