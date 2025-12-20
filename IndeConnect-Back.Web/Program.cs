@@ -70,6 +70,7 @@ builder.Services.AddScoped<IShippingService, ShippingService>();
 builder.Services.AddScoped<IOrderService, OrderService>();
 builder.Services.AddScoped<IPaymentService, PaymentService>();
 builder.Services.AddScoped<IPaymentMethodService, PaymentMethodService>();
+builder.Services.AddScoped<IModerationReviewService, ModerationReviewService>();
 
 // Background service for automatic order progression
 builder.Services.AddHostedService<OrderProgressionService>();
