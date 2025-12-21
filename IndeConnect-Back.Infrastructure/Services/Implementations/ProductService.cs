@@ -110,7 +110,7 @@ public class ProductService : IProductService
             product.Variants.Select(MapToVariantDto), // Maintenant juste les tailles
             product.Details.OrderBy(d => d.DisplayOrder).Select(d => new ProductDetailItemDto(d.Value, d.DisplayOrder)),
             product.Keywords.Select(pk => pk.Keyword.Name),
-            product.Reviews.Where(r => r.Status == ReviewStatus.Approved).Select(MapToReviewDto),
+            product.Reviews.Where(r => r.Status == ReviewStatus.Enabled).Select(MapToReviewDto),
             Math.Round(avgRating, 1),
             reviewsCount,
             totalStock,

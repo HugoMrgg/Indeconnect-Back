@@ -137,7 +137,7 @@ public class Product
     /// </summary>
     public double GetAverageRating()
     {
-        var approvedReviews = Reviews.Where(r => r.Status == ReviewStatus.Approved).ToList();
+        var approvedReviews = Reviews.Where(r => r.Status == ReviewStatus.Enabled).ToList();
         return approvedReviews.Any() ? approvedReviews.Average(r => (double)r.Rating) : 0.0;
     }
 
@@ -146,7 +146,7 @@ public class Product
     /// </summary>
     public int GetApprovedReviewsCount()
     {
-        return Reviews.Count(r => r.Status == ReviewStatus.Approved);
+        return Reviews.Count(r => r.Status == ReviewStatus.Enabled);
     }
 
     /// <summary>
