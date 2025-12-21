@@ -53,6 +53,7 @@ builder.Services.AddScoped<IBrandSubscriptionService, BrandSubscriptionService>(
 builder.Services.AddSingleton<BrandEthicsScorer>();
 builder.Services.AddScoped<IGeocodeService, NominatimGeocodeService>();
 builder.Services.AddScoped<ICartService, CartService>();
+builder.Services.AddScoped<IColorService, ColorService>();
 builder.Services.AddScoped<IAuditTrailService, AuditTrailService>();
 builder.Services.AddScoped<IEthicsService, EthicsService>();
 builder.Services.AddScoped<IEthicsQuestionnaireService, EthicsQuestionnaireService>();
