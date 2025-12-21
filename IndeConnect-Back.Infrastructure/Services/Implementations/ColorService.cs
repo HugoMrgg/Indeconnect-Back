@@ -14,11 +14,11 @@ public class ColorService : IColorService
         _context = context;
     }
 
-    public async Task<IEnumerable<ColorDto>> GetAllColorsAsync()
+    public async Task<IEnumerable<ColorLookupDto>> GetAllColorsAsync()
     {
         var colors = await _context.Colors
             .OrderBy(c => c.Name)
-            .Select(c => new ColorDto(c.Id, c.Name, c.Hexa))
+            .Select(c => new ColorLookupDto(c.Id, c.Name, c.Hexa))
             .ToListAsync();
 
         return colors;

@@ -4,5 +4,5 @@ namespace IndeConnect_Back.Application.Services.Interfaces;
 
 public interface IColorService
 {
-    Task<IEnumerable<ColorDto>> GetAllColorsAsync();
+    Task<IEnumerable<ColorLookupDto>> GetAllColorsAsync();
 }

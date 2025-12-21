@@ -19,7 +19,7 @@ public class ColorController : ControllerBase
     /// Get all available colors
     /// </summary>
     [HttpGet]
-    public async Task<ActionResult<IEnumerable<ColorDto>>> GetColors()
+    public async Task<ActionResult<IEnumerable<ColorLookupDto>>> GetColors()
     {
         var colors = await _colorService.GetAllColorsAsync();
         return Ok(colors);
