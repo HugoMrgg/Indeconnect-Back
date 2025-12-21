@@ -10,4 +10,4 @@ public record ProductReviewDto(
     string? Comment,
     DateTimeOffset CreatedAt,
     ReviewStatus Status
-);
+    );

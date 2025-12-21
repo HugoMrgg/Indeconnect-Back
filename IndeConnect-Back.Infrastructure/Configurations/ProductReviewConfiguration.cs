@@ -29,7 +29,7 @@ public class ProductReviewConfiguration : IEntityTypeConfiguration<ProductReview
                .HasConversion(new EnumToStringConverter<ReviewStatus>())
                .IsRequired()
                .HasMaxLength(20)
-               .HasDefaultValue(ReviewStatus.Pending);
+               .HasDefaultValue(ReviewStatus.Enabled);
         
         // Relation with Product
         builder.HasOne(pr => pr.Product)
