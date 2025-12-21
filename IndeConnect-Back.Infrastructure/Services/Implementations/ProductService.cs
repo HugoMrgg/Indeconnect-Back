@@ -43,7 +43,7 @@ public class ProductService : IProductService
             .Include(p => p.Details)
             .Include(p => p.Keywords)
                 .ThenInclude(pk => pk.Keyword)
-            .Include(p => p.Reviews.Where(r => r.Status == ReviewStatus.Approved))
+            .Include(p => p.Reviews.Where(r => r.Status == ReviewStatus.Enabled))
                 .ThenInclude(r => r.User)
             .FirstOrDefaultAsync(p => p.Id == productId && p.IsEnabled);
 
@@ -249,7 +249,7 @@ public class ProductService : IProductService
 
         var query = _context.ProductReviews
             .Include(r => r.User)
-            .Where(r => r.ProductId == productId && r.Status == ReviewStatus.Approved)
+            .Where(r => r.ProductId == productId && r.Status == ReviewStatus.Enabled)
             .OrderByDescending(r => r.CreatedAt);
 
         var reviews = await query

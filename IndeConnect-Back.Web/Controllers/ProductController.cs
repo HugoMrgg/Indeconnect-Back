@@ -232,13 +232,6 @@ public class ProductController : ControllerBase
                 Title = "Forbidden",
                 Detail = ex.Message
             });
-        catch (UnauthorizedAccessException ex)
-        {
-            return StatusCode(StatusCodes.Status403Forbidden, new ProblemDetails
-            {
-                Title = "Forbidden",
-                Detail = ex.Message
-            });
         }
     }
 
@@ -254,5 +247,9 @@ public class ProductController : ControllerBase
         {
             return Unauthorized();
         }
+
+        var userId = userIdNullable.Value;
+        var canReview = await _productService.CanUserReviewProductAsync(userId, productId);
+        return Ok(canReview);
     }
 }

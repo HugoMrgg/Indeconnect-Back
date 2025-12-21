@@ -33,5 +33,6 @@ public interface IProductService
     Task<IEnumerable<ProductReviewDto>> GetAllProductReviewsAsync(long productId);
 
     // Pour le vendeur : modération
+    Task ApproveProductReviewAsync(long reviewId, long sellerUserId);
     Task RejectProductReviewAsync(long reviewId, long sellerUserId);
 }
