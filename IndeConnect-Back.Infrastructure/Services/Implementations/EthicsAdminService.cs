@@ -196,24 +196,19 @@ public class EthicsAdminService : IEthicsAdminService
         {
             questionnaire.ReviewApproved(adminUserId);
 
-            // 1) Déclasser les anciens scores officiels de la marque
-            var currentOfficials = await _context.BrandEthicScores
-                .Where(s => s.BrandId == questionnaire.BrandId && s.IsOfficial)
+            // Charger tous les scores de la marque
+            var allBrandScores = await _context.BrandEthicScores
+                .Where(s => s.BrandId == questionnaire.BrandId)
                 .ToListAsync();
 
-            foreach (var s in currentOfficials)
-                s.MarkNonOfficial();
+            // Utiliser le service du domaine pour gérer la transition des scores officiels
+            var (demoted, promoted) = BrandEthicsScoreOfficializer.TransitionToOfficial(
+                allBrandScores,
+                questionnaire.Id
+            );
 
-            // 2) Promouvoir les scores de ce questionnaire comme officiels
-            var scores = await _context.BrandEthicScores
-                .Where(s => s.QuestionnaireId == questionnaire.Id)
-                .ToListAsync();
-
-            if (!scores.Any())
+            if (!promoted.Any())
                 throw new InvalidOperationException("Aucun score trouvé pour ce questionnaire (le SuperVendor doit soumettre pour générer les scores).");
-
-            foreach (var s in scores)
-                s.MarkOfficial();
         }
         else
         {

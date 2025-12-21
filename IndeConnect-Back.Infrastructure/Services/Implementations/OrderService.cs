@@ -155,7 +155,7 @@ public class OrderService : IOrderService
             var deposit = brand?.Deposits.FirstOrDefault();
             if (deposit != null)
             {
-                var estimatedDelivery = CalculateEstimatedDeliveryDate(
+                var estimatedDelivery = DeliveryEstimator.CalculateEstimatedDeliveryDate(
                     deposit,
                     address,
                     order.PlacedAt,
@@ -189,7 +189,7 @@ public class OrderService : IOrderService
             var invoice = new Invoice(
                 orderId: order.Id,
                 brandId: brandId,
-                invoiceNumber: GenerateInvoiceNumber(order.Id, brandId),
+                invoiceNumber: InvoiceNumberGenerator.Generate(order.Id, brandId),
                 amount: invoiceAmount
             );
 
@@ -323,149 +323,26 @@ public class OrderService : IOrderService
 
     /// <summary>
     /// Construit la timeline de suivi pour une BrandDelivery spécifique.
-    /// Une étape est marquée "completed" dès que le statut actuel la dépasse.
+    /// Utilise la méthode du domaine et mappe vers les DTOs.
     /// </summary>
     private List<TrackingStepDto> BuildBrandDeliveryTimeline(Order order, BrandDelivery delivery)
     {
-        var timeline = new List<TrackingStepDto>();
+        // Utiliser la méthode du domaine pour construire la timeline
+        var domainTimeline = delivery.BuildTrackingTimeline(order);
 
-        timeline.Add(new TrackingStepDto
+        // Mapper vers les DTOs
+        return domainTimeline.Select(step => new TrackingStepDto
         {
-            Status = "Placed",
-            Label = "Commande passée",
-            Description = "Votre commande a été enregistrée",
-            CompletedAt = order.PlacedAt,
-            IsCompleted = true,
-            IsCurrent = false // Jamais current
-        });
-
-        var isPaid = order.Status >= OrderStatus.Paid;
-        
-        timeline.Add(new TrackingStepDto
-        {
-            Status = "Paid",
-            Label = "Paiement confirmé",
-            Description = "Votre paiement a été accepté",
-            CompletedAt = isPaid ? order.PlacedAt : null,
-            IsCompleted = isPaid,
-            IsCurrent = false 
-        });
-
-       var preparingCompleted = delivery.Status > DeliveryStatus.Preparing;
-        var preparingCurrent = (order.Status == OrderStatus.Paid && delivery.Status == DeliveryStatus.Pending) 
-                             || (order.Status == OrderStatus.Processing && delivery.Status == DeliveryStatus.Preparing);
-        
-        var preparingDescription = order.Status == OrderStatus.Paid && delivery.Status == DeliveryStatus.Pending
-            ? "Votre commande va bientôt être préparée"
-            : "Votre commande est en cours de préparation";
-        
-        timeline.Add(new TrackingStepDto
-        {
-            Status = "Preparing",
-            Label = "En préparation",
-            Description = preparingDescription,
-            CompletedAt = preparingCompleted ? delivery.CreatedAt : null,
-            IsCompleted = preparingCompleted,
-            IsCurrent = preparingCurrent
-        });
-
-        var shippedCompleted = delivery.Status > DeliveryStatus.Shipped;
-        var shippedCurrent = delivery.Status == DeliveryStatus.Shipped;
-
-        timeline.Add(new TrackingStepDto
-        {
-            Status = "Shipped",
-            Label = "Expédiée",
-            Description = "Votre colis a été pris en charge par le transporteur",
-            CompletedAt = shippedCompleted || shippedCurrent ? delivery.ShippedAt : null,
-            IsCompleted = shippedCompleted,
-            IsCurrent = shippedCurrent
-        });
-
-        var inTransitCompleted = delivery.Status > DeliveryStatus.InTransit;
-        var inTransitCurrent = delivery.Status == DeliveryStatus.InTransit;
-
-        timeline.Add(new TrackingStepDto
-        {
-            Status = "InTransit",
-            Label = "En transit",
-            Description = "Votre colis est en cours d'acheminement",
-            CompletedAt = inTransitCompleted || inTransitCurrent ? delivery.UpdatedAt : null,
-            IsCompleted = inTransitCompleted,
-            IsCurrent = inTransitCurrent
-        });
-
-        var outForDeliveryCompleted = delivery.Status == DeliveryStatus.Delivered;
-        var outForDeliveryCurrent = delivery.Status == DeliveryStatus.OutForDelivery;
-
-        timeline.Add(new TrackingStepDto
-        {
-            Status = "OutForDelivery",
-            Label = "En cours de livraison",
-            Description = "Votre colis est en cours de livraison",
-            CompletedAt = outForDeliveryCompleted || outForDeliveryCurrent ? delivery.UpdatedAt : null,
-            IsCompleted = outForDeliveryCompleted,
-            IsCurrent = outForDeliveryCurrent
-        });
-
-        var deliveredCompleted = delivery.Status == DeliveryStatus.Delivered;
-        
-        timeline.Add(new TrackingStepDto
-        {
-            Status = "Delivered",
-            Label = "Livrée",
-            Description = "Votre commande a été livrée avec succès",
-            CompletedAt = delivery.DeliveredAt,
-            IsCompleted = deliveredCompleted,
-            IsCurrent = deliveredCompleted
-        });
-
-        return timeline;
+            Status = step.Status,
+            Label = step.Label,
+            Description = step.Description,
+            CompletedAt = step.CompletedAt,
+            IsCompleted = step.IsCompleted,
+            IsCurrent = step.IsCurrent
+        }).ToList();
     }
 
 
-    /// <summary>
-    /// Calcule la date estimée de livraison basée sur :
-    /// 1. La distance entre le dépôt de la marque et l'adresse de livraison
-    /// 2. Les délais de la méthode de livraison choisie
-    /// </summary>
-    private DateTimeOffset CalculateEstimatedDeliveryDate(
-        Deposit deposit,
-        ShippingAddress deliveryAddress,
-        DateTimeOffset orderPlacedAt,
-        BrandShippingMethod? shippingMethod = null)
-    {
-        // Calculer le délai de base selon la distance
-        int baseHours;
-
-        // Même ville : 24h
-        if (deposit.City?.Trim().Equals(deliveryAddress.City?.Trim(), StringComparison.OrdinalIgnoreCase) == true)
-        {
-            baseHours = 24;
-        }
-        // Même pays : 48h
-        else if (deposit.Country?.Trim().Equals(deliveryAddress.Country?.Trim(), StringComparison.OrdinalIgnoreCase) == true)
-        {
-            baseHours = 48;
-        }
-        // Pays différent : 72h
-        else
-        {
-            baseHours = 72;
-        }
-
-        // Ajouter le délai de la méthode de livraison (utilise la moyenne entre min et max)
-        if (shippingMethod != null)
-        {
-            var shippingMethodAvgDays = (shippingMethod.EstimatedMinDays + shippingMethod.EstimatedMaxDays) / 2.0;
-            var shippingMethodHours = (int)(shippingMethodAvgDays * 24);
-
-            return orderPlacedAt.AddHours(baseHours + shippingMethodHours);
-        }
-
-        // Si pas de méthode spécifiée, utiliser seulement le délai de distance
-        return orderPlacedAt.AddHours(baseHours);
-    }
 
     public async Task<List<OrderDto>> GetUserOrdersAsync(long userId)
     {
@@ -513,9 +390,4 @@ public class OrderService : IOrderService
         };
     }
 
-    private string GenerateInvoiceNumber(long orderId, long brandId)
-    {
-        var timestamp = DateTimeOffset.UtcNow.ToString("yyyyMMdd");
-        return $"INV-{timestamp}-{orderId}-{brandId}";
-    }
 }

@@ -193,7 +193,7 @@ public class OrderProgressionService : BackgroundService
                 if (currentHours >= delays[DeliveryStatus.Shipped])
                 {
                     var trackingNumber = brandDelivery.TrackingNumber ?? GenerateTrackingNumber(brandDelivery.BrandId);
-                    brandDelivery.MarkAsShipped(DateTime.UtcNow, trackingNumber);
+                    brandDelivery.MarkAsShipped(DateTimeOffset.Now, trackingNumber);
                     _logger.LogInformation(
                         "BrandDelivery {TrackingNumber} for Brand {BrandName} transitioned to Shipped",
                         brandDelivery.TrackingNumber, brandDelivery.Brand?.Name);

@@ -15,7 +15,8 @@ public record BrandDetailDto(
     int ReviewsCount,
     IEnumerable<string> EthicTags,
     IEnumerable<DepositDto> Deposits,
-    double EthicsScore,
+    double EthicsScoreProduction,
+    double EthicsScoreTransport,
     string? AccentColor
 );
 

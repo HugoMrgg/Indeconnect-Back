@@ -331,6 +331,67 @@ VALUES
     -- EcoKids
     (154, 101), (155, 106), (156, 109), (157, 113), (158, 117), (159, 121);
 
+-- ============================================
+-- 11.4 CRÉER LES SCORES ÉTHIQUES OFFICIELS (NOUVELLE TABLE CRITIQUE)
+-- ============================================
+-- Cette table stocke les scores calculés et approuvés pour chaque marque par catégorie
+
+INSERT INTO "BrandEthicScores" ("BrandId", "CategoryId", "QuestionnaireId", "RawScore", "FinalScore", "IsOfficial", "CreatedAt")
+VALUES
+    -- EcoWear (BrandId=100, QuestionnaireId=100) - Scores excellents
+    (100, 1, 100, 100.0, 100.0, true, NOW() - INTERVAL '20 days'),  -- MaterialsManufacturing
+    (100, 2, 100, 96.67, 96.67, true, NOW() - INTERVAL '20 days'),  -- Transport (avg: 90+100+100)/3
+
+    -- NaturalStyle (BrandId=101, QuestionnaireId=101) - Scores bons
+    (101, 1, 101, 75.0, 75.0, true, NOW() - INTERVAL '20 days'),    -- MaterialsManufacturing
+    (101, 2, 101, 73.33, 73.33, true, NOW() - INTERVAL '20 days'),  -- Transport (avg: 85+60+75)/3
+
+    -- UrbanFit (BrandId=102, QuestionnaireId=102) - Scores moyens
+    (102, 1, 102, 43.33, 43.33, true, NOW() - INTERVAL '20 days'),  -- MaterialsManufacturing
+    (102, 2, 102, 40.0, 40.0, true, NOW() - INTERVAL '20 days'),    -- Transport (avg: 60+20+40)/3
+
+    -- LuxeBrand (BrandId=103, QuestionnaireId=103) - Scores excellents
+    (103, 1, 103, 90.0, 90.0, true, NOW() - INTERVAL '20 days'),    -- MaterialsManufacturing
+    (103, 2, 103, 88.33, 88.33, true, NOW() - INTERVAL '20 days'),  -- Transport (avg: 90+100+75)/3
+
+    -- SportWear Pro (BrandId=104, QuestionnaireId=104) - Scores moyens-bons
+    (104, 1, 104, 65.0, 65.0, true, NOW() - INTERVAL '20 days'),    -- MaterialsManufacturing
+    (104, 2, 104, 53.33, 53.33, true, NOW() - INTERVAL '20 days'),  -- Transport (avg: 60+60+40)/3
+
+    -- VintageTales (BrandId=105, QuestionnaireId=105) - Scores faibles
+    (105, 1, 105, 30.0, 30.0, true, NOW() - INTERVAL '20 days'),    -- MaterialsManufacturing
+    (105, 2, 105, 3.33, 3.33, true, NOW() - INTERVAL '20 days'),    -- Transport (avg: 10+0+0)/3
+
+    -- EthicalDenim (BrandId=106, QuestionnaireId=106) - Scores excellents
+    (106, 1, 106, 100.0, 100.0, true, NOW() - INTERVAL '20 days'),  -- MaterialsManufacturing
+    (106, 2, 106, 95.0, 95.0, true, NOW() - INTERVAL '20 days'),    -- Transport (avg: 85+100+100)/3
+
+    -- MinimalStyle (BrandId=107, QuestionnaireId=107) - Scores moyens
+    (107, 1, 107, 55.0, 55.0, true, NOW() - INTERVAL '20 days'),    -- MaterialsManufacturing
+    (107, 2, 107, 23.33, 23.33, true, NOW() - INTERVAL '20 days'),  -- Transport (avg: 10+20+40)/3
+
+    -- ArtisanCraft (BrandId=108, QuestionnaireId=108) - Scores excellents
+    (108, 1, 108, 100.0, 100.0, true, NOW() - INTERVAL '20 days'),  -- MaterialsManufacturing
+    (108, 2, 108, 96.67, 96.67, true, NOW() - INTERVAL '20 days'),  -- Transport (avg: 90+100+100)/3
+
+    -- EcoKids (BrandId=109, QuestionnaireId=109) - Scores moyens-bons
+    (109, 1, 109, 65.0, 65.0, true, NOW() - INTERVAL '20 days'),    -- MaterialsManufacturing
+    (109, 2, 109, 73.33, 73.33, true, NOW() - INTERVAL '20 days');  -- Transport (avg: 85+60+75)/3
+
+-- Vérifier que les scores sont bien insérés
+SELECT 'BrandEthicScores : ' || COUNT(*) as info FROM "BrandEthicScores";
+
+-- Afficher un aperçu des scores par marque
+SELECT
+    b."Name" as brand_name,
+    ec."Label" as category,
+    bes."FinalScore" as score,
+    bes."IsOfficial" as is_official
+FROM "BrandEthicScores" bes
+         JOIN "Brands" b ON bes."BrandId" = b."Id"
+         JOIN "EthicsCategories" ec ON bes."CategoryId" = ec."Id"
+ORDER BY b."Name", ec."Order";
+
 -- 12. AVIS UTILISATEURS
 INSERT INTO "UserReviews" ("UserId", "BrandId", "Rating", "Comment", "CreatedAt")
 VALUES

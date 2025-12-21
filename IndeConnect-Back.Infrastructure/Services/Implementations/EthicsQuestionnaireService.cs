@@ -82,39 +82,11 @@ public class EthicsQuestionnaireService : IEthicsQuestionnaireService
 
             var optionIds = (a.OptionIds ?? Array.Empty<long>()).Distinct().ToList();
 
-            var answerType = q.AnswerType;
-            // si valeur hors-enum (ex: 0 ou 99), on fallback sur Single
-            if (!Enum.IsDefined(typeof(EthicsAnswerType), answerType))
-                answerType = EthicsAnswerType.Single;
+            // Valider les contraintes du type de réponse (Single/Multiple) - utilise la méthode du domaine
+            q.ValidateAnswerOptions(optionIds, request.Submit);
 
-            // Respect radio/checkbox
-            if (answerType == EthicsAnswerType.Single)
-            {
-                if (optionIds.Count > 1)
-                    throw new InvalidOperationException($"Question {q.Id} (Single) : une seule option autorisée.");
-                if (request.Submit && optionIds.Count != 1)
-                    throw new InvalidOperationException($"Question {q.Id} (Single) : exactement 1 option est requise à la soumission.");
-            }
-            else if (answerType == EthicsAnswerType.Multiple)
-            {
-                if (request.Submit && optionIds.Count < 1)
-                    throw new InvalidOperationException($"Question {q.Id} (Multiple) : au moins 1 option est requise à la soumission.");
-            }
-            else
-            {
-                // normalement inatteignable maintenant
-                throw new InvalidOperationException($"Type de réponse non supporté pour la question {q.Id}.");
-            }
-
-            // Valider options (existantes, actives, appartiennent à la question)
-            foreach (var optId in optionIds)
-            {
-                if (!optionsById.TryGetValue(optId, out var opt))
-                    throw new InvalidOperationException($"Option inconnue ou inactive: {optId}");
-
-                if (opt.QuestionId != q.Id)
-                    throw new InvalidOperationException($"Option {optId} n'appartient pas à la question {q.Id}.");
-            }
+            // Valider que les options appartiennent à la question - utilise la méthode du domaine
+            q.ValidateOptionsOwnership(optionIds, optionsById);
 
             // Upsert BrandQuestionResponse (1 par question)
             var response = questionnaire.Responses.FirstOrDefault(r => r.QuestionId == q.Id);
@@ -136,11 +108,8 @@ public class EthicsQuestionnaireService : IEthicsQuestionnaireService
             foreach (var optId in optionIds)
                 _context.BrandQuestionResponseOptions.Add(new BrandQuestionResponseOption(response.Id, optId));
 
-            // Score audit (optionnel)
-            var calculatedScore = optionIds.Count == 0
-                ? 0m
-                : optionIds.Sum(id => optionsById[id].Score);
-
+            // Score audit (optionnel) - utilise la méthode du domaine
+            var calculatedScore = BrandQuestionResponse.CalculateScore(optionsById, optionIds);
             response.SetCalculatedScore(calculatedScore);
         }
 
