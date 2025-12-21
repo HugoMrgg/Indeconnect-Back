@@ -73,7 +73,7 @@ public class ModerationReviewService : IModerationReviewService
         return items;
     }
 
-    public async Task ApproveAsync(long reviewId, long moderatorUserId)
+    public async Task ApproveAsync(long reviewId)
     {
         var review = await _context.ProductReviews.FirstOrDefaultAsync(r => r.Id == reviewId);
         if (review == null)
@@ -85,7 +85,7 @@ public class ModerationReviewService : IModerationReviewService
         await _context.SaveChangesAsync();
     }
 
-    public async Task RejectAsync(long reviewId, long moderatorUserId)
+    public async Task RejectAsync(long reviewId)
     {
         var review = await _context.ProductReviews.FirstOrDefaultAsync(r => r.Id == reviewId);
         if (review == null)
