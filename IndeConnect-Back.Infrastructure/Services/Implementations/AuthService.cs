@@ -31,7 +31,7 @@ public class AuthService : IAuthService
         _emailService = emailService;
         _resetTokenService = resetTokenService;
         _googleClientId = Environment.GetEnvironmentVariable("GOOGLE_CLIENT_ID");
-        _frontendUrl = Environment.GetEnvironmentVariable("FRONTEND_URL");
+        _frontendUrl = "http://localhost:5173"; /*Environment.GetEnvironmentVariable("FRONTEND_URL");*/
     }
 
     public async Task<AuthResponse> RegisterAsync(RegisterRequest request)

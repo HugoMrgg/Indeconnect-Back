@@ -26,6 +26,14 @@ public class BrandQuestionnaireConfiguration : IEntityTypeConfiguration<BrandQue
                .OnDelete(DeleteBehavior.Cascade)
                .IsRequired();
 
+        // Relation with CatalogVersion
+        builder.Property(bq => bq.CatalogVersionId).IsRequired();
+        builder.HasOne(bq => bq.CatalogVersion)
+               .WithMany(cv => cv.Questionnaires)
+               .HasForeignKey(bq => bq.CatalogVersionId)
+               .OnDelete(DeleteBehavior.Restrict)
+               .IsRequired();
+
         // Relation with Responses
         builder.HasMany(bq => bq.Responses)
                .WithOne(br => br.Questionnaire)

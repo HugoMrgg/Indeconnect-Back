@@ -7,7 +7,9 @@ public class BrandQuestionnaire
     public long Id { get; private set; }
     public long BrandId { get; private set; }
     public Brand Brand { get; private set; } = default!;
-    
+    public long CatalogVersionId { get; private set; }
+    public CatalogVersion CatalogVersion { get; private set; } = default!;
+
     public QuestionnaireStatus Status { get; private set; } = QuestionnaireStatus.Draft;
     public DateTimeOffset CreatedAt { get; private set; }
     public DateTimeOffset? SubmittedAt { get; private set; }
@@ -20,9 +22,10 @@ public class BrandQuestionnaire
 
     private BrandQuestionnaire() { }
 
-    public BrandQuestionnaire(long brandId)
+    public BrandQuestionnaire(long brandId, long catalogVersionId)
     {
         BrandId = brandId;
+        CatalogVersionId = catalogVersionId;
         CreatedAt = DateTimeOffset.UtcNow;
         Status = QuestionnaireStatus.Draft;
     }

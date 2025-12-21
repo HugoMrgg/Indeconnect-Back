@@ -1,5 +1,5 @@
 ﻿-- ============================================
--- SCRIPT MASSIF COMPLET - NOUVEAU MODÈLE AVEC ETHICS V2
+-- SCRIPT MASSIF COMPLET - NOUVEAU MODÈLE AVEC ETHICS V2 (CORRIGÉ)
 -- ============================================
 
 -- 1. NETTOYER TOUT
@@ -16,7 +16,6 @@ DELETE FROM "ProductGroups";
 DELETE FROM "Brands";
 DELETE FROM "EthicsOptions";
 DELETE FROM "EthicsQuestions";
-DELETE FROM "EthicsCategories";
 DELETE FROM "Keywords";
 DELETE FROM "Categories";
 DELETE FROM "Colors";
@@ -71,30 +70,28 @@ VALUES
     (108, 'elegant'), (109, 'sporty');
 
 -- ============================================
--- NOUVELLE STRUCTURE ETHICS V2
+-- NOUVELLE STRUCTURE ETHICS V2 (CORRIGÉE)
 -- ============================================
 
--- 3.1 CRÉER LES CATÉGORIES D'ÉTHIQUE (NOUVELLE TABLE)
-INSERT INTO "EthicsCategories" ("Id", "Key", "Label", "Order", "IsActive")
+-- 3.0 CRÉER UN CATALOG VERSION (OBLIGATOIRE)
+INSERT INTO "CatalogVersions" ("Id", "VersionNumber", "CreatedAt", "PublishedAt", "IsActive", "IsDraft")
 VALUES
-    (1, 'MaterialsManufacturing', 'Matériaux et Fabrication', 1, true),
-    (2, 'Transport', 'Transport et Logistique', 2, true),
-    (3, 'SocialImpact', 'Impact Social', 3, true),
-    (4, 'Environmental', 'Environnement', 4, true);
+    (1, 'v1.0', NOW(), NOW(), true, false);
 
--- 3.2 CRÉER LES QUESTIONS D'ÉTHIQUE (AVEC CategoryId)
+-- 3.2 CRÉER LES QUESTIONS D'ÉTHIQUE (AVEC CatalogVersionId ET Category en INT)
+-- Category : 0=MaterialsManufacturing, 1=Transport, 2=SocialImpact, 3=Environmental
 -- AnswerType : 0=SingleChoice, 1=MultipleChoice, 2=Text, 3=Number
-INSERT INTO "EthicsQuestions" ("Id", "CategoryId", "Key", "Label", "Order", "AnswerType", "IsActive")
+INSERT INTO "EthicsQuestions" ("Id", "CatalogVersionId", "Category", "Key", "Label", "Order", "AnswerType", "IsActive")
 VALUES
-    -- MaterialsManufacturing (CategoryId=1)
-    (100, 1, 'material_origin', 'Où proviennent vos matériaux ?', 1, 0, true),
-    (101, 1, 'manufacturing_conditions', 'Conditions de travail ?', 2, 0, true),
-    (102, 1, 'organic_certified', 'Certifiés bio ?', 3, 0, true),
+    -- MaterialsManufacturing (Category=0)
+    (100, 1, 0, 'material_origin', 'Où proviennent vos matériaux ?', 1, 0, true),
+    (101, 1, 0, 'manufacturing_conditions', 'Conditions de travail ?', 2, 0, true),
+    (102, 1, 0, 'organic_certified', 'Certifiés bio ?', 3, 0, true),
 
-    -- Transport (CategoryId=2)
-    (103, 2, 'transport_method', 'Mode de transport ?', 1, 0, true),
-    (104, 2, 'carbon_offset', 'Compensation carbone ?', 2, 0, true),
-    (105, 2, 'local_production', 'Production locale ?', 3, 0, true);
+    -- Transport (Category=1)
+    (103, 1, 1, 'transport_method', 'Mode de transport ?', 1, 0, true),
+    (104, 1, 1, 'carbon_offset', 'Compensation carbone ?', 2, 0, true),
+    (105, 1, 1, 'local_production', 'Production locale ?', 3, 0, true);
 
 -- 3.3 CRÉER LES OPTIONS DE RÉPONSE (AVEC Order ET IsActive)
 INSERT INTO "EthicsOptions" ("Id", "QuestionId", "Key", "Label", "Score", "Order", "IsActive")
@@ -148,6 +145,7 @@ VALUES
     (107, 'MinimalStyle', 'https://res.cloudinary.com/db82qv38a/image/upload/v1765219581/logo8_tvb97m.jpg', 'https://res.cloudinary.com/db82qv38a/image/upload/v1765219601/banner7_g133qm.png', 'Minimalisme', 'Intemporel', 'Stockholm', 'minimal@style.se', '€€', 'Approved'),
     (108, 'ArtisanCraft', 'https://res.cloudinary.com/db82qv38a/image/upload/v1765219581/logo9_fbhq1z.jpg', 'https://res.cloudinary.com/db82qv38a/image/upload/v1765219601/banner7_g133qm.png', 'Artisanal', 'Handmade', 'Athens', 'craft@artisan.gr', '€€€', 'Approved'),
     (109, 'EcoKids', 'https://res.cloudinary.com/db82qv38a/image/upload/v1765219583/logo10_bmv4db.jpg', 'https://res.cloudinary.com/db82qv38a/image/upload/v1765219601/banner7_g133qm.png', 'Enfants', 'Safe', 'Copenhagen', 'kids@eco.dk', '€€', 'Approved');
+
 
 -- 5. CRÉER LES ADRESSES DE LIVRAISON DE TEST POUR L'UTILISATEUR PRINCIPAL (Hugo - ID 97)
 INSERT INTO "ShippingAddresses" ("Id", "UserId", "Street", "Number", "PostalCode", "City", "Country", "IsDefault")
@@ -252,18 +250,19 @@ VALUES
 
 -- 11.1 Créer les questionnaires (avec Status enum au lieu de IsApproved)
 -- Status : 0=Draft, 1=Submitted, 2=UnderReview, 3=Approved, 4=Rejected
-INSERT INTO "BrandQuestionnaires" ("Id", "BrandId", "Status", "CreatedAt", "SubmittedAt", "ReviewedAt")
+
+INSERT INTO "BrandQuestionnaires" ("Id", "BrandId", "CatalogVersionId", "Status", "CreatedAt", "SubmittedAt", "ReviewedAt")
 VALUES
-    (100, 100, 3, NOW() - INTERVAL '30 days', NOW() - INTERVAL '25 days', NOW() - INTERVAL '20 days'),
-    (101, 101, 3, NOW() - INTERVAL '30 days', NOW() - INTERVAL '25 days', NOW() - INTERVAL '20 days'),
-    (102, 102, 3, NOW() - INTERVAL '30 days', NOW() - INTERVAL '25 days', NOW() - INTERVAL '20 days'),
-    (103, 103, 3, NOW() - INTERVAL '30 days', NOW() - INTERVAL '25 days', NOW() - INTERVAL '20 days'),
-    (104, 104, 3, NOW() - INTERVAL '30 days', NOW() - INTERVAL '25 days', NOW() - INTERVAL '20 days'),
-    (105, 105, 3, NOW() - INTERVAL '30 days', NOW() - INTERVAL '25 days', NOW() - INTERVAL '20 days'),
-    (106, 106, 3, NOW() - INTERVAL '30 days', NOW() - INTERVAL '25 days', NOW() - INTERVAL '20 days'),
-    (107, 107, 3, NOW() - INTERVAL '30 days', NOW() - INTERVAL '25 days', NOW() - INTERVAL '20 days'),
-    (108, 108, 3, NOW() - INTERVAL '30 days', NOW() - INTERVAL '25 days', NOW() - INTERVAL '20 days'),
-    (109, 109, 3, NOW() - INTERVAL '30 days', NOW() - INTERVAL '25 days', NOW() - INTERVAL '20 days');
+    (100, 100, 1, 3, NOW() - INTERVAL '30 days', NOW() - INTERVAL '25 days', NOW() - INTERVAL '20 days'),
+    (101, 101, 1, 3, NOW() - INTERVAL '30 days', NOW() - INTERVAL '25 days', NOW() - INTERVAL '20 days'),
+    (102, 102, 1, 3, NOW() - INTERVAL '30 days', NOW() - INTERVAL '25 days', NOW() - INTERVAL '20 days'),
+    (103, 103, 1, 3, NOW() - INTERVAL '30 days', NOW() - INTERVAL '25 days', NOW() - INTERVAL '20 days'),
+    (104, 104, 1, 3, NOW() - INTERVAL '30 days', NOW() - INTERVAL '25 days', NOW() - INTERVAL '20 days'),
+    (105, 105, 1, 3, NOW() - INTERVAL '30 days', NOW() - INTERVAL '25 days', NOW() - INTERVAL '20 days'),
+    (106, 106, 1, 3, NOW() - INTERVAL '30 days', NOW() - INTERVAL '25 days', NOW() - INTERVAL '20 days'),
+    (107, 107, 1, 3, NOW() - INTERVAL '30 days', NOW() - INTERVAL '25 days', NOW() - INTERVAL '20 days'),
+    (108, 108, 1, 3, NOW() - INTERVAL '30 days', NOW() - INTERVAL '25 days', NOW() - INTERVAL '20 days'),
+    (109, 109, 1, 3, NOW() - INTERVAL '30 days', NOW() - INTERVAL '25 days', NOW() - INTERVAL '20 days');
 
 -- 11.2 Créer les réponses (SANS OptionId direct)
 INSERT INTO "BrandQuestionResponses" ("Id", "QuestionnaireId", "QuestionId", "CalculatedScore")
@@ -319,7 +318,7 @@ VALUES
     (112, 102), (113, 106), (114, 110), (115, 114), (116, 118), (117, 122),
     -- LuxeBrand
     (118, 100), (119, 104), (120, 109), (121, 112), (122, 116), (123, 121),
-    -- SportWear Pro
+    -- SportWear Prox
     (124, 101), (125, 105), (126, 110), (127, 114), (128, 117), (129, 122),
     -- VintageTales
     (130, 102), (131, 107), (132, 111), (133, 115), (134, 119), (135, 123),
@@ -500,7 +499,6 @@ SELECT '✅ TOUTES LES DONNÉES INSÉRÉES AVEC NOUVEAU MODÈLE ETHICS V2 !' as 
 SELECT 'Users : ' || COUNT(*) as info FROM "Users";
 SELECT 'Brands : ' || COUNT(*) as info FROM "Brands";
 SELECT 'Deposits : ' || COUNT(*) as info FROM "Deposits";
-SELECT 'EthicsCategories : ' || COUNT(*) as info FROM "EthicsCategories";
 SELECT 'EthicsQuestions : ' || COUNT(*) as info FROM "EthicsQuestions";
 SELECT 'EthicsOptions : ' || COUNT(*) as info FROM "EthicsOptions";
 SELECT 'ProductGroups : ' || COUNT(*) as info FROM "ProductGroups";

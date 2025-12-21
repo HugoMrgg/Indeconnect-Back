@@ -21,6 +21,7 @@ using Serilog;
 using Serilog.Formatting.Compact;
 
 
+
 var builder = WebApplication.CreateBuilder(args);
 
 // Load .env (optional, but you use DotNetEnv)
@@ -38,7 +39,10 @@ Console.WriteLine("postgresDb = " + connectionString);
 
 builder.Services.AddDbContext<AppDbContext>(options =>
 {
-    options.UseNpgsql(connectionString);
+    options.UseNpgsql(connectionString, npgsql =>
+    {
+        npgsql.UseQuerySplittingBehavior(QuerySplittingBehavior.SplitQuery);
+    });
 });
 
 // ---------- SERVICES APPLICATION / INFRA ----------
@@ -55,6 +59,7 @@ builder.Services.AddScoped<ICartService, CartService>();
 builder.Services.AddScoped<IAuditTrailService, AuditTrailService>();
 builder.Services.AddScoped<IEthicsService, EthicsService>();
 builder.Services.AddScoped<IEthicsQuestionnaireService, EthicsQuestionnaireService>();
+builder.Services.AddScoped<ICatalogService, CatalogService>();
 builder.Services.AddScoped<IEthicsAdminService, EthicsAdminService>();
 builder.Services.AddScoped<ICartService, CartService>();
 builder.Services.AddScoped<IEmailService, SendGridEmailService>();
@@ -65,6 +70,7 @@ builder.Services.AddScoped<IShippingService, ShippingService>();
 builder.Services.AddScoped<IOrderService, OrderService>();
 builder.Services.AddScoped<IPaymentService, PaymentService>();
 builder.Services.AddScoped<IPaymentMethodService, PaymentMethodService>();
+builder.Services.AddScoped<IModerationReviewService, ModerationReviewService>();
 
 // Background service for automatic order progression
 builder.Services.AddHostedService<OrderProgressionService>();
@@ -81,7 +87,7 @@ builder.Services.AddCors(options =>
     options.AddPolicy(name: MyAllowSpecificOrigins,
         policy =>
         {
-            policy.AllowAnyOrigin()
+            policy.WithOrigins("http://localhost:5173","http://localhost:5172")
                 .AllowAnyHeader()
                 .AllowAnyMethod(); 
         });
@@ -226,7 +232,6 @@ app.UseRouting();
 // Doit être placé avant l'authentification et l'autorisation
 app.UseCors(MyAllowSpecificOrigins);
 
-//app.UseHttpsRedirection();
 app.UseHttpsRedirection();
 
 app.UseAuthentication();

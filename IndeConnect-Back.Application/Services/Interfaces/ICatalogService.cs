@@ -2,10 +2,8 @@
 
 namespace IndeConnect_Back.Application.Services.Interfaces;
 
-public interface IEthicsAdminService
+public interface ICatalogService
 {
     Task<AdminCatalogDto> GetCatalogAsync();
     Task<AdminCatalogDto> UpsertCatalogAsync(AdminUpsertCatalogRequest request);
-
-    Task ReviewQuestionnaireAsync(long questionnaireId, long adminUserId, ReviewQuestionnaireRequest request);
 }

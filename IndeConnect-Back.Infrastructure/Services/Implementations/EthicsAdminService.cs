@@ -9,45 +9,49 @@ public class EthicsAdminService : IEthicsAdminService
 {
     private readonly AppDbContext _context;
 
-    public EthicsAdminService(AppDbContext context)
-    {
-        _context = context;
-    }
+    public EthicsAdminService(AppDbContext context) => _context = context;
 
-    public async Task<AdminUpsertCatalogRequest> GetCatalogAsync()
+    public async Task<AdminCatalogDto> GetCatalogAsync()
     {
-        // Catalogue complet (actifs + inactifs)
-        var categories = await _context.EthicsCategories
+        // Récupérer la version draft (ou créer une nouvelle si aucune n'existe)
+        var draftVersion = await _context.CatalogVersions
             .AsNoTracking()
-            .OrderBy(c => c.Order)
-            .ThenBy(c => c.Id)
-            .ToListAsync();
+            .Where(v => v.IsDraft)
+            .FirstOrDefaultAsync();
+
+        if (draftVersion == null)
+        {
+            throw new InvalidOperationException("Aucune version draft du catalogue trouvée. Veuillez créer une nouvelle version.");
+        }
 
         var questions = await _context.EthicsQuestions
             .AsNoTracking()
-            .OrderBy(q => q.CategoryId)
-            .ThenBy(q => q.Order)
-            .ThenBy(q => q.Id)
+            .Where(q => q.CatalogVersionId == draftVersion.Id)
+            .OrderBy(q => q.Category).ThenBy(q => q.Order).ThenBy(q => q.Id)
             .ToListAsync();
 
         var options = await _context.EthicsOptions
             .AsNoTracking()
-            .OrderBy(o => o.QuestionId)
-            .ThenBy(o => o.Order)
-            .ThenBy(o => o.Id)
+            .Where(o => questions.Select(q => q.Id).Contains(o.QuestionId))
+            .OrderBy(o => o.QuestionId).ThenBy(o => o.Order).ThenBy(o => o.Id)
             .ToListAsync();
 
-        var categoriesDto = categories.Select(c => new UpsertCategoryDto(
-            Id: c.Id,
-            Key: c.Key,
-            Label: c.Label,
-            Order: c.Order,
-            IsActive: c.IsActive
+        var questionKeyById = questions.ToDictionary(q => q.Id, q => q.Key);
+
+        // Catégories : utiliser l'enum
+        var categories = Enum.GetValues<EthicsCategory>();
+        var categoriesDto = categories.Select(c => new AdminCategoryDto(
+            Id: (long)c,
+            Key: c.ToString(),
+            Label: c.ToString(),
+            Order: (int)c,
+            IsActive: true
         )).ToList();
 
-        var questionsDto = questions.Select(q => new UpsertQuestionDto(
+        var questionsDto = questions.Select(q => new AdminQuestionDto(
             Id: q.Id,
-            CategoryId: q.CategoryId,
+            CategoryId: (long)q.Category,
+            CategoryKey: q.Category.ToString(),
             Key: q.Key,
             Label: q.Label,
             Order: q.Order,
@@ -55,130 +59,123 @@ public class EthicsAdminService : IEthicsAdminService
             IsActive: q.IsActive
         )).ToList();
 
-        var optionsDto = options.Select(o => new UpsertOptionDto(
+        var optionsDto = options.Select(o => new AdminOptionDto(
             Id: o.Id,
             QuestionId: o.QuestionId,
+            QuestionKey: questionKeyById.TryGetValue(o.QuestionId, out var qk) ? qk : "",
             Key: o.Key,
             Label: o.Label,
             Order: o.Order,
             Score: o.Score,
             IsActive: o.IsActive
         )).ToList();
-        
-        return new AdminUpsertCatalogRequest(
-            Categories: categoriesDto,
-            Questions: questionsDto,
-            Options: optionsDto
-        );
+
+        return new AdminCatalogDto(categoriesDto, questionsDto, optionsDto);
     }
 
-    public async Task UpsertCatalogAsync(AdminUpsertCatalogRequest request)
+    public async Task<AdminCatalogDto> UpsertCatalogAsync(AdminUpsertCatalogRequest request)
     {
         using var tx = await _context.Database.BeginTransactionAsync();
 
-        // 1) Categories
-        foreach (var c in request.Categories)
+        // Récupérer ou créer la version draft
+        var draftVersion = await _context.CatalogVersions
+            .Where(v => v.IsDraft)
+            .FirstOrDefaultAsync();
+
+        if (draftVersion == null)
         {
-            if (string.IsNullOrWhiteSpace(c.Key))
-                throw new InvalidOperationException("Category.Key est requis.");
-            if (string.IsNullOrWhiteSpace(c.Label))
-                throw new InvalidOperationException("Category.Label est requis.");
-
-            EthicsCategoryEntity entity;
-            if (c.Id.HasValue)
-            {
-                entity = await _context.EthicsCategories.FirstOrDefaultAsync(x => x.Id == c.Id.Value)
-                         ?? throw new InvalidOperationException($"Catégorie introuvable: {c.Id.Value}");
-
-                entity.Update(c.Label, c.Order, c.IsActive);
-            }
-            else
-            {
-                // Key unique
-                var key = c.Key.Trim();
-                var exists = await _context.EthicsCategories.AnyAsync(x => x.Key == key);
-                if (exists)
-                    throw new InvalidOperationException($"Catégorie déjà existante pour Key='{key}'.");
-
-                entity = new EthicsCategoryEntity(key, c.Label.Trim(), c.Order, c.IsActive);
-                _context.EthicsCategories.Add(entity);
-            }
+            throw new InvalidOperationException("Aucune version draft trouvée. Impossible de modifier le catalogue.");
         }
 
-        await _context.SaveChangesAsync();
+        var questionsIn  = (request.Questions  ?? Array.Empty<UpsertQuestionDto>()).ToList();
+        var optionsIn    = (request.Options    ?? Array.Empty<UpsertOptionDto>()).ToList();
 
-        // 2) Questions
-        foreach (var q in request.Questions)
+        // 1) Questions
+        foreach (var q in questionsIn)
         {
-            if (string.IsNullOrWhiteSpace(q.Key))
-                throw new InvalidOperationException("Question.Key est requis.");
-            if (string.IsNullOrWhiteSpace(q.Label))
-                throw new InvalidOperationException("Question.Label est requis.");
+            if (string.IsNullOrWhiteSpace(q.Key))         throw new InvalidOperationException("Question.Key est requis.");
+            if (string.IsNullOrWhiteSpace(q.Label))       throw new InvalidOperationException("Question.Label est requis.");
+            if (string.IsNullOrWhiteSpace(q.CategoryKey)) throw new InvalidOperationException($"Question '{q.Key}': CategoryKey est requis.");
 
-            var categoryExists = await _context.EthicsCategories.AnyAsync(x => x.Id == q.CategoryId);
-            if (!categoryExists)
-                throw new InvalidOperationException($"CategoryId invalide pour question: {q.CategoryId}");
+            var key = q.Key.Trim();
+            var label = q.Label.Trim();
+            var catKey = q.CategoryKey.Trim();
 
-            if (!Enum.TryParse<EthicsAnswerType>(q.AnswerType, ignoreCase: true, out var answerType))
-                throw new InvalidOperationException($"AnswerType invalide: '{q.AnswerType}' (Single/Multiple).");
+            if (!Enum.TryParse<EthicsCategory>(catKey, true, out var category))
+                throw new InvalidOperationException($"CategoryKey invalide pour question '{key}': '{catKey}'. Valeurs attendues: Manufacture, Transport");
 
-            EthicsQuestion entity;
+            if (!Enum.TryParse<EthicsAnswerType>(q.AnswerType, true, out var answerType))
+                throw new InvalidOperationException($"AnswerType invalide: '{q.AnswerType}' (attendu: Single/Multiple).");
+
             if (q.Id.HasValue)
             {
-                entity = await _context.EthicsQuestions.FirstOrDefaultAsync(x => x.Id == q.Id.Value)
-                         ?? throw new InvalidOperationException($"Question introuvable: {q.Id.Value}");
+                var entity = await _context.EthicsQuestions.FirstOrDefaultAsync(x => x.Id == q.Id.Value)
+                    ?? throw new InvalidOperationException($"Question introuvable: {q.Id.Value}");
 
-                // Update minimaliste (si tu as une méthode métier Update sur l'entité, utilise-la)
-                _context.Entry(entity).Property("CategoryId").CurrentValue = q.CategoryId;
-                _context.Entry(entity).Property("Key").CurrentValue = q.Key.Trim();
-                _context.Entry(entity).Property("Label").CurrentValue = q.Label.Trim();
-                _context.Entry(entity).Property("Order").CurrentValue = q.Order;
-                _context.Entry(entity).Property("AnswerType").CurrentValue = answerType;
-                _context.Entry(entity).Property("IsActive").CurrentValue = q.IsActive;
+                // unicité éventuelle sur Key (si tu l'imposes)
+                var keyConflict = await _context.EthicsQuestions.AnyAsync(x => x.Id != entity.Id && x.CatalogVersionId == draftVersion.Id && x.Key == key);
+                if (keyConflict) throw new InvalidOperationException($"Question.Key déjà utilisé: '{key}'.");
+
+                _context.Entry(entity).Property(nameof(EthicsQuestion.Category)).CurrentValue = category;
+                _context.Entry(entity).Property(nameof(EthicsQuestion.Key)).CurrentValue = key;
+                _context.Entry(entity).Property(nameof(EthicsQuestion.Label)).CurrentValue = label;
+                _context.Entry(entity).Property(nameof(EthicsQuestion.Order)).CurrentValue = q.Order;
+                _context.Entry(entity).Property(nameof(EthicsQuestion.AnswerType)).CurrentValue = answerType;
+                _context.Entry(entity).Property(nameof(EthicsQuestion.IsActive)).CurrentValue = q.IsActive;
             }
             else
             {
-                entity = new EthicsQuestion(q.CategoryId, q.Key.Trim(), q.Label.Trim(), answerType, q.Order, q.IsActive);
-                _context.EthicsQuestions.Add(entity);
+                _context.EthicsQuestions.Add(new EthicsQuestion(draftVersion.Id, category, key, label, answerType, q.Order, q.IsActive));
             }
         }
 
         await _context.SaveChangesAsync();
 
+        // QuestionKey -> QuestionId
+        var questionKeyToId = await _context.EthicsQuestions
+            .AsNoTracking()
+            .ToDictionaryAsync(x => x.Key, x => x.Id, StringComparer.OrdinalIgnoreCase);
+
         // 3) Options
-        foreach (var o in request.Options)
+        foreach (var o in optionsIn)
         {
-            if (string.IsNullOrWhiteSpace(o.Key))
-                throw new InvalidOperationException("Option.Key est requis.");
-            if (string.IsNullOrWhiteSpace(o.Label))
-                throw new InvalidOperationException("Option.Label est requis.");
+            if (string.IsNullOrWhiteSpace(o.Key))         throw new InvalidOperationException("Option.Key est requis.");
+            if (string.IsNullOrWhiteSpace(o.Label))       throw new InvalidOperationException("Option.Label est requis.");
+            if (string.IsNullOrWhiteSpace(o.QuestionKey)) throw new InvalidOperationException($"Option '{o.Key}': QuestionKey est requis.");
 
-            var question = await _context.EthicsQuestions.FirstOrDefaultAsync(x => x.Id == o.QuestionId);
-            if (question == null)
-                throw new InvalidOperationException($"QuestionId invalide pour option: {o.QuestionId}");
+            var key = o.Key.Trim();
+            var label = o.Label.Trim();
+            var qKey = o.QuestionKey.Trim();
 
-            EthicsOption entity;
+            if (!questionKeyToId.TryGetValue(qKey, out var questionId))
+                throw new InvalidOperationException($"QuestionKey invalide pour option '{key}': '{qKey}'.");
+
             if (o.Id.HasValue)
             {
-                entity = await _context.EthicsOptions.FirstOrDefaultAsync(x => x.Id == o.Id.Value)
-                         ?? throw new InvalidOperationException($"Option introuvable: {o.Id.Value}");
+                var entity = await _context.EthicsOptions.FirstOrDefaultAsync(x => x.Id == o.Id.Value)
+                    ?? throw new InvalidOperationException($"Option introuvable: {o.Id.Value}");
 
-                _context.Entry(entity).Property("QuestionId").CurrentValue = o.QuestionId;
-                _context.Entry(entity).Property("Key").CurrentValue = o.Key.Trim();
-                _context.Entry(entity).Property("Label").CurrentValue = o.Label.Trim();
-                _context.Entry(entity).Property("Score").CurrentValue = o.Score;
-                _context.Entry(entity).Property("Order").CurrentValue = o.Order;
-                _context.Entry(entity).Property("IsActive").CurrentValue = o.IsActive;
+                var keyConflict = await _context.EthicsOptions.AnyAsync(x => x.Id != entity.Id && x.Key == key && x.QuestionId == questionId);
+                if (keyConflict) throw new InvalidOperationException($"Option.Key déjà utilisé pour cette question: '{key}'.");
+
+                _context.Entry(entity).Property(nameof(EthicsOption.QuestionId)).CurrentValue = questionId;
+                _context.Entry(entity).Property(nameof(EthicsOption.Key)).CurrentValue = key;
+                _context.Entry(entity).Property(nameof(EthicsOption.Label)).CurrentValue = label;
+                _context.Entry(entity).Property(nameof(EthicsOption.Score)).CurrentValue = o.Score;
+                _context.Entry(entity).Property(nameof(EthicsOption.Order)).CurrentValue = o.Order;
+                _context.Entry(entity).Property(nameof(EthicsOption.IsActive)).CurrentValue = o.IsActive;
             }
             else
             {
-                entity = new EthicsOption(o.QuestionId, o.Key.Trim(), o.Label.Trim(), o.Score, o.Order, o.IsActive);
-                _context.EthicsOptions.Add(entity);
+                _context.EthicsOptions.Add(new EthicsOption(questionId, key, label, o.Score, o.Order, o.IsActive));
             }
         }
 
         await _context.SaveChangesAsync();
         await tx.CommitAsync();
+
+        // renvoyer le catalogue à jour (super pratique côté front)
+        return await GetCatalogAsync();
     }
 
     public async Task ReviewQuestionnaireAsync(long questionnaireId, long adminUserId, ReviewQuestionnaireRequest request)

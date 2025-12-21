@@ -485,7 +485,6 @@ public class ProductService : IProductService
         }
 
         return new ProductVariantDto(
-            variant.Id,
             variant.SKU,
             variant.Size != null ? new SizeDto(variant.Size.Id, variant.Size.Name) : null,
             variant.StockCount,

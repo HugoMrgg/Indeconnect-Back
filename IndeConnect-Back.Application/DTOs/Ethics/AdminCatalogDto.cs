@@ -1,21 +1,22 @@
 ﻿namespace IndeConnect_Back.Application.DTOs.Ethics;
 
-public record AdminUpsertCatalogRequest(
-    IEnumerable<UpsertCategoryDto> Categories,
-    IEnumerable<UpsertQuestionDto> Questions,
-    IEnumerable<UpsertOptionDto> Options
+public record AdminCatalogDto(
+    IReadOnlyList<AdminCategoryDto> Categories,
+    IReadOnlyList<AdminQuestionDto> Questions,
+    IReadOnlyList<AdminOptionDto> Options
 );
 
-public record UpsertCategoryDto(
-    long? Id,
+public record AdminCategoryDto(
+    long Id,
     string Key,
     string Label,
     int Order,
     bool IsActive
 );
 
-public record UpsertQuestionDto(
-    long? Id,
+public record AdminQuestionDto(
+    long Id,
+    long CategoryId,
     string CategoryKey,
     string Key,
     string Label,
@@ -24,8 +25,9 @@ public record UpsertQuestionDto(
     bool IsActive
 );
 
-public record UpsertOptionDto(
-    long? Id,
+public record AdminOptionDto(
+    long Id,
+    long QuestionId,
     string QuestionKey,
     string Key,
     string Label,
