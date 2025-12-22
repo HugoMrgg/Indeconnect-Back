@@ -1,4 +1,5 @@
 ﻿using IndeConnect_Back.Application.DTOs.Products;
+using IndeConnect_Back.Application.DTOs.Reviews;
 using IndeConnect_Back.Application.Services.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -252,4 +253,48 @@ public class ProductController : ControllerBase
         var canReview = await _productService.CanUserReviewProductAsync(userId, productId);
         return Ok(canReview);
     }
+    /// <summary>
+    /// Add a review for a product (client must have purchased it)
+    /// </summary>
+    [HttpPost("{productId:long}/reviews")]
+    [Authorize] // utilisateur connecté
+    [ProducesResponseType(typeof(ProductReviewDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status403Forbidden)]
+    public async Task<ActionResult<ProductReviewDto>> AddProductReview(
+        [FromRoute] long productId,
+        [FromBody] CreateProductReviewDto dto,
+        [FromServices] UserHelper userHelper)
+    {
+        var userId = userHelper.GetUserId();
+
+        try
+        {
+            var review = await _productService.AddProductReviewAsync(
+                productId,
+                userId!.Value,
+                dto.Rating,
+                dto.Comment
+            );
+            return Ok(review);
+        }
+        catch (KeyNotFoundException ex)
+        {
+            return NotFound(new ProblemDetails
+            {
+                Title = "Product not found",
+                Detail = ex.Message
+            });
+        }
+        catch (InvalidOperationException ex)
+        {
+            // "User has not purchased this product" ou "User has already reviewed this product"
+            return StatusCode(StatusCodes.Status403Forbidden, new ProblemDetails
+            {
+                Title = "Forbidden",
+                Detail = ex.Message
+            });
+        }
+    }
+
 }

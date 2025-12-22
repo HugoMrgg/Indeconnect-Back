@@ -2,6 +2,6 @@
 
 public enum EthicsAnswerType
 {
-    Single = 1,   // radio
-    Multiple = 2  // checkbox
+    Single = 0,   // radio
+    Multiple = 1  // checkbox
 }

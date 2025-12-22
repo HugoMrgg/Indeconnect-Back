@@ -39,7 +39,7 @@ public class EthicsQuestion
     public void ValidateAnswerOptions(IEnumerable<long> selectedOptionIds, bool isSubmitting = false)
     {
         var optionIdsList = selectedOptionIds.Distinct().ToList();
-
+        Console.WriteLine("REGARDE MOI JE SUIS ICIIIIII" + AnswerType.ToString());
         if (AnswerType == EthicsAnswerType.Single)
         {
             // Single (radio) : max 1 option

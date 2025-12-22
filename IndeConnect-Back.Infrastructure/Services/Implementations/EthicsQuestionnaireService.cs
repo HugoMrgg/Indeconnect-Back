@@ -24,10 +24,10 @@ public class EthicsQuestionnaireService : IEthicsQuestionnaireService
         // Dernier questionnaire Draft/Submitted (un seul attendu fonctionnellement)
         var questionnaire = await _context.BrandQuestionnaires
             .Include(q => q.Responses)
-                .ThenInclude(r => r.SelectedOptions)
-                    .ThenInclude(so => so.Option)
+            .ThenInclude(r => r.SelectedOptions)
+            .ThenInclude(so => so.Option)
             .Include(q => q.Responses)
-                .ThenInclude(r => r.Question)
+            .ThenInclude(r => r.Question)
             .Where(q => q.BrandId == brandId &&
                         (q.Status == QuestionnaireStatus.Draft || q.Status == QuestionnaireStatus.Submitted))
             .OrderByDescending(q => q.CreatedAt)
@@ -37,105 +37,112 @@ public class EthicsQuestionnaireService : IEthicsQuestionnaireService
 
         return BuildFormDto(catalog, questionnaire);
     }
+
 
     public async Task<EthicsFormDto> UpsertMyQuestionnaireAsync(long superVendorUserId, UpsertQuestionnaireRequest request)
+{
+    var brandId = await GetBrandIdForSuperVendorOrThrow(superVendorUserId);
+
+    var catalog = await LoadActiveCatalogAsync();
+    var questionsById = catalog.QuestionsById;
+    var optionsById = catalog.OptionsById;
+
+    // Charger / créer questionnaire Draft/Submitted
+    var questionnaire = await _context.BrandQuestionnaires
+        .Include(q => q.Responses)
+            .ThenInclude(r => r.SelectedOptions)
+        .Include(q => q.Responses)
+            .ThenInclude(r => r.Question)
+        .Where(q => q.BrandId == brandId &&
+                    (q.Status == QuestionnaireStatus.Draft || q.Status == QuestionnaireStatus.Submitted))
+        .OrderByDescending(q => q.CreatedAt)
+        .FirstOrDefaultAsync();
+
+    if (questionnaire == null)
     {
-        var brandId = await GetBrandIdForSuperVendorOrThrow(superVendorUserId);
-
-        var catalog = await LoadActiveCatalogAsync();
-        var questionsById = catalog.QuestionsById;
-        var optionsById = catalog.OptionsById;
-
-        // Charger / créer questionnaire Draft/Submitted
-        var questionnaire = await _context.BrandQuestionnaires
-            .Include(q => q.Responses)
-                .ThenInclude(r => r.SelectedOptions)
-            .Include(q => q.Responses)
-                .ThenInclude(r => r.Question)
-            .Where(q => q.BrandId == brandId &&
-                        (q.Status == QuestionnaireStatus.Draft || q.Status == QuestionnaireStatus.Submitted))
-            .OrderByDescending(q => q.CreatedAt)
-            .FirstOrDefaultAsync();
-
-        if (questionnaire == null)
-        {
-            questionnaire = new BrandQuestionnaire(brandId, catalog.Version.Id);
-            _context.BrandQuestionnaires.Add(questionnaire);
-        }
-
-        // On refuse toute modification si déjà Approved/Rejected (traçabilité)
-        if (questionnaire.Status is QuestionnaireStatus.Approved or QuestionnaireStatus.Rejected)
-            throw new InvalidOperationException("Ce questionnaire est déjà clôturé (Approved/Rejected) et ne peut plus être modifié.");
-
-        // Validation + upsert réponses
-        var answers = (request.Answers ?? Array.Empty<QuestionAnswerDto>()).ToList();
-
-        using var tx = await _context.Database.BeginTransactionAsync();
-
-        foreach (var a in answers)
-        {
-            if (!questionsById.TryGetValue(a.QuestionId, out var q))
-                throw new InvalidOperationException($"Question inconnue ou inactive: {a.QuestionId}");
-
-            var optionIds = (a.OptionIds ?? Array.Empty<long>()).Distinct().ToList();
-
-            // Valider les contraintes du type de réponse (Single/Multiple) - utilise la méthode du domaine
-            q.ValidateAnswerOptions(optionIds, request.Submit);
-
-            // Valider que les options appartiennent à la question - utilise la méthode du domaine
-            q.ValidateOptionsOwnership(optionIds, optionsById);
-
-            // Upsert BrandQuestionResponse (1 par question)
-            var response = questionnaire.Responses.FirstOrDefault(r => r.QuestionId == q.Id);
-            if (response == null)
-            {
-                response = new BrandQuestionResponse(questionnaire.Id, q.Id);
-                (questionnaire as dynamic).GetType();
-                _context.BrandQuestionResponses.Add(response);
-            }
-
-            // Remplacer la sélection (join table)
-            // 1) supprimer anciens liens
-            if (response.SelectedOptions.Any())
-                _context.BrandQuestionResponseOptions.RemoveRange(response.SelectedOptions);
-
-            // 2) ajouter nouveaux liens
-            foreach (var optId in optionIds)
-                _context.BrandQuestionResponseOptions.Add(new BrandQuestionResponseOption(response.Id, optId));
-
-            // Score audit (optionnel) - utilise la méthode du domaine
-            var calculatedScore = BrandQuestionResponse.CalculateScore(optionsById, optionIds);
-            response.SetCalculatedScore(calculatedScore);
-        }
-
-        if (request.Submit)
-        {
-            questionnaire.MarkSubmitted();
-        }
-
+        questionnaire = new BrandQuestionnaire(brandId, catalog.Version.Id);
+        _context.BrandQuestionnaires.Add(questionnaire);
+        // IMPORTANT : on sauve ici pour avoir un QuestionnaireId réel pour les FK
         await _context.SaveChangesAsync();
+    }
 
-        // Recharger questionnaire avec options
-        questionnaire = await _context.BrandQuestionnaires
-            .Include(q => q.Responses)
-                .ThenInclude(r => r.SelectedOptions)
-                    .ThenInclude(so => so.Option)
-            .Include(q => q.Responses)
-                .ThenInclude(r => r.Question)
-            .FirstAsync(q => q.Id == questionnaire.Id);
+    // On refuse toute modification si déjà Approved/Rejected (traçabilité)
+    if (questionnaire.Status is QuestionnaireStatus.Approved or QuestionnaireStatus.Rejected)
+        throw new InvalidOperationException("Ce questionnaire est déjà clôturé (Approved/Rejected) et ne peut plus être modifié.");
 
-        // Calcul + persistance des scores
-        if (request.Submit)
+    var answers = (request.Answers ?? Array.Empty<QuestionAnswerDto>()).ToList();
+
+    using var tx = await _context.Database.BeginTransactionAsync();
+
+    foreach (var a in answers)
+    {
+        if (!questionsById.TryGetValue(a.QuestionId, out var q))
+            throw new InvalidOperationException($"Question inconnue ou inactive: {a.QuestionId}");
+
+        var optionIds = (a.OptionIds ?? Array.Empty<long>()).Distinct().ToList();
+
+        // Valider les contraintes du type de réponse (Single/Multiple)
+        q.ValidateAnswerOptions(optionIds, request.Submit);
+
+        // Valider que les options appartiennent à la question
+        q.ValidateOptionsOwnership(optionIds, optionsById);
+
+        // Upsert BrandQuestionResponse (1 par question)
+        var response = questionnaire.Responses.FirstOrDefault(r => r.QuestionId == q.Id);
+        if (response == null)
         {
-            await UpsertPendingScoresAsync(brandId, questionnaire, catalog.ActiveQuestions);
+            response = new BrandQuestionResponse(questionnaire.Id, q.Id);
+            _context.BrandQuestionResponses.Add(response);
+            // IMPORTANT : on sauve ici pour avoir un Id non temporaire,
+            // utile pour les BrandQuestionResponseOptions
             await _context.SaveChangesAsync();
+
+            // optionnel : garder la collection en phase
+            // (si tu utilises la navigation Responses plus tard)
+            // (_context.Entry(questionnaire).Collection(x => x.Responses).Load();) possible aussi
         }
 
-        await tx.CommitAsync();
+        // Remplacer la sélection (join table)
+        if (response.SelectedOptions.Any())
+            _context.BrandQuestionResponseOptions.RemoveRange(response.SelectedOptions);
 
-        // Retourner le formulaire (catalogue + réponses)
-        return BuildFormDto(catalog, questionnaire);
+        foreach (var optId in optionIds)
+        {
+            var link = new BrandQuestionResponseOption(response.Id, optId);
+            _context.BrandQuestionResponseOptions.Add(link);
+        }
+
+        var calculatedScore = BrandQuestionResponse.CalculateScore(optionsById, optionIds);
+        response.SetCalculatedScore(calculatedScore);
     }
+
+    if (request.Submit)
+    {
+        questionnaire.MarkSubmitted();
+    }
+
+    await _context.SaveChangesAsync();
+
+    // Recharger questionnaire avec options complètes
+    questionnaire = await _context.BrandQuestionnaires
+        .Include(q => q.Responses)
+            .ThenInclude(r => r.SelectedOptions)
+                .ThenInclude(so => so.Option)
+        .Include(q => q.Responses)
+            .ThenInclude(r => r.Question)
+        .FirstAsync(q => q.Id == questionnaire.Id);
+
+    // Calcul + persistance des scores
+    if (request.Submit)
+    {
+        await UpsertPendingScoresAsync(brandId, questionnaire, catalog.ActiveQuestions);
+        await _context.SaveChangesAsync();
+    }
+
+    await tx.CommitAsync();
+
+    return BuildFormDto(catalog, questionnaire);
+}
     
     // -------------------------
     // Helpers
