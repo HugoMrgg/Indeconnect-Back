@@ -21,7 +21,7 @@ public class ModeratorReviewsController : ControllerBase
     /// </summary>
     [HttpGet]
     public async Task<IActionResult> GetAll(
-        [FromQuery] string? status = "Pending",
+        [FromQuery] string? status = "Enabled",
         [FromQuery] int page = 1,
         [FromQuery] int pageSize = 20,
         [FromQuery] string? q = null
@@ -33,7 +33,7 @@ public class ModeratorReviewsController : ControllerBase
             !string.Equals(status, "All", StringComparison.OrdinalIgnoreCase))
         {
             if (!Enum.TryParse<ReviewStatus>(status, ignoreCase: true, out var s))
-                return BadRequest(new { message = $"Status invalide: '{status}'. Valeurs: Pending, Approved, Rejected, All" });
+                return BadRequest(new { message = $"Status invalide: '{status}'. Valeurs: Enabled, Disabled, All" });
 
             parsedStatus = s;
         }
@@ -48,8 +48,7 @@ public class ModeratorReviewsController : ControllerBase
     [HttpPost("{reviewId:long}/approve")]
     public async Task<IActionResult> Approve([FromRoute] long reviewId)
     {
-        var moderatorUserId = GetUserIdOrThrow();
-        await _service.ApproveAsync(reviewId, moderatorUserId);
+        await _service.ApproveAsync(reviewId);
         return NoContent();
     }
 
@@ -59,22 +58,7 @@ public class ModeratorReviewsController : ControllerBase
     [HttpPost("{reviewId:long}/reject")]
     public async Task<IActionResult> Reject([FromRoute] long reviewId)
     {
-        var moderatorUserId = GetUserIdOrThrow();
-        await _service.RejectAsync(reviewId, moderatorUserId);
+        await _service.RejectAsync(reviewId);
         return NoContent();
-    }
-
-    private long GetUserIdOrThrow()
-    {
-        // adapte si ton claim id est différent
-        var raw =
-            User.FindFirstValue(ClaimTypes.NameIdentifier) ??
-            User.FindFirstValue("sub") ??
-            User.FindFirstValue("id");
-
-        if (string.IsNullOrWhiteSpace(raw) || !long.TryParse(raw, out var id))
-            throw new InvalidOperationException("Impossible de récupérer l'identifiant utilisateur depuis le token.");
-
-        return id;
     }
 }
