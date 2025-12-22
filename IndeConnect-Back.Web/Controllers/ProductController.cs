@@ -108,32 +108,9 @@ public class ProductController : ControllerBase
         var reviews = await _productService.GetAllProductReviewsAsync(productId);
         return Ok(reviews);
     }
-    
-    [Authorize] // vendeur
-    [HttpPost("reviews/{reviewId:long}/approve")]
-    public async Task<IActionResult> ApproveReview(
-        long reviewId,
-        [FromServices] UserHelper userHelper)
-    {
-        var sellerId = (long) userHelper.GetUserId();
-
-        try
-        {
-            await _productService.ApproveProductReviewAsync(reviewId, sellerId);
-            return NoContent();
-        }
-        catch (KeyNotFoundException)
-        {
-            return NotFound(new { message = "Review not found" });
-        }
-        catch (UnauthorizedAccessException)
-        {
-            return Forbid();
-        }
-    }
 
     [Authorize] // vendeur
-    [HttpPost("reviews/{reviewId:long}/reject")]
+    [HttpPost("reviews/{reviewId:long}/disable")]
     public async Task<IActionResult> RejectReview(
         long reviewId,
         [FromServices] UserHelper userHelper)

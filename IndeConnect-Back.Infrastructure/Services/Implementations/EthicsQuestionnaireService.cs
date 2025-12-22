@@ -306,6 +306,4 @@ public class EthicsQuestionnaireService : IEthicsQuestionnaireService
     {
         _context.Entry(entity).Property(propName).CurrentValue = value;
     }
-
 }
-    

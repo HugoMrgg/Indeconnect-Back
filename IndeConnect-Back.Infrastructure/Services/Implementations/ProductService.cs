@@ -301,7 +301,7 @@ public async Task<ProductsListResponse> GetProductsByBrandAsync(GetProductsQuery
 
     var productsQuery = _context.Products
         .Where(p => p.BrandId == query.BrandId)
-        .Include(p => p.Reviews) // ✅ Cette ligne charge les reviews
+        .Include(p => p.Reviews)
         .Include(p => p.Variants) 
         .Include(p => p.Media)
         .Include(p => p.Category) 
@@ -341,12 +341,10 @@ public async Task<ProductsListResponse> GetProductsByBrandAsync(GetProductsQuery
 
     var products = await productsQuery.ToListAsync();
 
-    // ✅ CORRECTION : Vérifier si Reviews est null avant d'accéder
     var enrichedProducts = products
         .Select(p => new
         {
             Product = p,
-            // ✅ Ajouter une vérification null-safety
             AverageRating = p.Reviews != null && p.Reviews.Any() 
                 ? p.Reviews.Average(r => (double)r.Rating) 
                 : 0.0
@@ -358,7 +356,6 @@ public async Task<ProductsListResponse> GetProductsByBrandAsync(GetProductsQuery
         ProductSortType.PriceAsc => enrichedProducts.OrderBy(x => x.Product.Price).ToList(),
         ProductSortType.PriceDesc => enrichedProducts.OrderByDescending(x => x.Product.Price).ToList(),
         ProductSortType.Rating => enrichedProducts.OrderByDescending(x => x.AverageRating).ToList(),
-        // ✅ Ajouter null-check ici aussi
         ProductSortType.Popular => enrichedProducts.OrderByDescending(x => x.Product.Reviews?.Count ?? 0).ToList(),
         ProductSortType.Newest => enrichedProducts.OrderByDescending(x => x.Product.CreatedAt).ToList(),
         _ => enrichedProducts.OrderByDescending(x => x.Product.CreatedAt).ToList()
@@ -400,7 +397,6 @@ public async Task<ProductsListResponse> GetProductsByBrandAsync(GetProductsQuery
         if (!categoryExists)
             throw new InvalidOperationException($"Category with id {query.CategoryId} not found.");
 
-        // VÉRIFICATION : Le ProductGroup doit exister et appartenir à la même marque
         var productGroup = await _context.ProductGroups
             .FirstOrDefaultAsync(pg => pg.Id == query.ProductGroupId);
 
@@ -422,7 +418,6 @@ public async Task<ProductsListResponse> GetProductsByBrandAsync(GetProductsQuery
 
         _context.Products.Add(product);
         
-        // IMPORTANT : Sauvegarder d'abord pour obtenir l'Id du produit
         await _context.SaveChangesAsync();
 
         // Maintenant que product.Id est généré, on peut ajouter les entités liées
@@ -582,7 +577,6 @@ public async Task<UpdateProductResponse> UpdateProductAsync(long productId, Upda
      */
     private ProductSummaryDto MapToProductSummary(Product product, double averageRating)
     {
-        // ✅ Null-check pour Media
         var primaryImage = product.Media?
             .Where(m => m.IsPrimary)
             .OrderBy(m => m.DisplayOrder)
@@ -602,7 +596,7 @@ public async Task<UpdateProductResponse> UpdateProductAsync(long productId, Upda
             product.Price,
             product.Description,
             Math.Round(averageRating, 1),
-            product.Reviews?.Count ?? 0, // ✅ Null-check ici
+            product.Reviews?.Count ?? 0,
             product.PrimaryColor != null 
                 ? new ColorDto(product.PrimaryColor.Id, product.PrimaryColor.Name, product.PrimaryColor.Hexa)
                 : null,
@@ -727,25 +721,6 @@ public async Task<UpdateProductResponse> UpdateProductAsync(long productId, Upda
 
         return (brand.SuperVendorUserId == sellerUserId)
                || brand.Sellers.Any(s => s.SellerId == sellerUserId && s.IsActive);
-    }
-
-    public async Task ApproveProductReviewAsync(long reviewId, long sellerUserId)
-    {
-        var review = await _context.ProductReviews
-            .Include(r => r.Product)
-            .ThenInclude(p => p.Brand)
-            .ThenInclude(b => b.Sellers)
-            .FirstOrDefaultAsync(r => r.Id == reviewId);
-
-        if (review == null)
-            throw new KeyNotFoundException("Review not found");
-
-        var isSeller = await IsSellerOfProductAsync(sellerUserId, review.ProductId);
-        if (!isSeller)
-            throw new UnauthorizedAccessException("User is not seller of this product");
-
-        review.Approve();
-        await _context.SaveChangesAsync();
     }
 
     public async Task RejectProductReviewAsync(long reviewId, long sellerUserId)
