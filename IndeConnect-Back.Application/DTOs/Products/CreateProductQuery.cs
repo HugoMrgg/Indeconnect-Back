@@ -8,8 +8,9 @@ public record CreateProductQuery(
     decimal Price,
     long BrandId,
     long CategoryId,
-    long? PrimaryColorId, 
-    IEnumerable<ProductMediaDto> Media, 
+    long ProductGroupId, // Obligatoire : doit appartenir à un groupe
+    long? PrimaryColorId,
+    IEnumerable<ProductMediaDto> Media,
     IEnumerable<ProductVariantDto> SizeVariants,
     IEnumerable<ProductDetailItemDto> Details,
     IEnumerable<string> Keywords,

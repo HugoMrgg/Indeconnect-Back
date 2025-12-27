@@ -1,5 +1,4 @@
-﻿// Domain/order/OrderItem.cs
-using IndeConnect_Back.Domain.catalog.product;
+﻿using IndeConnect_Back.Domain.catalog.product;
 
 namespace IndeConnect_Back.Domain.order;
 

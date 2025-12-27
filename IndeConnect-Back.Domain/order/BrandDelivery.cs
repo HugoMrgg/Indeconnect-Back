@@ -86,7 +86,7 @@ public class BrandDelivery
         UpdatedAt = DateTimeOffset.UtcNow;
     }
 
-    public void MarkAsShipped(DateTimeOffset shippedAt, string trackingNumber)
+    public void MarkAsShipped(DateTime shippedAt, string trackingNumber)
     {
         if (string.IsNullOrWhiteSpace(trackingNumber))
             throw new ArgumentException("Tracking number is required", nameof(trackingNumber));

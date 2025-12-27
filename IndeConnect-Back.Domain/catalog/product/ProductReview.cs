@@ -32,6 +32,12 @@ public class ProductReview
         Status = ReviewStatus.Enabled;
     }
 
+    public void Approve()
+    {
+        if (Status == ReviewStatus.Enabled) return;
+        Status = ReviewStatus.Enabled;
+    }
+
     public void Reject()
     {
         if (Status == ReviewStatus.Disabled) return;

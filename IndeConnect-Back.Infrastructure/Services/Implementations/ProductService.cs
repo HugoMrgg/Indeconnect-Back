@@ -50,36 +50,27 @@ public class ProductService : IProductService
         if (product == null)
             return null;
 
-        // Calculate sale price
+        // Utiliser les méthodes métier du Domain
+        var currentPrice = product.CalculateCurrentPrice();
         var basePrice = product.Price;
-        decimal? salePrice = null;
-        
-        if (product.Sale != null && product.Sale.IsActive 
-            && product.Sale.StartDate <= DateTimeOffset.UtcNow 
-            && product.Sale.EndDate >= DateTimeOffset.UtcNow)
-        {
-            salePrice = basePrice * (1 - product.Sale.DiscountPercentage / 100);
-        }
+        var salePrice = currentPrice != basePrice ? currentPrice : (decimal?)null;
 
-        // Calculate total stock
-        var totalStock = product.Variants.Sum(v => v.StockCount);
-        var isAvailable = totalStock > 0 && product.Status == ProductStatus.Online;
+        var totalStock = product.GetTotalStock();
+        var isAvailable = product.IsAvailableForPurchase();
 
-        // Calculate average rating
-        var approvedReviews = product.Reviews.Where(r => r.Status == ReviewStatus.Enabled).ToList();
-        var avgRating = approvedReviews.Any() ? approvedReviews.Average(r => (double)r.Rating) : 0.0;
+        var avgRating = product.GetAverageRating();
+        var reviewsCount = product.GetApprovedReviewsCount();
 
-        // NOUVEAU : Récupérer les autres couleurs disponibles
-        var colorVariants = product.ProductGroup?.Products
-            .Where(p => p.Id != productId && p.IsEnabled && p.Status == ProductStatus.Online)
+        // Récupérer les autres couleurs disponibles - utiliser les méthodes du Domain
+        var colorVariants = product.ProductGroup?.GetOnlineProducts()
+            .Where(p => p.Id != productId)
             .Select(p => new ProductColorVariantDto(
                 p.Id,
                 p.PrimaryColor?.Id,
                 p.PrimaryColor?.Name,
                 p.PrimaryColor?.Hexa,
-                p.Media.FirstOrDefault(m => m.IsPrimary)?.Url 
-                    ?? p.Media.OrderBy(m => m.DisplayOrder).FirstOrDefault()?.Url,
-                p.Variants.Sum(v => v.StockCount) > 0
+                p.GetPrimaryImageUrl(),
+                p.IsAvailableForPurchase()
             ))
             .ToList() ?? new List<ProductColorVariantDto>();
 
@@ -111,7 +102,6 @@ public class ProductService : IProductService
                 : null, // NOUVEAU : couleur principale de ce produit
             colorVariants, // NOUVEAU : autres couleurs disponibles
             product.Media.OrderBy(m => m.DisplayOrder).Select(m => new ProductMediaDto(
-                m.Id,
                 m.Url,
                 m.Type,
                 m.DisplayOrder,
@@ -120,9 +110,9 @@ public class ProductService : IProductService
             product.Variants.Select(MapToVariantDto), // Maintenant juste les tailles
             product.Details.OrderBy(d => d.DisplayOrder).Select(d => new ProductDetailItemDto(d.Value, d.DisplayOrder)),
             product.Keywords.Select(pk => pk.Keyword.Name),
-            approvedReviews.Select(MapToReviewDto),
+            product.Reviews.Where(r => r.Status == ReviewStatus.Enabled).Select(MapToReviewDto),
             Math.Round(avgRating, 1),
-            approvedReviews.Count,
+            reviewsCount,
             totalStock,
             product.Status,
             product.CreatedAt
@@ -163,16 +153,15 @@ public class ProductService : IProductService
         if (product?.ProductGroup == null)
             return Enumerable.Empty<ProductColorVariantDto>();
 
-        return product.ProductGroup.Products
-            .Where(p => p.IsEnabled && p.Status == ProductStatus.Online)
+        // Utiliser les méthodes du Domain
+        return product.ProductGroup.GetOnlineProducts()
             .Select(p => new ProductColorVariantDto(
                 p.Id,
                 p.PrimaryColor?.Id,
                 p.PrimaryColor?.Name,
                 p.PrimaryColor?.Hexa,
-                p.Media.FirstOrDefault(m => m.IsPrimary)?.Url 
-                    ?? p.Media.OrderBy(m => m.DisplayOrder).FirstOrDefault()?.Url,
-                p.Variants.Sum(v => v.StockCount) > 0
+                p.GetPrimaryImageUrl(),
+                p.IsAvailableForPurchase()
             ));
     }
 
@@ -208,16 +197,15 @@ public class ProductService : IProductService
                 0, 0, null, null, null, 0
             ),
             new CategoryDto(group.Category.Id, group.Category.Name),
-            group.Products
-                .Where(p => p.IsEnabled && p.Status == ProductStatus.Online)
+            // Utiliser les méthodes du Domain
+            group.GetOnlineProducts()
                 .Select(p => new ProductColorVariantDto(
                     p.Id,
                     p.PrimaryColor?.Id,
                     p.PrimaryColor?.Name,
                     p.PrimaryColor?.Hexa,
-                    p.Media.FirstOrDefault(m => m.IsPrimary)?.Url 
-                        ?? p.Media.OrderBy(m => m.DisplayOrder).FirstOrDefault()?.Url,
-                    p.Variants.Sum(v => v.StockCount) > 0
+                    p.GetPrimaryImageUrl(),
+                    p.IsAvailableForPurchase()
                 ))
         );
     }
@@ -234,7 +222,8 @@ public class ProductService : IProductService
         if (product == null)
             return null;
 
-        var totalStock = product.Variants.Sum(v => v.StockCount);
+        // Utiliser la méthode métier du Domain
+        var totalStock = product.GetTotalStock();
         var variantStocks = product.Variants.Select(v => new VariantStockDto(
             v.Id,
             v.SKU,
@@ -285,101 +274,137 @@ public class ProductService : IProductService
      * Retrieves paginated and filtered products for a specific brand
      * IMPORTANT: Returns individual products (each color = separate entry)
      */
-    public async Task<ProductsListResponse> GetProductsByBrandAsync(GetProductsQuery query, long? userId)
+public async Task<ProductsListResponse> GetProductsByBrandAsync(GetProductsQuery query, long? userId)
+{
+    UserDetailDto? user = null;
+    
+    if (userId.HasValue)
     {
+        user = await _userService.GetUserByIdAsync(userId);
+    }
+    
+    var brand = await _context.Brands
+        .FirstOrDefaultAsync(b => b.Id == query.BrandId);
 
-        UserDetailDto user = await _userService.GetUserByIdAsync(userId);
-        
-        var brand = await _context.Brands
-            .FirstOrDefaultAsync(b => b.Id == query.BrandId);
+    if (brand == null)
+        throw new InvalidOperationException("Brand not found");
 
-        if (brand == null || (brand.Status != BrandStatus.Approved && user.role != Role.SuperVendor))
-            throw new InvalidOperationException("Brand not found or not approved");
+    // Vérifier si l'utilisateur peut voir les produits non-Online
+    bool canSeeAllProducts = user != null && 
+        ((user.role == Role.SuperVendor && brand.SuperVendorUserId == userId) ||
+         (user.role == Role.Administrator) ||
+         (user.role == Role.Moderator));
 
-        // MODIFIÉ : Query sur Products directement (chaque couleur = un produit)
-        var productsQuery = _context.Products
-            .Where(p => p.BrandId == query.BrandId && p.Status == ProductStatus.Online) 
-            .Include(p => p.Reviews)
-            .Include(p => p.Variants) 
-            .Include(p => p.Media) // NOUVEAU
-            .Include(p => p.Category) 
-            .Include(p => p.PrimaryColor) // NOUVEAU
-            .AsQueryable();
+    // Si la marque n'est pas approuvée, seul le SuperVendor peut voir ses produits
+    if (brand.Status != BrandStatus.Approved && !canSeeAllProducts)
+        throw new InvalidOperationException("Brand not found or not approved");
 
-        // Apply filters
-        if (!string.IsNullOrEmpty(query.Category))
-        {
-            productsQuery = productsQuery.Where(p => p.Category.Name == query.Category);
-        }
+    var productsQuery = _context.Products
+        .Where(p => p.BrandId == query.BrandId)
+        .Include(p => p.Reviews)
+        .Include(p => p.Variants) 
+        .Include(p => p.Media)
+        .Include(p => p.Category) 
+        .Include(p => p.PrimaryColor)
+        .AsQueryable();
 
-        if (query.MinPrice.HasValue)
-        {
-            productsQuery = productsQuery.Where(p => p.Price >= query.MinPrice.Value);
-        }
+    // Appliquer le filtre de statut selon le rôle
+    if (!canSeeAllProducts)
+    {
+        productsQuery = productsQuery.Where(p => p.Status == ProductStatus.Online);
+    }
 
-        if (query.MaxPrice.HasValue)
-        {
-            productsQuery = productsQuery.Where(p => p.Price <= query.MaxPrice.Value);
-        }
+    // Apply filters
+    if (!string.IsNullOrEmpty(query.Category))
+    {
+        productsQuery = productsQuery.Where(p => p.Category.Name == query.Category);
+    }
 
-        if (!string.IsNullOrEmpty(query.SearchTerm))
-        {
-            var searchTerm = query.SearchTerm.ToLower();
-            productsQuery = productsQuery.Where(p => 
-                p.Name.ToLower().Contains(searchTerm) || 
-                p.Description.ToLower().Contains(searchTerm)
-            );
-        }
+    if (query.MinPrice.HasValue)
+    {
+        productsQuery = productsQuery.Where(p => p.Price >= query.MinPrice.Value);
+    }
 
-        var products = await productsQuery.ToListAsync();
+    if (query.MaxPrice.HasValue)
+    {
+        productsQuery = productsQuery.Where(p => p.Price <= query.MaxPrice.Value);
+    }
 
-        var enrichedProducts = products
-            .Select(p => new
-            {
-                Product = p,
-                AverageRating = p.Reviews.Any() ? p.Reviews.Average(r => (double)r.Rating) : 0.0
-            })
-            .ToList();
-
-        var sortedProducts = query.SortBy switch
-        {
-            ProductSortType.PriceAsc => enrichedProducts.OrderBy(x => x.Product.Price).ToList(),
-            ProductSortType.PriceDesc => enrichedProducts.OrderByDescending(x => x.Product.Price).ToList(),
-            ProductSortType.Rating => enrichedProducts.OrderByDescending(x => x.AverageRating).ToList(),
-            ProductSortType.Popular => enrichedProducts.OrderByDescending(x => x.Product.Reviews.Count).ToList(),
-            ProductSortType.Newest => enrichedProducts.OrderByDescending(x => x.Product.CreatedAt).ToList(),
-            _ => enrichedProducts.OrderByDescending(x => x.Product.CreatedAt).ToList()
-        };
-
-        var totalCount = sortedProducts.Count;
-
-        var paginatedProducts = sortedProducts
-            .Skip((query.Page - 1) * query.PageSize)
-            .Take(query.PageSize)
-            .Select(x => MapToProductSummary(x.Product, x.AverageRating))
-            .ToList();
-
-        return new ProductsListResponse(
-            paginatedProducts,
-            totalCount,
-            query.Page,
-            query.PageSize
+    if (!string.IsNullOrEmpty(query.SearchTerm))
+    {
+        var searchTerm = query.SearchTerm.ToLower();
+        productsQuery = productsQuery.Where(p => 
+            p.Name.ToLower().Contains(searchTerm) || 
+            p.Description.ToLower().Contains(searchTerm)
         );
     }
 
-    /**
-     * Create product for a brand
-     */
-   public async Task<CreateProductResponse> CreateProductAsync(CreateProductQuery query)
-    {
-        if (string.IsNullOrWhiteSpace(query.Name)) throw new ArgumentException("Product name is required.", nameof(query.Name));
-        if (query.Price <= 0) throw new ArgumentOutOfRangeException(nameof(query.Price), "Price must be positive.");
+    var products = await productsQuery.ToListAsync();
 
-        var brandExists = await _context.Brands.AnyAsync(b => b.Id == query.BrandId);
-        if (!brandExists) throw new InvalidOperationException($"Brand with id {query.BrandId} not found.");
+    var enrichedProducts = products
+        .Select(p => new
+        {
+            Product = p,
+            AverageRating = p.Reviews != null && p.Reviews.Any() 
+                ? p.Reviews.Average(r => (double)r.Rating) 
+                : 0.0
+        })
+        .ToList();
+
+    var sortedProducts = query.SortBy switch
+    {
+        ProductSortType.PriceAsc => enrichedProducts.OrderBy(x => x.Product.Price).ToList(),
+        ProductSortType.PriceDesc => enrichedProducts.OrderByDescending(x => x.Product.Price).ToList(),
+        ProductSortType.Rating => enrichedProducts.OrderByDescending(x => x.AverageRating).ToList(),
+        ProductSortType.Popular => enrichedProducts.OrderByDescending(x => x.Product.Reviews?.Count ?? 0).ToList(),
+        ProductSortType.Newest => enrichedProducts.OrderByDescending(x => x.Product.CreatedAt).ToList(),
+        _ => enrichedProducts.OrderByDescending(x => x.Product.CreatedAt).ToList()
+    };
+
+    var totalCount = sortedProducts.Count;
+
+    var paginatedProducts = sortedProducts
+        .Skip((query.Page - 1) * query.PageSize)
+        .Take(query.PageSize)
+        .Select(x => MapToProductSummary(x.Product, x.AverageRating))
+        .ToList();
+
+    return new ProductsListResponse(
+        paginatedProducts,
+        totalCount,
+        query.Page,
+        query.PageSize
+    );
+}
+    public async Task<CreateProductResponse> CreateProductAsync(CreateProductQuery query, long? currentUserId)
+    {
+        if (string.IsNullOrWhiteSpace(query.Name)) 
+            throw new ArgumentException("Product name is required.", nameof(query.Name));
+        if (query.Price <= 0) 
+            throw new ArgumentOutOfRangeException(nameof(query.Price), "Price must be positive.");
+
+        // VÉRIFICATION : L'utilisateur doit être SuperVendor de la marque
+        var brand = await _context.Brands
+            .FirstOrDefaultAsync(b => b.Id == query.BrandId);
+        
+        if (brand == null)
+            throw new InvalidOperationException($"Brand with id {query.BrandId} not found.");
+        
+        if (brand.SuperVendorUserId != currentUserId)
+            throw new UnauthorizedAccessException("You are not the SuperVendor of this brand.");
 
         var categoryExists = await _context.Categories.AnyAsync(c => c.Id == query.CategoryId);
-        if (!categoryExists) throw new InvalidOperationException($"Category with id {query.CategoryId} not found.");
+        if (!categoryExists)
+            throw new InvalidOperationException($"Category with id {query.CategoryId} not found.");
+
+        var productGroup = await _context.ProductGroups
+            .FirstOrDefaultAsync(pg => pg.Id == query.ProductGroupId);
+
+        if (productGroup == null)
+            throw new InvalidOperationException($"Product group with id {query.ProductGroupId} not found.");
+
+        if (productGroup.BrandId != query.BrandId)
+            throw new InvalidOperationException($"Product group {query.ProductGroupId} does not belong to brand {query.BrandId}.");
 
         var product = new Product(
             name: query.Name,
@@ -387,24 +412,84 @@ public class ProductService : IProductService
             price: query.Price,
             brandId: query.BrandId,
             categoryId: query.CategoryId,
-            primaryColorId: query.PrimaryColorId,
-            productGroupId: null
+            productGroupId: query.ProductGroupId,
+            primaryColorId: query.PrimaryColorId
         );
-
-        // Status : tu peux utiliser celui que tu reçois ou forcer un défaut
-        //product.Status = query.Status;
-
-        // CreatedAt : souvent géré dans l'entité (DateTimeOffset.UtcNow)
-        // donc pas besoin de prendre query.CreatedAt
 
         _context.Products.Add(product);
         
         await _context.SaveChangesAsync();
 
-        var brand = await _context.Brands
-            .Where(b => b.Id == query.BrandId)
-            .Select(b => b.Name)
-            .FirstAsync();
+        // Maintenant que product.Id est généré, on peut ajouter les entités liées
+
+        // Ajouter les médias
+        if (query.Media != null && query.Media.Any())
+        {
+            foreach (var mediaDto in query.Media)
+            {
+                var media = new ProductMedia(
+                    productId: product.Id,
+                    url: mediaDto.Url,
+                    type: mediaDto.Type,
+                    displayOrder: mediaDto.DisplayOrder,
+                    isPrimary: mediaDto.IsPrimary
+                );
+                _context.ProductMedia.Add(media); // Utilise DbSet directement
+            }
+        }
+
+        // Ajouter les variantes de taille
+        if (query.SizeVariants != null && query.SizeVariants.Any())
+        {
+            foreach (var variantDto in query.SizeVariants)
+            {
+                var variant = new ProductVariant(
+                    productId: product.Id,
+                    sizeId: variantDto.Size?.Id,
+                    sku: variantDto.SKU,
+                    stockCount: variantDto.StockCount, // OU stockCount selon ton constructeur
+                    priceOverride: variantDto.Price != product.Price ? variantDto.Price : null
+                );
+                _context.ProductVariants.Add(variant);
+            }
+        }
+
+        // Ajouter les détails
+        if (query.Details != null && query.Details.Any())
+        {
+            foreach (var detailDto in query.Details)
+            {
+                var detail = new ProductDetail(
+                    productId: product.Id,
+                    value: detailDto.Value,
+                    displayOrder: detailDto.DisplayOrder
+                );
+                _context.ProductDetails.Add(detail);
+            }
+        }
+
+        // Ajouter les keywords
+        if (query.Keywords != null && query.Keywords.Any())
+        {
+            foreach (var keywordName in query.Keywords)
+            {
+                var keyword = await _context.Keywords
+                    .FirstOrDefaultAsync(k => k.Name == keywordName);
+                
+                if (keyword == null)
+                {
+                    keyword = new Keyword(keywordName);
+                    _context.Keywords.Add(keyword);
+                    await _context.SaveChangesAsync(); // Sauvegarder pour obtenir keyword.Id
+                }
+                
+                // Utilise le constructeur avec 2 paramètres
+                var productKeyword = new ProductKeyword(product.Id, keyword.Id);
+                _context.ProductKeywords.Add(productKeyword);
+            }
+        }
+
+        await _context.SaveChangesAsync();
 
         var categoryName = await _context.Categories
             .Where(c => c.Id == query.CategoryId)
@@ -414,77 +499,71 @@ public class ProductService : IProductService
         return new CreateProductResponse(
             Id: product.Id,
             Name: product.Name,
-            BrandName: brand,
+            BrandName: brand.Name,
             CategoryName: categoryName,
             Price: product.Price,
             Status: product.Status,
             CreatedAt: product.CreatedAt
         );
     }
-    
-    /**
-    * Update product for a brand
-    */
-    public async Task<UpdateProductResponse> UpdateProductAsync(long productId, UpdateProductQuery query)
-    {
-        if (string.IsNullOrWhiteSpace(query.Name)) throw new ArgumentException("Product name is required.", nameof(query.Name));
-        if (query.Price <= 0) throw new ArgumentOutOfRangeException(nameof(query.Price), "Price must be positive.");
+public async Task<UpdateProductResponse> UpdateProductAsync(long productId, UpdateProductQuery query, long? currentUserId)
+{
+    if (string.IsNullOrWhiteSpace(query.Name)) 
+        throw new ArgumentException("Product name is required.", nameof(query.Name));
+    if (query.Price <= 0) 
+        throw new ArgumentOutOfRangeException(nameof(query.Price), "Price must be positive.");
 
-        var categoryExists = await _context.Categories.AnyAsync(c => c.Id == query.CategoryId);
-        if (!categoryExists) throw new InvalidOperationException($"Category with id {query.CategoryId} not found.");
+    var product = await _context.Products
+        .Include(p => p.Brand)
+        .FirstOrDefaultAsync(p => p.Id == productId);
 
-        var product = await _context.Products.FirstOrDefaultAsync(p => p.Id == productId);
+    if (product == null) 
+        throw new KeyNotFoundException($"Product with id {productId} not found.");
 
-        if (product is null) throw new KeyNotFoundException($"Product with id {productId} not found.");
+    // VÉRIFICATION : L'utilisateur doit être SuperVendor de la marque
+    if (product.Brand.SuperVendorUserId != currentUserId)
+        throw new UnauthorizedAccessException("You are not the SuperVendor of this product's brand.");
 
-        product.UpdateInfo(
-            name: query.Name,
-            description: query.Description,
-            price: query.Price,
-            categoryId: query.CategoryId,
-            primaryColorId: query.PrimaryColorId,
-            status: query.Status
-        );
+    var categoryExists = await _context.Categories.AnyAsync(c => c.Id == query.CategoryId);
+    if (!categoryExists) 
+        throw new InvalidOperationException($"Category with id {query.CategoryId} not found.");
 
-        await _context.SaveChangesAsync();
+    product.UpdateInfo(
+        name: query.Name,
+        description: query.Description,
+        price: query.Price,
+        categoryId: query.CategoryId,
+        primaryColorId: query.PrimaryColorId,
+        status: query.Status
+    );
 
-        var brandName = await _context.Brands
-            .Where(b => b.Id == product.BrandId)
-            .Select(b => b.Name)
-            .FirstAsync();
+    await _context.SaveChangesAsync();
 
-        var categoryName = await _context.Categories
-            .Where(c => c.Id == product.CategoryId)
-            .Select(c => c.Name)
-            .FirstAsync();
+    var categoryName = await _context.Categories
+        .Where(c => c.Id == product.CategoryId)
+        .Select(c => c.Name)
+        .FirstAsync();
 
-        return new UpdateProductResponse(
-            Id: product.Id,
-            Name: product.Name,
-            BrandName: brandName,
-            CategoryName: categoryName,
-            Price: product.Price,
-            Status: product.Status,
-            UpdatedAt: product.UpdatedAt!.Value
-        );
-    }
-
-
+    return new UpdateProductResponse(
+        Id: product.Id,
+        Name: product.Name,
+        BrandName: product.Brand.Name,
+        CategoryName: categoryName,
+        Price: product.Price,
+        Status: product.Status,
+        UpdatedAt: product.UpdatedAt!.Value
+    );
+}
     /**
      * Maps a product variant (size) to DTO
      */
     private ProductVariantDto MapToVariantDto(ProductVariant variant)
     {
-        var price = variant.PriceOverride ?? variant.Product.Price;
-        
-        if (variant.Product.Sale != null && variant.Product.Sale.IsActive
-            && variant.Product.Sale.StartDate <= DateTimeOffset.UtcNow
-            && variant.Product.Sale.EndDate >= DateTimeOffset.UtcNow)
-        {
-            price *= (1 - variant.Product.Sale.DiscountPercentage / 100);
-        }
+        // Utiliser la méthode métier du Domain pour calculer le prix
+        var price = variant.PriceOverride ?? variant.Product.CalculateCurrentPrice();
 
         return new ProductVariantDto(
+            Id: variant.Id,
             variant.SKU,
             variant.Size != null ? new SizeDto(variant.Size.Id, variant.Size.Name) : null,
             variant.StockCount,
@@ -498,15 +577,14 @@ public class ProductService : IProductService
      */
     private ProductSummaryDto MapToProductSummary(Product product, double averageRating)
     {
-        // MODIFIÉ : Prend l'image primaire du Product directement
-        var primaryImage = product.Media
+        var primaryImage = product.Media?
             .Where(m => m.IsPrimary)
             .OrderBy(m => m.DisplayOrder)
             .FirstOrDefault()?.Url;
 
         if (primaryImage == null)
         {
-            primaryImage = product.Media
+            primaryImage = product.Media?
                 .OrderBy(m => m.DisplayOrder)
                 .FirstOrDefault()?.Url;
         }
@@ -518,10 +596,11 @@ public class ProductService : IProductService
             product.Price,
             product.Description,
             Math.Round(averageRating, 1),
-            product.Reviews.Count,
+            product.Reviews?.Count ?? 0,
             product.PrimaryColor != null 
                 ? new ColorDto(product.PrimaryColor.Id, product.PrimaryColor.Name, product.PrimaryColor.Hexa)
-                : null // NOUVEAU : affiche la couleur dans le listing
+                : null,
+            product.Status
         );
     }
 
@@ -599,11 +678,10 @@ public class ProductService : IProductService
     
     public async Task<bool> CanUserReviewProductAsync(long userId, long productId)
     {
-        // C'est ici qu'on met la logique "sale" d'accès aux données
         return await _context.Orders
             .AnyAsync(o => 
                 o.UserId == userId &&
-                o.Status.ToString() == "Delivered" && // Vérifie que ton enum match bien
+                o.Status.ToString() == "Delivered" &&
                 o.Items.Any(i => i.ProductId == productId)
             );
     }

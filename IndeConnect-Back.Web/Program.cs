@@ -33,9 +33,9 @@ var postgresUser     = Environment.GetEnvironmentVariable("POSTGRES_USER");
 var postgresPassword = Environment.GetEnvironmentVariable("POSTGRES_PASSWORD");
 var postgresHost     = Environment.GetEnvironmentVariable("POSTGRES_HOST");
 var postgresPort     = Environment.GetEnvironmentVariable("POSTGRES_PORT");
+
 var connectionString =
     $"Host={postgresHost};Port={postgresPort};Database={postgresDb};Username={postgresUser};Password={postgresPassword}";
-Console.WriteLine("postgresDb = " + connectionString);
 
 builder.Services.AddDbContext<AppDbContext>(options =>
 {
@@ -50,12 +50,14 @@ builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<IJwtTokenGenerator, JwtTokenGenerator>();
 builder.Services.AddScoped<IBrandService, BrandService>();
 builder.Services.AddScoped<IProductService, ProductService>();
+builder.Services.AddScoped<IProductGroupService, ProductGroupService>();
 builder.Services.AddScoped<IUserService, UserService>();
 builder.Services.AddScoped<IWishlistService, WishlistService>();
 builder.Services.AddScoped<IBrandSubscriptionService, BrandSubscriptionService>();
 builder.Services.AddSingleton<BrandEthicsScorer>();
 builder.Services.AddScoped<IGeocodeService, NominatimGeocodeService>();
 builder.Services.AddScoped<ICartService, CartService>();
+builder.Services.AddScoped<IColorService, ColorService>();
 builder.Services.AddScoped<IAuditTrailService, AuditTrailService>();
 builder.Services.AddScoped<IEthicsService, EthicsService>();
 builder.Services.AddScoped<IEthicsQuestionnaireService, EthicsQuestionnaireService>();
