@@ -13,42 +13,35 @@ public class SizeConfiguration : IEntityTypeConfiguration<Size>
         
         // Properties
         builder.Property(s => s.Name)
-               .IsRequired()
-               .HasMaxLength(20);
+            .IsRequired()
+            .HasMaxLength(20);
+               
+        builder.Property(s => s.SortOrder)
+            .IsRequired();
+               
+        builder.Property(s => s.CategoryId)
+            .IsRequired();
         
-        // Relation with ProductVariant
+        // Relation avec Category
+        builder.HasOne(s => s.Category)
+            .WithMany(c => c.Sizes)
+            .HasForeignKey(s => s.CategoryId)
+            .OnDelete(DeleteBehavior.Restrict);
+        
+        // Relation avec ProductVariant
         builder.HasMany<ProductVariant>()
-               .WithOne(pv => pv.Size)
-               .HasForeignKey(pv => pv.SizeId)
-               .OnDelete(DeleteBehavior.Restrict)
-               .IsRequired(false); 
+            .WithOne(pv => pv.Size)
+            .HasForeignKey(pv => pv.SizeId)
+            .OnDelete(DeleteBehavior.Restrict)
+            .IsRequired(false);
         
-        builder.HasIndex(s => s.Name)
-               .IsUnique()
-               .HasDatabaseName("IX_Size_UniqueName");
-        
-        // Seed Data 
-        builder.HasData(
-            new { Id = 1L, Name = "XS" },
-            new { Id = 2L, Name = "S" },
-            new { Id = 3L, Name = "M" },
-            new { Id = 4L, Name = "L" },
-            new { Id = 5L, Name = "XL" },
-            new { Id = 6L, Name = "XXL" },
-            new { Id = 7L, Name = "XXXL" },
-
-            new { Id = 10L, Name = "36" },
-            new { Id = 11L, Name = "37" },
-            new { Id = 12L, Name = "38" },
-            new { Id = 13L, Name = "39" },
-            new { Id = 14L, Name = "40" },
-            new { Id = 15L, Name = "41" },
-            new { Id = 16L, Name = "42" },
-            new { Id = 17L, Name = "43" },
-            new { Id = 18L, Name = "44" },
-            new { Id = 19L, Name = "45" },
-
-            new { Id = 99L, Name = "Unique" }
-        );
+        // Index unique sur Name + CategoryId (deux catégories peuvent avoir un "M" différent)
+        builder.HasIndex(s => new { s.Name, s.CategoryId })
+            .IsUnique()
+            .HasDatabaseName("IX_Size_Name_Category");
+               
+        // Index pour améliorer les queries par CategoryId
+        builder.HasIndex(s => s.CategoryId)
+            .HasDatabaseName("IX_Size_CategoryId");
     }
 }

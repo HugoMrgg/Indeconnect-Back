@@ -72,6 +72,6 @@ public class AppDbContext : DbContext
         
         modelBuilder.ApplyConfigurationsFromAssembly(typeof(AppDbContext).Assembly);
         modelBuilder.ApplyConfiguration(new ProductReviewConfiguration());
-
+        modelBuilder.SeedData();
     }
 }

@@ -146,19 +146,6 @@ namespace IndeConnect_Back.Infrastructure.Migrations
                 });
 
             migrationBuilder.CreateTable(
-                name: "Sizes",
-                columns: table => new
-                {
-                    Id = table.Column<long>(type: "bigint", nullable: false)
-                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
-                    Name = table.Column<string>(type: "character varying(20)", maxLength: 20, nullable: false)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_Sizes", x => x.Id);
-                });
-
-            migrationBuilder.CreateTable(
                 name: "BrandEthicTags",
                 columns: table => new
                 {
@@ -300,7 +287,10 @@ namespace IndeConnect_Back.Infrastructure.Migrations
                     SubmittedAt = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: true),
                     ReviewedAt = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: true),
                     ReviewerAdminUserId = table.Column<long>(type: "bigint", nullable: true),
-                    RejectionReason = table.Column<string>(type: "character varying(1000)", maxLength: 1000, nullable: true)
+                    RejectionReason = table.Column<string>(type: "character varying(1000)", maxLength: 1000, nullable: true),
+                    NeedsUpdate = table.Column<bool>(type: "boolean", nullable: false),
+                    MigratedFromQuestionnaireId = table.Column<long>(type: "bigint", nullable: true),
+                    MigratedAt = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: true)
                 },
                 constraints: table =>
                 {
@@ -366,6 +356,27 @@ namespace IndeConnect_Back.Infrastructure.Migrations
                         onDelete: ReferentialAction.Restrict);
                     table.ForeignKey(
                         name: "FK_ProductGroups_Categories_CategoryId",
+                        column: x => x.CategoryId,
+                        principalTable: "Categories",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Restrict);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "Sizes",
+                columns: table => new
+                {
+                    Id = table.Column<long>(type: "bigint", nullable: false)
+                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
+                    Name = table.Column<string>(type: "character varying(20)", maxLength: 20, nullable: false),
+                    SortOrder = table.Column<int>(type: "integer", nullable: false),
+                    CategoryId = table.Column<long>(type: "bigint", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_Sizes", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_Sizes_Categories_CategoryId",
                         column: x => x.CategoryId,
                         principalTable: "Categories",
                         principalColumn: "Id",
@@ -609,7 +620,8 @@ namespace IndeConnect_Back.Infrastructure.Migrations
                         .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
                     QuestionnaireId = table.Column<long>(type: "bigint", nullable: false),
                     QuestionId = table.Column<long>(type: "bigint", nullable: false),
-                    CalculatedScore = table.Column<decimal>(type: "numeric", nullable: true)
+                    CalculatedScore = table.Column<decimal>(type: "numeric", nullable: true),
+                    QuestionKey = table.Column<string>(type: "text", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -1152,6 +1164,23 @@ namespace IndeConnect_Back.Infrastructure.Migrations
                 });
 
             migrationBuilder.InsertData(
+                table: "Categories",
+                columns: new[] { "Id", "Name" },
+                values: new object[,]
+                {
+                    { 100L, "T-Shirts" },
+                    { 101L, "Jeans" },
+                    { 102L, "Shoes" },
+                    { 103L, "Accessories" },
+                    { 104L, "Dresses" },
+                    { 105L, "Jackets" },
+                    { 106L, "Hoodies" },
+                    { 107L, "Pants" },
+                    { 108L, "Skirts" },
+                    { 109L, "Swimwear" }
+                });
+
+            migrationBuilder.InsertData(
                 table: "PaymentProviders",
                 columns: new[] { "Id", "Description", "IsEnabled", "LogoUrl", "Name" },
                 values: new object[,]
@@ -1163,27 +1192,59 @@ namespace IndeConnect_Back.Infrastructure.Migrations
 
             migrationBuilder.InsertData(
                 table: "Sizes",
-                columns: new[] { "Id", "Name" },
+                columns: new[] { "Id", "CategoryId", "Name", "SortOrder" },
                 values: new object[,]
                 {
-                    { 1L, "XS" },
-                    { 2L, "S" },
-                    { 3L, "M" },
-                    { 4L, "L" },
-                    { 5L, "XL" },
-                    { 6L, "XXL" },
-                    { 7L, "XXXL" },
-                    { 10L, "36" },
-                    { 11L, "37" },
-                    { 12L, "38" },
-                    { 13L, "39" },
-                    { 14L, "40" },
-                    { 15L, "41" },
-                    { 16L, "42" },
-                    { 17L, "43" },
-                    { 18L, "44" },
-                    { 19L, "45" },
-                    { 99L, "Unique" }
+                    { 1L, 100L, "XS", 1 },
+                    { 2L, 100L, "S", 2 },
+                    { 3L, 100L, "M", 3 },
+                    { 4L, 100L, "L", 4 },
+                    { 5L, 100L, "XL", 5 },
+                    { 6L, 100L, "XXL", 6 },
+                    { 7L, 100L, "XXXL", 7 },
+                    { 10L, 102L, "36", 1 },
+                    { 11L, 102L, "37", 2 },
+                    { 12L, 102L, "38", 3 },
+                    { 13L, 102L, "39", 4 },
+                    { 14L, 102L, "40", 5 },
+                    { 15L, 102L, "41", 6 },
+                    { 16L, 102L, "42", 7 },
+                    { 17L, 102L, "43", 8 },
+                    { 18L, 102L, "44", 9 },
+                    { 19L, 102L, "45", 10 },
+                    { 20L, 101L, "28", 1 },
+                    { 21L, 101L, "30", 2 },
+                    { 22L, 101L, "32", 3 },
+                    { 23L, 101L, "34", 4 },
+                    { 24L, 101L, "36", 5 },
+                    { 25L, 101L, "38", 6 },
+                    { 50L, 106L, "XS", 1 },
+                    { 51L, 106L, "S", 2 },
+                    { 52L, 106L, "M", 3 },
+                    { 53L, 106L, "L", 4 },
+                    { 54L, 106L, "XL", 5 },
+                    { 55L, 106L, "XXL", 6 },
+                    { 60L, 105L, "XS", 1 },
+                    { 61L, 105L, "S", 2 },
+                    { 62L, 105L, "M", 3 },
+                    { 63L, 105L, "L", 4 },
+                    { 64L, 105L, "XL", 5 },
+                    { 65L, 105L, "XXL", 6 },
+                    { 70L, 104L, "XS", 1 },
+                    { 71L, 104L, "S", 2 },
+                    { 72L, 104L, "M", 3 },
+                    { 73L, 104L, "L", 4 },
+                    { 74L, 104L, "XL", 5 },
+                    { 75L, 104L, "XXL", 6 },
+                    { 80L, 107L, "28", 1 },
+                    { 81L, 107L, "30", 2 },
+                    { 82L, 107L, "32", 3 },
+                    { 83L, 107L, "34", 4 },
+                    { 84L, 107L, "36", 5 },
+                    { 85L, 107L, "38", 6 },
+                    { 99L, 103L, "Unique", 1 },
+                    { 100L, 108L, "Unique", 1 },
+                    { 101L, 109L, "Unique", 1 }
                 });
 
             migrationBuilder.CreateIndex(
@@ -1804,9 +1865,14 @@ namespace IndeConnect_Back.Infrastructure.Migrations
                 column: "UserId");
 
             migrationBuilder.CreateIndex(
-                name: "IX_Size_UniqueName",
+                name: "IX_Size_CategoryId",
                 table: "Sizes",
-                column: "Name",
+                column: "CategoryId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Size_Name_Category",
+                table: "Sizes",
+                columns: new[] { "Name", "CategoryId" },
                 unique: true);
 
             migrationBuilder.CreateIndex(

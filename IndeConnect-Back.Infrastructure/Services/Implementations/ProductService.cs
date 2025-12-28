@@ -97,17 +97,18 @@ public class ProductService : IProductService
                 0             
             ),
             new CategoryDto(product.Category.Id, product.Category.Name),
+            product.CategoryId, // ← AJOUTER CETTE LIGNE (manquait dans ton code)
             product.PrimaryColor != null 
                 ? new ColorDto(product.PrimaryColor.Id, product.PrimaryColor.Name, product.PrimaryColor.Hexa) 
-                : null, // NOUVEAU : couleur principale de ce produit
-            colorVariants, // NOUVEAU : autres couleurs disponibles
+                : null, 
+            colorVariants,
             product.Media.OrderBy(m => m.DisplayOrder).Select(m => new ProductMediaDto(
                 m.Url,
                 m.Type,
                 m.DisplayOrder,
                 m.IsPrimary
-            )), // NOUVEAU : médias du produit
-            product.Variants.Select(MapToVariantDto), // Maintenant juste les tailles
+            )),
+            product.Variants.Select(MapToVariantDto),
             product.Details.OrderBy(d => d.DisplayOrder).Select(d => new ProductDetailItemDto(d.Value, d.DisplayOrder)),
             product.Keywords.Select(pk => pk.Keyword.Name),
             product.Reviews.Where(r => r.Status == ReviewStatus.Enabled).Select(MapToReviewDto),
@@ -306,6 +307,7 @@ public async Task<ProductsListResponse> GetProductsByBrandAsync(GetProductsQuery
         .Include(p => p.Media)
         .Include(p => p.Category) 
         .Include(p => p.PrimaryColor)
+        .Include(p => p.Sale)
         .AsQueryable();
 
     // Appliquer le filtre de statut selon le rôle
@@ -505,8 +507,7 @@ public async Task<ProductsListResponse> GetProductsByBrandAsync(GetProductsQuery
             Status: product.Status,
             CreatedAt: product.CreatedAt
         );
-    }
-public async Task<UpdateProductResponse> UpdateProductAsync(long productId, UpdateProductQuery query, long? currentUserId)
+    }public async Task<UpdateProductResponse> UpdateProductAsync(long productId, UpdateProductQuery query, long? currentUserId)
 {
     if (string.IsNullOrWhiteSpace(query.Name)) 
         throw new ArgumentException("Product name is required.", nameof(query.Name));
@@ -515,6 +516,9 @@ public async Task<UpdateProductResponse> UpdateProductAsync(long productId, Upda
 
     var product = await _context.Products
         .Include(p => p.Brand)
+        .Include(p => p.Sale)
+        .Include(p => p.Media)
+        .Include(p => p.Variants)
         .FirstOrDefaultAsync(p => p.Id == productId);
 
     if (product == null) 
@@ -528,6 +532,7 @@ public async Task<UpdateProductResponse> UpdateProductAsync(long productId, Upda
     if (!categoryExists) 
         throw new InvalidOperationException($"Category with id {query.CategoryId} not found.");
 
+    // 1. Mettre à jour les infos de base
     product.UpdateInfo(
         name: query.Name,
         description: query.Description,
@@ -536,6 +541,121 @@ public async Task<UpdateProductResponse> UpdateProductAsync(long productId, Upda
         primaryColorId: query.PrimaryColorId,
         status: query.Status
     );
+
+    // 2. Gérer la promotion (Sale)
+    if (query.Sale != null)
+    {
+        // ← NOUVEAU : Convertir les dates en UTC pour PostgreSQL
+        var startDateUtc = query.Sale.StartDate.ToUniversalTime();
+        var endDateUtc = query.Sale.EndDate.ToUniversalTime();
+    
+        if (product.Sale == null)
+        {
+            // Créer une nouvelle promotion
+            var newSale = new Sale(
+                name: $"Promo {product.Name}",
+                description: query.Sale.Description ?? "",
+                discountPercentage: query.Sale.DiscountPercentage,
+                startDate: startDateUtc,  // ← MODIFIÉ
+                endDate: endDateUtc        // ← MODIFIÉ
+            );
+            _context.Sales.Add(newSale);
+            await _context.SaveChangesAsync();
+
+            product.SetSale(newSale.Id);
+        }
+        else
+        {
+            // Mettre à jour la promotion existante
+            _context.Sales.Remove(product.Sale);
+        
+            var updatedSale = new Sale(
+                name: $"Promo {product.Name}",
+                description: query.Sale.Description ?? "",
+                discountPercentage: query.Sale.DiscountPercentage,
+                startDate: startDateUtc,  // ← MODIFIÉ
+                endDate: endDateUtc        // ← MODIFIÉ
+            );
+            _context.Sales.Add(updatedSale);
+            await _context.SaveChangesAsync();
+        
+            product.SetSale(updatedSale.Id);
+        }
+    }
+    else
+    {
+        // Supprimer la promotion si elle existe
+        if (product.Sale != null)
+        {
+            _context.Sales.Remove(product.Sale);
+            product.RemoveSale();
+        }
+    }
+
+    // 3. Gérer les médias
+    if (query.Media != null && query.Media.Any())
+    {
+        // Supprimer tous les anciens médias
+        var existingMedia = await _context.ProductMedia
+            .Where(m => m.ProductId == productId)
+            .ToListAsync();
+        
+        _context.ProductMedia.RemoveRange(existingMedia);
+
+        // Ajouter les nouveaux médias
+        foreach (var mediaDto in query.Media)
+        {
+            var media = new ProductMedia(
+                productId: product.Id,
+                url: mediaDto.Url,
+                type: mediaDto.Type,
+                displayOrder: mediaDto.DisplayOrder,
+                isPrimary: mediaDto.IsPrimary
+            );
+            _context.ProductMedia.Add(media);
+        }
+    }
+
+    // 4. Gérer les variantes (tailles)
+    if (query.Variants != null && query.Variants.Any())
+    {
+        // Récupérer les variantes existantes
+        var existingVariants = await _context.ProductVariants
+            .Where(v => v.ProductId == productId)
+            .ToListAsync();
+
+        // Identifier les variantes à supprimer (celles qui ne sont plus dans la requête)
+        var variantsToRemove = existingVariants
+            .Where(ev => !query.Variants.Any(qv => qv.Id == ev.Id))
+            .ToList();
+        
+        _context.ProductVariants.RemoveRange(variantsToRemove);
+
+        foreach (var variantDto in query.Variants)
+        {
+            if (variantDto.Id.HasValue)
+            {
+                // Mise à jour d'une variante existante
+                var existingVariant = existingVariants.FirstOrDefault(v => v.Id == variantDto.Id.Value);
+                if (existingVariant != null)
+                {
+                    existingVariant.UpdateStock(variantDto.StockCount);
+                }
+            }
+            else
+            {
+                // Création d'une nouvelle variante
+                var newVariant = new ProductVariant(
+                    productId: product.Id,
+                    sizeId: variantDto.SizeId,
+                    sku: $"{product.Id}-{variantDto.SizeId}-{Guid.NewGuid().ToString().Substring(0, 8)}",
+                    stockCount: variantDto.StockCount,
+                    priceOverride: null
+                );
+                _context.ProductVariants.Add(newVariant);
+            }
+        }
+    }
 
     await _context.SaveChangesAsync();
 
@@ -600,7 +720,8 @@ public async Task<UpdateProductResponse> UpdateProductAsync(long productId, Upda
             product.PrimaryColor != null 
                 ? new ColorDto(product.PrimaryColor.Id, product.PrimaryColor.Name, product.PrimaryColor.Hexa)
                 : null,
-            product.Status
+            product.Status,
+            product.Sale != null ? MapToSaleDto(product.Sale) : null 
         );
     }
 

@@ -52,5 +52,12 @@ public class ProductVariant
             throw new ArgumentException("Stock cannot be negative", nameof(newStock));
             
         StockCount = newStock;
+    } 
+    public void UpdateStock(int newStock)
+    {
+        if (newStock < 0)
+            throw new ArgumentException("Stock cannot be negative");
+    
+        StockCount = newStock;
     }
 }

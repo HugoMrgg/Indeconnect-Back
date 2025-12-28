@@ -39,26 +39,23 @@ public class EthicsQuestion
     public void ValidateAnswerOptions(IEnumerable<long> selectedOptionIds, bool isSubmitting = false)
     {
         var optionIdsList = selectedOptionIds.Distinct().ToList();
-        Console.WriteLine("REGARDE MOI JE SUIS ICIIIIII" + AnswerType.ToString());
+
         if (AnswerType == EthicsAnswerType.Single)
         {
-            // Single (radio) : max 1 option
             if (optionIdsList.Count > 1)
-                throw new InvalidOperationException($"Question {Id} (Single) : une seule option autorisée.");
+                throw new InvalidOperationException($"Question {Id} (Single): only one option allowed.");
 
-            // À la soumission, exactement 1 option requise
             if (isSubmitting && optionIdsList.Count != 1)
-                throw new InvalidOperationException($"Question {Id} (Single) : exactement 1 option est requise à la soumission.");
+                throw new InvalidOperationException($"Question {Id} (Single): exactly 1 option is required on submission.");
         }
         else if (AnswerType == EthicsAnswerType.Multiple)
         {
-            // Multiple (checkbox) : au moins 1 option à la soumission
             if (isSubmitting && optionIdsList.Count < 1)
-                throw new InvalidOperationException($"Question {Id} (Multiple) : au moins 1 option est requise à la soumission.");
+                throw new InvalidOperationException($"Question {Id} (Multiple): at least 1 option is required on submission.");
         }
         else
         {
-            throw new InvalidOperationException($"Type de réponse non supporté pour la question {Id}.");
+            throw new InvalidOperationException($"Unsupported answer type for question {Id}.");
         }
     }
 
@@ -84,13 +81,11 @@ public class EthicsQuestion
     {
         foreach (var optId in selectedOptionIds)
         {
-            // Vérifier que l'option existe
             if (!availableOptionsById.TryGetValue(optId, out var option))
-                throw new InvalidOperationException($"Option inconnue ou inactive: {optId}");
+                throw new InvalidOperationException($"Unknown or inactive option: {optId}");
 
-            // Vérifier que l'option appartient à cette question
             if (option.QuestionId != Id)
-                throw new InvalidOperationException($"Option {optId} n'appartient pas à la question {Id}.");
+                throw new InvalidOperationException($"Option {optId} does not belong to question {Id}.");
         }
     }
 }

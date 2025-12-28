@@ -165,4 +165,14 @@ public class Product
     {
         return GetPrimaryImage()?.Url;
     }
+    // Dans Product.cs
+    public void SetSale(long saleId)
+    {
+        SaleId = saleId;
+    }
+
+    public void RemoveSale()
+    {
+        SaleId = null;
+    }
 }

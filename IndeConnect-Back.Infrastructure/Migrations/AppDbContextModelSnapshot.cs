@@ -220,6 +220,10 @@ namespace IndeConnect_Back.Infrastructure.Migrations
                     b.Property<long>("QuestionId")
                         .HasColumnType("bigint");
 
+                    b.Property<string>("QuestionKey")
+                        .IsRequired()
+                        .HasColumnType("text");
+
                     b.Property<long>("QuestionnaireId")
                         .HasColumnType("bigint");
 
@@ -269,6 +273,15 @@ namespace IndeConnect_Back.Infrastructure.Migrations
 
                     b.Property<DateTimeOffset>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTimeOffset?>("MigratedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<long?>("MigratedFromQuestionnaireId")
+                        .HasColumnType("bigint");
+
+                    b.Property<bool>("NeedsUpdate")
+                        .HasColumnType("boolean");
 
                     b.Property<string>("RejectionReason")
                         .HasMaxLength(1000)
@@ -601,6 +614,58 @@ namespace IndeConnect_Back.Infrastructure.Migrations
                         .HasDatabaseName("IX_Category_UniqueName");
 
                     b.ToTable("Categories");
+
+                    b.HasData(
+                        new
+                        {
+                            Id = 100L,
+                            Name = "T-Shirts"
+                        },
+                        new
+                        {
+                            Id = 101L,
+                            Name = "Jeans"
+                        },
+                        new
+                        {
+                            Id = 102L,
+                            Name = "Shoes"
+                        },
+                        new
+                        {
+                            Id = 103L,
+                            Name = "Accessories"
+                        },
+                        new
+                        {
+                            Id = 104L,
+                            Name = "Dresses"
+                        },
+                        new
+                        {
+                            Id = 105L,
+                            Name = "Jackets"
+                        },
+                        new
+                        {
+                            Id = 106L,
+                            Name = "Hoodies"
+                        },
+                        new
+                        {
+                            Id = 107L,
+                            Name = "Pants"
+                        },
+                        new
+                        {
+                            Id = 108L,
+                            Name = "Skirts"
+                        },
+                        new
+                        {
+                            Id = 109L,
+                            Name = "Swimwear"
+                        });
                 });
 
             modelBuilder.Entity("IndeConnect_Back.Domain.catalog.product.Color", b =>
@@ -1035,16 +1100,25 @@ namespace IndeConnect_Back.Infrastructure.Migrations
 
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("Id"));
 
+                    b.Property<long>("CategoryId")
+                        .HasColumnType("bigint");
+
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasMaxLength(20)
                         .HasColumnType("character varying(20)");
 
+                    b.Property<int>("SortOrder")
+                        .HasColumnType("integer");
+
                     b.HasKey("Id");
 
-                    b.HasIndex("Name")
+                    b.HasIndex("CategoryId")
+                        .HasDatabaseName("IX_Size_CategoryId");
+
+                    b.HasIndex("Name", "CategoryId")
                         .IsUnique()
-                        .HasDatabaseName("IX_Size_UniqueName");
+                        .HasDatabaseName("IX_Size_Name_Category");
 
                     b.ToTable("Sizes");
 
@@ -1052,92 +1126,352 @@ namespace IndeConnect_Back.Infrastructure.Migrations
                         new
                         {
                             Id = 1L,
-                            Name = "XS"
+                            CategoryId = 100L,
+                            Name = "XS",
+                            SortOrder = 1
                         },
                         new
                         {
                             Id = 2L,
-                            Name = "S"
+                            CategoryId = 100L,
+                            Name = "S",
+                            SortOrder = 2
                         },
                         new
                         {
                             Id = 3L,
-                            Name = "M"
+                            CategoryId = 100L,
+                            Name = "M",
+                            SortOrder = 3
                         },
                         new
                         {
                             Id = 4L,
-                            Name = "L"
+                            CategoryId = 100L,
+                            Name = "L",
+                            SortOrder = 4
                         },
                         new
                         {
                             Id = 5L,
-                            Name = "XL"
+                            CategoryId = 100L,
+                            Name = "XL",
+                            SortOrder = 5
                         },
                         new
                         {
                             Id = 6L,
-                            Name = "XXL"
+                            CategoryId = 100L,
+                            Name = "XXL",
+                            SortOrder = 6
                         },
                         new
                         {
                             Id = 7L,
-                            Name = "XXXL"
+                            CategoryId = 100L,
+                            Name = "XXXL",
+                            SortOrder = 7
+                        },
+                        new
+                        {
+                            Id = 50L,
+                            CategoryId = 106L,
+                            Name = "XS",
+                            SortOrder = 1
+                        },
+                        new
+                        {
+                            Id = 51L,
+                            CategoryId = 106L,
+                            Name = "S",
+                            SortOrder = 2
+                        },
+                        new
+                        {
+                            Id = 52L,
+                            CategoryId = 106L,
+                            Name = "M",
+                            SortOrder = 3
+                        },
+                        new
+                        {
+                            Id = 53L,
+                            CategoryId = 106L,
+                            Name = "L",
+                            SortOrder = 4
+                        },
+                        new
+                        {
+                            Id = 54L,
+                            CategoryId = 106L,
+                            Name = "XL",
+                            SortOrder = 5
+                        },
+                        new
+                        {
+                            Id = 55L,
+                            CategoryId = 106L,
+                            Name = "XXL",
+                            SortOrder = 6
+                        },
+                        new
+                        {
+                            Id = 60L,
+                            CategoryId = 105L,
+                            Name = "XS",
+                            SortOrder = 1
+                        },
+                        new
+                        {
+                            Id = 61L,
+                            CategoryId = 105L,
+                            Name = "S",
+                            SortOrder = 2
+                        },
+                        new
+                        {
+                            Id = 62L,
+                            CategoryId = 105L,
+                            Name = "M",
+                            SortOrder = 3
+                        },
+                        new
+                        {
+                            Id = 63L,
+                            CategoryId = 105L,
+                            Name = "L",
+                            SortOrder = 4
+                        },
+                        new
+                        {
+                            Id = 64L,
+                            CategoryId = 105L,
+                            Name = "XL",
+                            SortOrder = 5
+                        },
+                        new
+                        {
+                            Id = 65L,
+                            CategoryId = 105L,
+                            Name = "XXL",
+                            SortOrder = 6
+                        },
+                        new
+                        {
+                            Id = 70L,
+                            CategoryId = 104L,
+                            Name = "XS",
+                            SortOrder = 1
+                        },
+                        new
+                        {
+                            Id = 71L,
+                            CategoryId = 104L,
+                            Name = "S",
+                            SortOrder = 2
+                        },
+                        new
+                        {
+                            Id = 72L,
+                            CategoryId = 104L,
+                            Name = "M",
+                            SortOrder = 3
+                        },
+                        new
+                        {
+                            Id = 73L,
+                            CategoryId = 104L,
+                            Name = "L",
+                            SortOrder = 4
+                        },
+                        new
+                        {
+                            Id = 74L,
+                            CategoryId = 104L,
+                            Name = "XL",
+                            SortOrder = 5
+                        },
+                        new
+                        {
+                            Id = 75L,
+                            CategoryId = 104L,
+                            Name = "XXL",
+                            SortOrder = 6
+                        },
+                        new
+                        {
+                            Id = 20L,
+                            CategoryId = 101L,
+                            Name = "28",
+                            SortOrder = 1
+                        },
+                        new
+                        {
+                            Id = 21L,
+                            CategoryId = 101L,
+                            Name = "30",
+                            SortOrder = 2
+                        },
+                        new
+                        {
+                            Id = 22L,
+                            CategoryId = 101L,
+                            Name = "32",
+                            SortOrder = 3
+                        },
+                        new
+                        {
+                            Id = 23L,
+                            CategoryId = 101L,
+                            Name = "34",
+                            SortOrder = 4
+                        },
+                        new
+                        {
+                            Id = 24L,
+                            CategoryId = 101L,
+                            Name = "36",
+                            SortOrder = 5
+                        },
+                        new
+                        {
+                            Id = 25L,
+                            CategoryId = 101L,
+                            Name = "38",
+                            SortOrder = 6
+                        },
+                        new
+                        {
+                            Id = 80L,
+                            CategoryId = 107L,
+                            Name = "28",
+                            SortOrder = 1
+                        },
+                        new
+                        {
+                            Id = 81L,
+                            CategoryId = 107L,
+                            Name = "30",
+                            SortOrder = 2
+                        },
+                        new
+                        {
+                            Id = 82L,
+                            CategoryId = 107L,
+                            Name = "32",
+                            SortOrder = 3
+                        },
+                        new
+                        {
+                            Id = 83L,
+                            CategoryId = 107L,
+                            Name = "34",
+                            SortOrder = 4
+                        },
+                        new
+                        {
+                            Id = 84L,
+                            CategoryId = 107L,
+                            Name = "36",
+                            SortOrder = 5
+                        },
+                        new
+                        {
+                            Id = 85L,
+                            CategoryId = 107L,
+                            Name = "38",
+                            SortOrder = 6
                         },
                         new
                         {
                             Id = 10L,
-                            Name = "36"
+                            CategoryId = 102L,
+                            Name = "36",
+                            SortOrder = 1
                         },
                         new
                         {
                             Id = 11L,
-                            Name = "37"
+                            CategoryId = 102L,
+                            Name = "37",
+                            SortOrder = 2
                         },
                         new
                         {
                             Id = 12L,
-                            Name = "38"
+                            CategoryId = 102L,
+                            Name = "38",
+                            SortOrder = 3
                         },
                         new
                         {
                             Id = 13L,
-                            Name = "39"
+                            CategoryId = 102L,
+                            Name = "39",
+                            SortOrder = 4
                         },
                         new
                         {
                             Id = 14L,
-                            Name = "40"
+                            CategoryId = 102L,
+                            Name = "40",
+                            SortOrder = 5
                         },
                         new
                         {
                             Id = 15L,
-                            Name = "41"
+                            CategoryId = 102L,
+                            Name = "41",
+                            SortOrder = 6
                         },
                         new
                         {
                             Id = 16L,
-                            Name = "42"
+                            CategoryId = 102L,
+                            Name = "42",
+                            SortOrder = 7
                         },
                         new
                         {
                             Id = 17L,
-                            Name = "43"
+                            CategoryId = 102L,
+                            Name = "43",
+                            SortOrder = 8
                         },
                         new
                         {
                             Id = 18L,
-                            Name = "44"
+                            CategoryId = 102L,
+                            Name = "44",
+                            SortOrder = 9
                         },
                         new
                         {
                             Id = 19L,
-                            Name = "45"
+                            CategoryId = 102L,
+                            Name = "45",
+                            SortOrder = 10
                         },
                         new
                         {
                             Id = 99L,
-                            Name = "Unique"
+                            CategoryId = 103L,
+                            Name = "Unique",
+                            SortOrder = 1
+                        },
+                        new
+                        {
+                            Id = 100L,
+                            CategoryId = 108L,
+                            Name = "Unique",
+                            SortOrder = 1
+                        },
+                        new
+                        {
+                            Id = 101L,
+                            CategoryId = 109L,
+                            Name = "Unique",
+                            SortOrder = 1
                         });
                 });
 
@@ -2318,6 +2652,17 @@ namespace IndeConnect_Back.Infrastructure.Migrations
                     b.Navigation("Size");
                 });
 
+            modelBuilder.Entity("IndeConnect_Back.Domain.catalog.product.Size", b =>
+                {
+                    b.HasOne("IndeConnect_Back.Domain.catalog.product.Category", "Category")
+                        .WithMany("Sizes")
+                        .HasForeignKey("CategoryId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Category");
+                });
+
             modelBuilder.Entity("IndeConnect_Back.Domain.order.BrandDelivery", b =>
                 {
                     b.HasOne("IndeConnect_Back.Domain.catalog.brand.Brand", "Brand")
@@ -2660,6 +3005,11 @@ namespace IndeConnect_Back.Infrastructure.Migrations
             modelBuilder.Entity("IndeConnect_Back.Domain.catalog.brand.EthicsQuestion", b =>
                 {
                     b.Navigation("Options");
+                });
+
+            modelBuilder.Entity("IndeConnect_Back.Domain.catalog.product.Category", b =>
+                {
+                    b.Navigation("Sizes");
                 });
 
             modelBuilder.Entity("IndeConnect_Back.Domain.catalog.product.Product", b =>

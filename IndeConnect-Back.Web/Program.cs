@@ -61,7 +61,6 @@ builder.Services.AddScoped<IColorService, ColorService>();
 builder.Services.AddScoped<IAuditTrailService, AuditTrailService>();
 builder.Services.AddScoped<IEthicsService, EthicsService>();
 builder.Services.AddScoped<IEthicsQuestionnaireService, EthicsQuestionnaireService>();
-builder.Services.AddScoped<ICatalogService, CatalogService>();
 builder.Services.AddScoped<IEthicsAdminService, EthicsAdminService>();
 builder.Services.AddScoped<ICartService, CartService>();
 builder.Services.AddScoped<IEmailService, SendGridEmailService>();
@@ -73,6 +72,9 @@ builder.Services.AddScoped<IOrderService, OrderService>();
 builder.Services.AddScoped<IPaymentService, PaymentService>();
 builder.Services.AddScoped<IPaymentMethodService, PaymentMethodService>();
 builder.Services.AddScoped<IModerationReviewService, ModerationReviewService>();
+builder.Services.AddScoped<IRecommendationService, RecommendationService>();
+builder.Services.AddScoped<ICategoryService, CategoryService>();
+builder.Services.AddScoped<ISizeService, SizeService>();
 
 // Background service for automatic order progression
 builder.Services.AddHostedService<OrderProgressionService>();

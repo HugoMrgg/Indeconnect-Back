@@ -142,7 +142,7 @@ public class Brand
     public void AddShippingMethod(BrandShippingMethod method)
     {
         if (method.BrandId != Id)
-            throw new InvalidOperationException("Cette méthode appartient à une autre marque");
+            throw new InvalidOperationException("This method belongs to another brand");
 
         _shippingMethods.Add(method);
     }
