@@ -2,6 +2,6 @@
 
 public enum EthicsCategory
 {
-    Manufacture = 1,
-    Transport = 2
+    MaterialsManufacturing = 0,
+    Transport = 1
 }

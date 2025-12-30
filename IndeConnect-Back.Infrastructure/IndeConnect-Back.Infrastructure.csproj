@@ -40,4 +40,8 @@
 
   </ItemGroup>
 
+  <ItemGroup>
+    <Compile Remove="Migrations\AppDbContextModelSnapshot.cs" />
+  </ItemGroup>
+
 </Project>

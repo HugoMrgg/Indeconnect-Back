@@ -7,19 +7,32 @@ DELETE FROM "BrandQuestionResponseOptions";
 DELETE FROM "BrandQuestionResponses";
 DELETE FROM "BrandQuestionnaires";
 DELETE FROM "UserReviews";
+DELETE FROM "BrandEthicScores";      -- ← Ajouter si existe
+DELETE FROM "BrandEthicTags";        -- ← Ajouter si existe
+DELETE FROM "BrandShippingMethods";  -- ← Ajouter si existe
 DELETE FROM "Deposits";
 DELETE FROM "ProductReviews";
 DELETE FROM "ProductMedia";
+
+-- Tables liées aux commandes et paniers (AVANT ProductVariants)
+DELETE FROM "OrderItems";
+DELETE FROM "Orders";
+DELETE FROM "CartItems";
+DELETE FROM "ShippingAddresses";     -- ← Ajouter si tu veux nettoyer les adresses
+
+-- Maintenant on peut supprimer les variants et produits
 DELETE FROM "ProductVariants";
 DELETE FROM "Products";
 DELETE FROM "ProductGroups";
 DELETE FROM "Brands";
+
+-- ⚠️ AJOUTER CES LIGNES POUR NETTOYER LES DONNÉES DE RÉFÉRENCE ⚠️
 DELETE FROM "EthicsOptions";
 DELETE FROM "EthicsQuestions";
 DELETE FROM "Keywords";
 DELETE FROM "Categories";
 DELETE FROM "Colors";
-DELETE FROM "Users" WHERE "Id" BETWEEN 100 AND 200;
+DELETE FROM "Users";
 
 -- Note: Les Sizes sont déjà créées par la migration (IDs 1-19, 99)
 -- On ajoute seulement les tailles de jeans manquantes
@@ -221,7 +234,7 @@ VALUES
     (113, 110, 'https://res.cloudinary.com/db82qv38a/image/upload/v1765219570/leggings-black-1_oqdhm2.jpg', 'Image', 1, true),
     (114, 111, 'https://res.cloudinary.com/db82qv38a/image/upload/v1765219571/leggings-purple-1_dpg97y.jpg', 'Image', 1, true),
     (115, 112, 'https://res.cloudinary.com/db82qv38a/image/upload/v1765219558/dress-vintage-1_lae3x2.jpg', 'Image', 1, true),
-    (116, 113, 'https://res.cloudinary.com/db82qv38a/image/upload/v1765219569/kids-tee-1_rmwbfh.jpg', 'Image', 1, true),
+    (116, 113, 'https://res.cloudinary.com/db82qv38a/image/upload/v1765219569/denim-blue-1_dcodgv.jpg', 'Image', 1, true),
     (117, 114, 'https://res.cloudinary.com/db82qv38a/image/upload/v1765219591/tee-white-2_emlexh.jpg', 'Image', 1, true),
     (118, 115, 'https://res.cloudinary.com/db82qv38a/image/upload/v1765219592/bag-brown-1_yawuge.jpg', 'Image', 1, true),
     (119, 116, 'https://res.cloudinary.com/db82qv38a/image/upload/v1765219569/kids-tee-1_rmwbfh.jpg', 'Image', 1, true);

@@ -1,4 +1,6 @@
-﻿namespace IndeConnect_Back.Application.DTOs.Products;
+﻿using IndeConnect_Back.Domain.catalog.product;
+
+namespace IndeConnect_Back.Application.DTOs.Products;
 
 public record ProductSummaryDto(
     long Id,
@@ -8,5 +10,6 @@ public record ProductSummaryDto(
     string Description,
     double AverageRating,
     int ReviewCount,
-    ColorDto? PrimaryColor 
+    ColorDto? PrimaryColor,
+    ProductStatus Status
 );
