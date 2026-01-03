@@ -12,7 +12,7 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace IndeConnect_Back.Infrastructure.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    [Migration("20251228183913_InitialCreate")]
+    [Migration("20260103182305_InitialCreate")]
     partial class InitialCreate
     {
         /// <inheritdoc />
@@ -401,6 +401,55 @@ namespace IndeConnect_Back.Infrastructure.Migrations
                     b.ToTable("BrandShippingMethods", (string)null);
                 });
 
+            modelBuilder.Entity("IndeConnect_Back.Domain.catalog.brand.BrandTranslation", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("Id"));
+
+                    b.Property<string>("AboutUs")
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)");
+
+                    b.Property<long>("BrandId")
+                        .HasColumnType("bigint");
+
+                    b.Property<string>("Description")
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)");
+
+                    b.Property<string>("LanguageCode")
+                        .IsRequired()
+                        .HasMaxLength(2)
+                        .HasColumnType("character varying(2)");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<string>("OtherInfo")
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)");
+
+                    b.Property<string>("WhereAreWe")
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("LanguageCode")
+                        .HasDatabaseName("IX_BrandTranslation_LanguageCode");
+
+                    b.HasIndex("BrandId", "LanguageCode")
+                        .IsUnique()
+                        .HasDatabaseName("IX_BrandTranslation_Unique_BrandId_LanguageCode");
+
+                    b.ToTable("brand_translations", (string)null);
+                });
+
             modelBuilder.Entity("IndeConnect_Back.Domain.catalog.brand.CatalogVersion", b =>
                 {
                     b.Property<long>("Id")
@@ -671,6 +720,39 @@ namespace IndeConnect_Back.Infrastructure.Migrations
                         });
                 });
 
+            modelBuilder.Entity("IndeConnect_Back.Domain.catalog.product.CategoryTranslation", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("Id"));
+
+                    b.Property<long>("CategoryId")
+                        .HasColumnType("bigint");
+
+                    b.Property<string>("LanguageCode")
+                        .IsRequired()
+                        .HasMaxLength(2)
+                        .HasColumnType("character varying(2)");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("LanguageCode")
+                        .HasDatabaseName("IX_CategoryTranslation_LanguageCode");
+
+                    b.HasIndex("CategoryId", "LanguageCode")
+                        .IsUnique()
+                        .HasDatabaseName("IX_CategoryTranslation_Unique_CategoryId_LanguageCode");
+
+                    b.ToTable("category_translations", (string)null);
+                });
+
             modelBuilder.Entity("IndeConnect_Back.Domain.catalog.product.Color", b =>
                 {
                     b.Property<long>("Id")
@@ -701,6 +783,39 @@ namespace IndeConnect_Back.Infrastructure.Migrations
                         .HasDatabaseName("IX_Color_UniqueName");
 
                     b.ToTable("Colors", (string)null);
+                });
+
+            modelBuilder.Entity("IndeConnect_Back.Domain.catalog.product.ColorTranslation", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("Id"));
+
+                    b.Property<long>("ColorId")
+                        .HasColumnType("bigint");
+
+                    b.Property<string>("LanguageCode")
+                        .IsRequired()
+                        .HasMaxLength(2)
+                        .HasColumnType("character varying(2)");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("LanguageCode")
+                        .HasDatabaseName("IX_ColorTranslation_LanguageCode");
+
+                    b.HasIndex("ColorId", "LanguageCode")
+                        .IsUnique()
+                        .HasDatabaseName("IX_ColorTranslation_Unique_ColorId_LanguageCode");
+
+                    b.ToTable("color_translations", (string)null);
                 });
 
             modelBuilder.Entity("IndeConnect_Back.Domain.catalog.product.Keyword", b =>
@@ -1001,6 +1116,44 @@ namespace IndeConnect_Back.Infrastructure.Migrations
                         .HasDatabaseName("IX_ProductReview_UniqueUserProduct");
 
                     b.ToTable("ProductReviews");
+                });
+
+            modelBuilder.Entity("IndeConnect_Back.Domain.catalog.product.ProductTranslation", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("Id"));
+
+                    b.Property<string>("Description")
+                        .IsRequired()
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)");
+
+                    b.Property<string>("LanguageCode")
+                        .IsRequired()
+                        .HasMaxLength(2)
+                        .HasColumnType("character varying(2)");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<long>("ProductId")
+                        .HasColumnType("bigint");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("LanguageCode")
+                        .HasDatabaseName("IX_ProductTranslation_LanguageCode");
+
+                    b.HasIndex("ProductId", "LanguageCode")
+                        .IsUnique()
+                        .HasDatabaseName("IX_ProductTranslation_Unique_ProductId_LanguageCode");
+
+                    b.ToTable("product_translations", (string)null);
                 });
 
             modelBuilder.Entity("IndeConnect_Back.Domain.catalog.product.ProductVariant", b =>
@@ -1476,6 +1629,39 @@ namespace IndeConnect_Back.Infrastructure.Migrations
                             Name = "Unique",
                             SortOrder = 1
                         });
+                });
+
+            modelBuilder.Entity("IndeConnect_Back.Domain.catalog.product.SizeTranslation", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("Id"));
+
+                    b.Property<string>("LanguageCode")
+                        .IsRequired()
+                        .HasMaxLength(2)
+                        .HasColumnType("character varying(2)");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<long>("SizeId")
+                        .HasColumnType("bigint");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("LanguageCode")
+                        .HasDatabaseName("IX_SizeTranslation_LanguageCode");
+
+                    b.HasIndex("SizeId", "LanguageCode")
+                        .IsUnique()
+                        .HasDatabaseName("IX_SizeTranslation_Unique_SizeId_LanguageCode");
+
+                    b.ToTable("size_translations", (string)null);
                 });
 
             modelBuilder.Entity("IndeConnect_Back.Domain.order.BrandDelivery", b =>
@@ -2485,6 +2671,17 @@ namespace IndeConnect_Back.Infrastructure.Migrations
                     b.Navigation("Brand");
                 });
 
+            modelBuilder.Entity("IndeConnect_Back.Domain.catalog.brand.BrandTranslation", b =>
+                {
+                    b.HasOne("IndeConnect_Back.Domain.catalog.brand.Brand", "Brand")
+                        .WithMany("Translations")
+                        .HasForeignKey("BrandId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Brand");
+                });
+
             modelBuilder.Entity("IndeConnect_Back.Domain.catalog.brand.Deposit", b =>
                 {
                     b.HasOne("IndeConnect_Back.Domain.catalog.brand.Brand", "Brand")
@@ -2516,6 +2713,28 @@ namespace IndeConnect_Back.Infrastructure.Migrations
                         .IsRequired();
 
                     b.Navigation("CatalogVersion");
+                });
+
+            modelBuilder.Entity("IndeConnect_Back.Domain.catalog.product.CategoryTranslation", b =>
+                {
+                    b.HasOne("IndeConnect_Back.Domain.catalog.product.Category", "Category")
+                        .WithMany("Translations")
+                        .HasForeignKey("CategoryId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Category");
+                });
+
+            modelBuilder.Entity("IndeConnect_Back.Domain.catalog.product.ColorTranslation", b =>
+                {
+                    b.HasOne("IndeConnect_Back.Domain.catalog.product.Color", "Color")
+                        .WithMany("Translations")
+                        .HasForeignKey("ColorId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Color");
                 });
 
             modelBuilder.Entity("IndeConnect_Back.Domain.catalog.product.Product", b =>
@@ -2637,6 +2856,17 @@ namespace IndeConnect_Back.Infrastructure.Migrations
                     b.Navigation("User");
                 });
 
+            modelBuilder.Entity("IndeConnect_Back.Domain.catalog.product.ProductTranslation", b =>
+                {
+                    b.HasOne("IndeConnect_Back.Domain.catalog.product.Product", "Product")
+                        .WithMany("Translations")
+                        .HasForeignKey("ProductId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Product");
+                });
+
             modelBuilder.Entity("IndeConnect_Back.Domain.catalog.product.ProductVariant", b =>
                 {
                     b.HasOne("IndeConnect_Back.Domain.catalog.product.Product", "Product")
@@ -2664,6 +2894,17 @@ namespace IndeConnect_Back.Infrastructure.Migrations
                         .IsRequired();
 
                     b.Navigation("Category");
+                });
+
+            modelBuilder.Entity("IndeConnect_Back.Domain.catalog.product.SizeTranslation", b =>
+                {
+                    b.HasOne("IndeConnect_Back.Domain.catalog.product.Size", "Size")
+                        .WithMany("Translations")
+                        .HasForeignKey("SizeId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Size");
                 });
 
             modelBuilder.Entity("IndeConnect_Back.Domain.order.BrandDelivery", b =>
@@ -2986,6 +3227,8 @@ namespace IndeConnect_Back.Infrastructure.Migrations
                     b.Navigation("ShippingMethods");
 
                     b.Navigation("SuperVendorUser");
+
+                    b.Navigation("Translations");
                 });
 
             modelBuilder.Entity("IndeConnect_Back.Domain.catalog.brand.BrandQuestionResponse", b =>
@@ -3013,6 +3256,13 @@ namespace IndeConnect_Back.Infrastructure.Migrations
             modelBuilder.Entity("IndeConnect_Back.Domain.catalog.product.Category", b =>
                 {
                     b.Navigation("Sizes");
+
+                    b.Navigation("Translations");
+                });
+
+            modelBuilder.Entity("IndeConnect_Back.Domain.catalog.product.Color", b =>
+                {
+                    b.Navigation("Translations");
                 });
 
             modelBuilder.Entity("IndeConnect_Back.Domain.catalog.product.Product", b =>
@@ -3025,6 +3275,8 @@ namespace IndeConnect_Back.Infrastructure.Migrations
 
                     b.Navigation("Reviews");
 
+                    b.Navigation("Translations");
+
                     b.Navigation("Variants");
                 });
 
@@ -3036,6 +3288,11 @@ namespace IndeConnect_Back.Infrastructure.Migrations
             modelBuilder.Entity("IndeConnect_Back.Domain.catalog.product.Sale", b =>
                 {
                     b.Navigation("Products");
+                });
+
+            modelBuilder.Entity("IndeConnect_Back.Domain.catalog.product.Size", b =>
+                {
+                    b.Navigation("Translations");
                 });
 
             modelBuilder.Entity("IndeConnect_Back.Domain.order.BrandDelivery", b =>

@@ -7,6 +7,7 @@ using IndeConnect_Back.Domain.catalog.product;
 using IndeConnect_Back.Domain.order;
 using IndeConnect_Back.Domain.user;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 
 namespace IndeConnect_Back.Infrastructure.Services.Implementations;
 
@@ -15,14 +16,60 @@ public class ProductService : IProductService
     private readonly AppDbContext _context;
     private readonly IUserService _userService;
     private readonly IEmailService _emailService;
+    private readonly IAutoTranslationService _autoTranslationService;
+    private readonly ITranslationService _translationService;
+    private readonly ILogger<ProductService> _logger;
+    private static readonly string[] TargetLanguages = { "nl", "de", "en" };
 
-    public ProductService(AppDbContext context, IUserService userService, IEmailService emailService)
+    public ProductService(
+        AppDbContext context,
+        IUserService userService,
+        IEmailService emailService,
+        IAutoTranslationService autoTranslationService,
+        ITranslationService translationService,
+        ILogger<ProductService> logger)
     {
         _context = context;
         _userService = userService;
         _emailService = emailService;
+        _autoTranslationService = autoTranslationService;
+        _translationService = translationService;
+        _logger = logger;
     }
 
+    /// <summary>
+    /// Auto-translate product to NL, DE, EN using DeepL.
+    /// If translation fails, logs error but doesn't throw (product stays FR only).
+    /// </summary>
+    private async Task AutoTranslateProductAsync(Product product)
+    {
+        try
+        {
+            _logger.LogInformation("Auto-translating product {ProductId} ({ProductName})", product.Id, product.Name);
+
+            var nameTranslations = await _autoTranslationService.TranslateAsync(
+                product.Name, "fr", TargetLanguages);
+
+            var descriptionTranslations = await _autoTranslationService.TranslateAsync(
+                product.Description, "fr", TargetLanguages);
+
+            foreach (var lang in TargetLanguages)
+            {
+                product.AddOrUpdateTranslation(
+                    lang, 
+                    nameTranslations[lang], 
+                    descriptionTranslations[lang]);
+            }
+
+            _logger.LogInformation("Product {ProductId} successfully translated to {Languages}", 
+                product.Id, string.Join(", ", TargetLanguages));
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to auto-translate product {ProductId}. Product will remain in French only.", product.Id);
+        }
+    }
+    
     /// <summary>
     /// Vérifie si l'utilisateur a accès à la marque (SuperVendor ou Vendor)
     /// </summary>
@@ -64,51 +111,61 @@ public class ProductService : IProductService
     /**
      * Retrieves detailed product information including variants, reviews, stock, and color alternatives
      */
-    public async Task<ProductDetailDto?> GetProductByIdAsync(long productId)
+public async Task<ProductDetailDto?> GetProductByIdAsync(long productId)
     {
-        // Load product with all related entities
+        var lang = _translationService.GetCurrentLanguage(); // ✅ Détection langue
+
         var product = await _context.Products
             .Include(p => p.Brand)
             .Include(p => p.Category)
+                .ThenInclude(c => c.Translations) // ✅
             .Include(p => p.Sale)
-            .Include(p => p.PrimaryColor) // NOUVEAU
-            .Include(p => p.Media) // NOUVEAU : médias sur Product directement
-            .Include(p => p.ProductGroup) // NOUVEAU
-                .ThenInclude(pg => pg.Products) // NOUVEAU : autres couleurs du groupe
+            .Include(p => p.PrimaryColor)
+                .ThenInclude(c => c.Translations) // ✅
+            .Include(p => p.Media)
+            .Include(p => p.ProductGroup)
+                .ThenInclude(pg => pg.Products)
                     .ThenInclude(p => p.PrimaryColor)
+                        .ThenInclude(c => c.Translations) // ✅
             .Include(p => p.ProductGroup)
                 .ThenInclude(pg => pg.Products)
                     .ThenInclude(p => p.Media)
-            .Include(p => p.Variants) // Variants = juste les tailles maintenant
+            .Include(p => p.ProductGroup)
+                .ThenInclude(pg => pg.Products)
+                    .ThenInclude(p => p.Translations) // ✅
+            .Include(p => p.Variants)
                 .ThenInclude(v => v.Size)
+                    .ThenInclude(s => s.Translations) // ✅
             .Include(p => p.Details)
             .Include(p => p.Keywords)
                 .ThenInclude(pk => pk.Keyword)
             .Include(p => p.Reviews.Where(r => r.Status == ReviewStatus.Enabled))
                 .ThenInclude(r => r.User)
+            .Include(p => p.Translations) // ✅
             .FirstOrDefaultAsync(p => p.Id == productId && p.IsEnabled);
 
         if (product == null)
             return null;
 
-        // Utiliser les méthodes métier du Domain
         var currentPrice = product.CalculateCurrentPrice();
         var basePrice = product.Price;
-        var salePrice = currentPrice != basePrice ? currentPrice : (decimal?)null;
-
+        var salePrice = currentPrice != basePrice ? (decimal?)currentPrice : null;
         var totalStock = product.GetTotalStock();
         var isAvailable = product.IsAvailableForPurchase();
-
         var avgRating = product.GetAverageRating();
         var reviewsCount = product.GetApprovedReviewsCount();
 
-        // Récupérer les autres couleurs disponibles - utiliser les méthodes du Domain
+        // ✅ Variantes de couleur traduites
         var colorVariants = product.ProductGroup?.GetOnlineProducts()
             .Where(p => p.Id != productId)
             .Select(p => new ProductColorVariantDto(
                 p.Id,
                 p.PrimaryColor?.Id,
-                p.PrimaryColor?.Name,
+                _translationService.GetTranslatedValue(
+                    p.PrimaryColor?.Translations,
+                    lang,
+                    t => t.Name,
+                    p.PrimaryColor?.Name), // ✅ Traduit
                 p.PrimaryColor?.Hexa,
                 p.GetPrimaryImageUrl(),
                 p.IsAvailableForPurchase()
@@ -117,8 +174,8 @@ public class ProductService : IProductService
 
         return new ProductDetailDto(
             product.Id,
-            product.Name,
-            product.Description,
+            _translationService.GetTranslatedValue(product.Translations, lang, t => t.Name, product.Name), // ✅
+            _translationService.GetTranslatedValue(product.Translations, lang, t => t.Description, product.Description), // ✅
             basePrice,
             salePrice,
             product.Sale != null ? MapToSaleDto(product.Sale) : null,
@@ -128,29 +185,39 @@ public class ProductService : IProductService
                 product.Brand.LogoUrl,
                 product.Brand.BannerUrl,
                 product.Brand.Description,
-                0,          
-                0, 
-                Enumerable.Empty<string>(),
+                0,    // ethicsScoreProduction (tu peux calculer si besoin)
+                0,    // ethicsScoreTransport
+                Enumerable.Empty<string>(), // ethicTags
                 product.Brand.Deposits.FirstOrDefault() != null 
-                    ? $"{product.Brand.Deposits.First().Number} {product.Brand.Deposits.First().Street}, {product.Brand.Deposits.First().PostalCode}" 
-                    : null,    
-                null,       
-                0             
+                    ? $"{product.Brand.Deposits.First().Number} {product.Brand.Deposits.First().Street}, {product.Brand.Deposits.First().PostalCode}"
+                    : null,
+                null, // distanceKm
+                0     // userRating
             ),
-            new CategoryDto(product.Category.Id, product.Category.Name),
-            product.CategoryId, // ← AJOUTER CETTE LIGNE (manquait dans ton code)
-            product.PrimaryColor != null 
-                ? new ColorDto(product.PrimaryColor.Id, product.PrimaryColor.Name, product.PrimaryColor.Hexa) 
-                : null, 
+            new CategoryDto(
+                product.Category.Id,
+                _translationService.GetTranslatedValue(
+                    product.Category.Translations, 
+                    lang, 
+                    t => t.Name, 
+                    product.Category.Name)), // ✅ Catégorie traduite
+            product.CategoryId,
+            product.PrimaryColor != null
+                ? new ColorDto(
+                    product.PrimaryColor.Id,
+                    _translationService.GetTranslatedValue(
+                        product.PrimaryColor.Translations,
+                        lang,
+                        t => t.Name,
+                        product.PrimaryColor.Name), // ✅ Couleur traduite
+                    product.PrimaryColor.Hexa)
+                : null,
             colorVariants,
             product.Media.OrderBy(m => m.DisplayOrder).Select(m => new ProductMediaDto(
-                m.Url,
-                m.Type,
-                m.DisplayOrder,
-                m.IsPrimary
-            )),
-            product.Variants.Select(MapToVariantDto),
-            product.Details.OrderBy(d => d.DisplayOrder).Select(d => new ProductDetailItemDto(d.Value, d.DisplayOrder)),
+                m.Url, m.Type, m.DisplayOrder, m.IsPrimary)),
+            product.Variants.Select(v => MapToVariantDto(v, lang)), // ✅ Passer lang
+            product.Details.OrderBy(d => d.DisplayOrder).Select(d => new ProductDetailItemDto(
+                d.Value, d.DisplayOrder)),
             product.Keywords.Select(pk => pk.Keyword.Name),
             product.Reviews.Where(r => r.Status == ReviewStatus.Enabled).Select(MapToReviewDto),
             Math.Round(avgRating, 1),
@@ -161,18 +228,56 @@ public class ProductService : IProductService
         );
     }
 
+    // ✅ MapToProductSummary - AVEC TRADUCTIONS
+    private ProductSummaryDto MapToProductSummary(Product product, double averageRating, string lang)
+    {
+        var primaryImage = product.Media?
+            .Where(m => m.IsPrimary)
+            .OrderBy(m => m.DisplayOrder)
+            .FirstOrDefault()?.Url;
+
+        if (primaryImage == null)
+            primaryImage = product.Media?
+                .OrderBy(m => m.DisplayOrder)
+                .FirstOrDefault()?.Url;
+
+        return new ProductSummaryDto(
+            product.Id,
+            _translationService.GetTranslatedValue(product.Translations, lang, t => t.Name, product.Name), // ✅
+            primaryImage,
+            product.Price,
+            _translationService.GetTranslatedValue(product.Translations, lang, t => t.Description, product.Description), // ✅
+            Math.Round(averageRating, 1),
+            product.Reviews?.Count ?? 0,
+            product.PrimaryColor != null
+                ? new ColorDto(
+                    product.PrimaryColor.Id,
+                    _translationService.GetTranslatedValue(
+                        product.PrimaryColor.Translations,
+                        lang,
+                        t => t.Name,
+                        product.PrimaryColor.Name), // ✅
+                    product.PrimaryColor.Hexa)
+                : null,
+            product.Status,
+            product.Sale != null ? MapToSaleDto(product.Sale) : null
+        );
+    }
     /**
      * Retrieves all size variants for a product
      */
     public async Task<IEnumerable<ProductVariantDto>> GetProductVariantsAsync(long productId)
     {
+        var lang = _translationService.GetCurrentLanguage(); // ✅ Ajouter
+
         var variants = await _context.ProductVariants
             .Include(v => v.Size)
+            .ThenInclude(s => s.Translations) // ✅ Ajouter
             .Include(v => v.Product)
             .Where(v => v.ProductId == productId && v.Product.IsEnabled)
             .ToListAsync();
 
-        return variants.Select(MapToVariantDto);
+        return variants.Select(v => MapToVariantDto(v, lang)); // ✅ Passer lang
     }
 
     /**
@@ -317,116 +422,107 @@ public class ProductService : IProductService
      * IMPORTANT: Returns individual products (each color = separate entry)
      */
 public async Task<ProductsListResponse> GetProductsByBrandAsync(GetProductsQuery query, long? userId)
-{
-    UserDetailDto? user = null;
-    if (userId.HasValue)
-        user = await _userService.GetUserByIdAsync(userId);
-
-    var brand = await _context.Brands
-        .FirstOrDefaultAsync(b => b.Id == query.BrandId);
-
-    if (brand == null)
-        throw new InvalidOperationException("Brand not found.");
-
-    // ✅ Vérifier si l'utilisateur peut voir les produits (même si marque non approuvée)
-    bool canSeeAllProducts = false;
-
-    if (user != null)
     {
-        if (user.role == Role.SuperVendor && brand.SuperVendorUserId == userId)
+        var lang = _translationService.GetCurrentLanguage(); // ✅ Détection langue
+
+        UserDetailDto? user = null;
+        if (userId.HasValue)
+            user = await _userService.GetUserByIdAsync(userId);
+
+        var brand = await _context.Brands
+            .FirstOrDefaultAsync(b => b.Id == query.BrandId);
+
+        if (brand == null)
+            throw new InvalidOperationException("Brand not found");
+
+        // Vérifier les permissions...
+        bool canSeeAllProducts = false;
+        if (user != null)
         {
-            canSeeAllProducts = true;
+            if (user.role == Role.SuperVendor && brand.SuperVendorUserId == userId)
+                canSeeAllProducts = true;
+            else if (user.role == Role.Vendor)
+            {
+                var isVendorOfBrand = await _context.BrandSellers
+                    .AnyAsync(bs => bs.SellerId == userId && bs.BrandId == brand.Id && bs.IsActive);
+                canSeeAllProducts = isVendorOfBrand;
+            }
+            else if (user.role == Role.Administrator || user.role == Role.Moderator)
+                canSeeAllProducts = true;
         }
-        else if (user.role == Role.Vendor)
+
+        if (brand.Status != BrandStatus.Approved && !canSeeAllProducts)
+            throw new InvalidOperationException("Brand not found or not approved.");
+
+        // ✅ Charger les produits AVEC leurs traductions
+        var productsQuery = _context.Products
+            .Where(p => p.BrandId == query.BrandId)
+            .Include(p => p.Reviews)
+            .Include(p => p.Variants)
+            .Include(p => p.Media)
+            .Include(p => p.Category)
+                .ThenInclude(c => c.Translations) // ✅ Traductions catégories
+            .Include(p => p.PrimaryColor)
+                .ThenInclude(c => c.Translations) // ✅ Traductions couleurs
+            .Include(p => p.Sale)
+            .Include(p => p.Translations) // ✅ Traductions produits
+            .AsQueryable();
+
+        // Filtre statut
+        if (!canSeeAllProducts)
+            productsQuery = productsQuery.Where(p => p.Status == ProductStatus.Online);
+
+        // Filtres
+        if (!string.IsNullOrEmpty(query.Category))
+            productsQuery = productsQuery.Where(p => p.Category.Name == query.Category);
+
+        if (query.MinPrice.HasValue)
+            productsQuery = productsQuery.Where(p => p.Price >= query.MinPrice.Value);
+
+        if (query.MaxPrice.HasValue)
+            productsQuery = productsQuery.Where(p => p.Price <= query.MaxPrice.Value);
+
+        if (!string.IsNullOrEmpty(query.SearchTerm))
         {
-            // ✅ Vérifier via BrandSellers (comme dans BrandService)
-            var isVendorOfBrand = await _context.BrandSellers
-                .AnyAsync(bs => bs.SellerId == userId && bs.BrandId == brand.Id && bs.IsActive);
-            
-            canSeeAllProducts = isVendorOfBrand;
+            var searchTerm = query.SearchTerm.ToLower();
+            productsQuery = productsQuery.Where(p =>
+                p.Name.ToLower().Contains(searchTerm) ||
+                p.Description.ToLower().Contains(searchTerm));
         }
-        else if (user.role == Role.Administrator || user.role == Role.Moderator)
+
+        var products = await productsQuery.ToListAsync();
+
+        // Enrichir avec ratings
+        var enrichedProducts = products
+            .Select(p => new
+            {
+                Product = p,
+                AverageRating = p.Reviews != null && p.Reviews.Any()
+                    ? p.Reviews.Average(r => (double)r.Rating)
+                    : 0.0
+            })
+            .ToList();
+
+        // Tri
+        var sortedProducts = query.SortBy switch
         {
-            canSeeAllProducts = true;
-        }
+            ProductSortType.PriceAsc => enrichedProducts.OrderBy(x => x.Product.Price).ToList(),
+            ProductSortType.PriceDesc => enrichedProducts.OrderByDescending(x => x.Product.Price).ToList(),
+            ProductSortType.Rating => enrichedProducts.OrderByDescending(x => x.AverageRating).ToList(),
+            ProductSortType.Popular => enrichedProducts.OrderByDescending(x => x.Product.Reviews?.Count ?? 0).ToList(),
+            ProductSortType.Newest => enrichedProducts.OrderByDescending(x => x.Product.CreatedAt).ToList(),
+            _ => enrichedProducts.OrderByDescending(x => x.Product.CreatedAt).ToList()
+        };
+
+        var totalCount = sortedProducts.Count;
+        var paginatedProducts = sortedProducts
+            .Skip((query.Page - 1) * query.PageSize)
+            .Take(query.PageSize)
+            .Select(x => MapToProductSummary(x.Product, x.AverageRating, lang)) // ✅ Passer lang
+            .ToList();
+
+        return new ProductsListResponse(paginatedProducts, totalCount, query.Page, query.PageSize);
     }
-
-    // ✅ Si la marque n'est pas approuvée ET l'utilisateur n'a pas les droits → erreur
-    if (brand.Status != BrandStatus.Approved && !canSeeAllProducts)
-        throw new InvalidOperationException("Brand not found or not approved.");
-
-    // Récupérer les produits
-    var productsQuery = _context.Products
-        .Where(p => p.BrandId == query.BrandId)
-        .Include(p => p.Reviews)
-        .Include(p => p.Variants)
-        .Include(p => p.Media)
-        .Include(p => p.Category)
-        .Include(p => p.PrimaryColor)
-        .Include(p => p.Sale)
-        .AsQueryable();
-
-    // ✅ Appliquer le filtre de statut selon le rôle
-    if (!canSeeAllProducts)
-    {
-        // Client ou non-authentifié : uniquement produits Online
-        productsQuery = productsQuery.Where(p => p.Status == ProductStatus.Online);
-    }
-    // Sinon (SuperVendor/Vendor/Admin) : voir tous les produits (Draft, Online, Archived)
-
-    // Apply filters
-    if (!string.IsNullOrEmpty(query.Category))
-        productsQuery = productsQuery.Where(p => p.Category.Name == query.Category);
-
-    if (query.MinPrice.HasValue)
-        productsQuery = productsQuery.Where(p => p.Price >= query.MinPrice.Value);
-
-    if (query.MaxPrice.HasValue)
-        productsQuery = productsQuery.Where(p => p.Price <= query.MaxPrice.Value);
-
-    if (!string.IsNullOrEmpty(query.SearchTerm))
-    {
-        var searchTerm = query.SearchTerm.ToLower();
-        productsQuery = productsQuery.Where(p =>
-            p.Name.ToLower().Contains(searchTerm) ||
-            p.Description.ToLower().Contains(searchTerm)
-        );
-    }
-
-    var products = await productsQuery.ToListAsync();
-
-    // Enrichir avec les ratings
-    var enrichedProducts = products
-        .Select(p => new
-        {
-            Product = p,
-            AverageRating = p.Reviews != null && p.Reviews.Any()
-                ? p.Reviews.Average(r => (double)r.Rating)
-                : 0.0
-        })
-        .ToList();
-
-    // Tri
-    var sortedProducts = query.SortBy switch
-    {
-        ProductSortType.PriceAsc => enrichedProducts.OrderBy(x => x.Product.Price).ToList(),
-        ProductSortType.PriceDesc => enrichedProducts.OrderByDescending(x => x.Product.Price).ToList(),
-        ProductSortType.Rating => enrichedProducts.OrderByDescending(x => x.AverageRating).ToList(),
-        ProductSortType.Popular => enrichedProducts.OrderByDescending(x => x.Product.Reviews?.Count ?? 0).ToList(),
-        ProductSortType.Newest => enrichedProducts.OrderByDescending(x => x.Product.CreatedAt).ToList(),
-        _ => enrichedProducts.OrderByDescending(x => x.Product.CreatedAt).ToList()
-    };
-
-    var totalCount = sortedProducts.Count;
-
-    var paginatedProducts = sortedProducts
-        .Skip((query.Page - 1) * query.PageSize)
-        .Take(query.PageSize)
-        .Select(x => MapToProductSummary(x.Product, x.AverageRating))
-        .ToList();
-
-    return new ProductsListResponse(paginatedProducts, totalCount, query.Page, query.PageSize);
-}
     public async Task<CreateProductResponse> CreateProductAsync(CreateProductQuery query, long? currentUserId)
     {
         if (string.IsNullOrWhiteSpace(query.Name)) 
@@ -468,8 +564,11 @@ public async Task<ProductsListResponse> GetProductsByBrandAsync(GetProductsQuery
         );
 
         _context.Products.Add(product);
-        
+
         await _context.SaveChangesAsync();
+
+        // Auto-translate to NL, DE, EN using DeepL
+        await AutoTranslateProductAsync(product);
 
         // Maintenant que product.Id est généré, on peut ajouter les entités liées
 
@@ -576,6 +675,7 @@ public async Task<ProductsListResponse> GetProductsByBrandAsync(GetProductsQuery
         .Include(p => p.Sale)
         .Include(p => p.Media)
         .Include(p => p.Variants)
+        .Include(p => p.Translations)
         .FirstOrDefaultAsync(p => p.Id == productId);
 
     if (product == null)
@@ -586,8 +686,12 @@ public async Task<ProductsListResponse> GetProductsByBrandAsync(GetProductsQuery
         throw new UnauthorizedAccessException("You do not have access to this product's brand.");
 
     var categoryExists = await _context.Categories.AnyAsync(c => c.Id == query.CategoryId);
-    if (!categoryExists) 
+    if (!categoryExists)
         throw new InvalidOperationException($"Category with id {query.CategoryId} not found.");
+
+    // Track if name or description changed for re-translation
+    var nameChanged = product.Name != query.Name;
+    var descriptionChanged = product.Description != query.Description;
 
     // 1. Mettre à jour les infos de base
     product.UpdateInfo(
@@ -598,6 +702,12 @@ public async Task<ProductsListResponse> GetProductsByBrandAsync(GetProductsQuery
         primaryColorId: query.PrimaryColorId,
         status: query.Status
     );
+
+    // Auto-translate if name or description changed
+    if (nameChanged || descriptionChanged)
+    {
+        await AutoTranslateProductAsync(product);
+    }
 
     // 2. Gérer la promotion (Sale)
     bool shouldNotifyPromotion = false;
@@ -757,21 +867,28 @@ public async Task<ProductsListResponse> GetProductsByBrandAsync(GetProductsQuery
     /**
      * Maps a product variant (size) to DTO
      */
-    private ProductVariantDto MapToVariantDto(ProductVariant variant)
+    private ProductVariantDto MapToVariantDto(ProductVariant variant, string lang)
     {
-        // Utiliser la méthode métier du Domain pour calculer le prix
         var price = variant.PriceOverride ?? variant.Product.CalculateCurrentPrice();
 
         return new ProductVariantDto(
-            Id: variant.Id,
+            variant.Id,
             variant.SKU,
-            variant.Size != null ? new SizeDto(variant.Size.Id, variant.Size.Name) : null,
+            variant.Size != null
+                ? new SizeDto(
+                    variant.Size.Id,
+                    _translationService.GetTranslatedValue(
+                        variant.Size.Translations,
+                        lang,
+                        t => t.Name,
+                        variant.Size.Name)) // ✅ Taille traduite
+                : null,
             variant.StockCount,
             price,
             variant.StockCount > 0
         );
     }
-
+    
     /**
      * Maps a product to summary DTO (for listing pages)
      */

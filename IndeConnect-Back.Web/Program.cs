@@ -12,6 +12,7 @@ using IndeConnect_Back.Web;
 using IndeConnect_Back.Web.Attributes;
 using IndeConnect_Back.Web.Handlers;
 using IndeConnect_Back.Web.Middlewares;
+using IndeConnect_Back.Web.Services;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.EntityFrameworkCore;
@@ -75,6 +76,12 @@ builder.Services.AddScoped<IModerationReviewService, ModerationReviewService>();
 builder.Services.AddScoped<IRecommendationService, RecommendationService>();
 builder.Services.AddScoped<ICategoryService, CategoryService>();
 builder.Services.AddScoped<ISizeService, SizeService>();
+
+// Translation services
+builder.Services.AddHttpContextAccessor(); // Required for CurrentLanguageProvider
+builder.Services.AddScoped<ICurrentLanguageProvider, CurrentLanguageProvider>();
+builder.Services.AddScoped<IAutoTranslationService, DeepLTranslationService>();
+builder.Services.AddScoped<ITranslationService, TranslationService>();
 
 // Background service for automatic order progression
 builder.Services.AddHostedService<OrderProgressionService>();

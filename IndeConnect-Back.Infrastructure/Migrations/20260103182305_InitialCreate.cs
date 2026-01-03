@@ -146,6 +146,31 @@ namespace IndeConnect_Back.Infrastructure.Migrations
                 });
 
             migrationBuilder.CreateTable(
+                name: "brand_translations",
+                columns: table => new
+                {
+                    Id = table.Column<long>(type: "bigint", nullable: false)
+                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
+                    BrandId = table.Column<long>(type: "bigint", nullable: false),
+                    LanguageCode = table.Column<string>(type: "character varying(2)", maxLength: 2, nullable: false),
+                    Name = table.Column<string>(type: "character varying(200)", maxLength: 200, nullable: false),
+                    Description = table.Column<string>(type: "character varying(2000)", maxLength: 2000, nullable: true),
+                    AboutUs = table.Column<string>(type: "character varying(2000)", maxLength: 2000, nullable: true),
+                    WhereAreWe = table.Column<string>(type: "character varying(2000)", maxLength: 2000, nullable: true),
+                    OtherInfo = table.Column<string>(type: "character varying(2000)", maxLength: 2000, nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_brand_translations", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_brand_translations_Brands_BrandId",
+                        column: x => x.BrandId,
+                        principalTable: "Brands",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
                 name: "BrandEthicTags",
                 columns: table => new
                 {
@@ -335,6 +360,27 @@ namespace IndeConnect_Back.Infrastructure.Migrations
                 });
 
             migrationBuilder.CreateTable(
+                name: "category_translations",
+                columns: table => new
+                {
+                    Id = table.Column<long>(type: "bigint", nullable: false)
+                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
+                    CategoryId = table.Column<long>(type: "bigint", nullable: false),
+                    LanguageCode = table.Column<string>(type: "character varying(2)", maxLength: 2, nullable: false),
+                    Name = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_category_translations", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_category_translations_Categories_CategoryId",
+                        column: x => x.CategoryId,
+                        principalTable: "Categories",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
                 name: "ProductGroups",
                 columns: table => new
                 {
@@ -381,6 +427,27 @@ namespace IndeConnect_Back.Infrastructure.Migrations
                         principalTable: "Categories",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Restrict);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "color_translations",
+                columns: table => new
+                {
+                    Id = table.Column<long>(type: "bigint", nullable: false)
+                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
+                    ColorId = table.Column<long>(type: "bigint", nullable: false),
+                    LanguageCode = table.Column<string>(type: "character varying(2)", maxLength: 2, nullable: false),
+                    Name = table.Column<string>(type: "character varying(50)", maxLength: 50, nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_color_translations", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_color_translations_Colors_ColorId",
+                        column: x => x.ColorId,
+                        principalTable: "Colors",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
                 });
 
             migrationBuilder.CreateTable(
@@ -719,6 +786,27 @@ namespace IndeConnect_Back.Infrastructure.Migrations
                 });
 
             migrationBuilder.CreateTable(
+                name: "size_translations",
+                columns: table => new
+                {
+                    Id = table.Column<long>(type: "bigint", nullable: false)
+                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
+                    SizeId = table.Column<long>(type: "bigint", nullable: false),
+                    LanguageCode = table.Column<string>(type: "character varying(2)", maxLength: 2, nullable: false),
+                    Name = table.Column<string>(type: "character varying(50)", maxLength: 50, nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_size_translations", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_size_translations_Sizes_SizeId",
+                        column: x => x.SizeId,
+                        principalTable: "Sizes",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
                 name: "Orders",
                 columns: table => new
                 {
@@ -771,6 +859,28 @@ namespace IndeConnect_Back.Infrastructure.Migrations
                         principalTable: "EthicsOptions",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Restrict);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "product_translations",
+                columns: table => new
+                {
+                    Id = table.Column<long>(type: "bigint", nullable: false)
+                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
+                    ProductId = table.Column<long>(type: "bigint", nullable: false),
+                    LanguageCode = table.Column<string>(type: "character varying(2)", maxLength: 2, nullable: false),
+                    Name = table.Column<string>(type: "character varying(200)", maxLength: 200, nullable: false),
+                    Description = table.Column<string>(type: "character varying(2000)", maxLength: 2000, nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_product_translations", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_product_translations_Products_ProductId",
+                        column: x => x.ProductId,
+                        principalTable: "Products",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
                 });
 
             migrationBuilder.CreateTable(
@@ -1248,6 +1358,17 @@ namespace IndeConnect_Back.Infrastructure.Migrations
                 });
 
             migrationBuilder.CreateIndex(
+                name: "IX_BrandTranslation_LanguageCode",
+                table: "brand_translations",
+                column: "LanguageCode");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_BrandTranslation_Unique_BrandId_LanguageCode",
+                table: "brand_translations",
+                columns: new[] { "BrandId", "LanguageCode" },
+                unique: true);
+
+            migrationBuilder.CreateIndex(
                 name: "IX_BrandDeliveries_BrandId",
                 table: "BrandDeliveries",
                 column: "BrandId");
@@ -1464,6 +1585,28 @@ namespace IndeConnect_Back.Infrastructure.Migrations
                 unique: true);
 
             migrationBuilder.CreateIndex(
+                name: "IX_CategoryTranslation_LanguageCode",
+                table: "category_translations",
+                column: "LanguageCode");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_CategoryTranslation_Unique_CategoryId_LanguageCode",
+                table: "category_translations",
+                columns: new[] { "CategoryId", "LanguageCode" },
+                unique: true);
+
+            migrationBuilder.CreateIndex(
+                name: "IX_ColorTranslation_LanguageCode",
+                table: "color_translations",
+                column: "LanguageCode");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_ColorTranslation_Unique_ColorId_LanguageCode",
+                table: "color_translations",
+                columns: new[] { "ColorId", "LanguageCode" },
+                unique: true);
+
+            migrationBuilder.CreateIndex(
                 name: "IX_Color_UniqueHexa",
                 table: "Colors",
                 column: "Hexa",
@@ -1668,6 +1811,17 @@ namespace IndeConnect_Back.Infrastructure.Migrations
                 filter: "\"TransactionId\" IS NOT NULL");
 
             migrationBuilder.CreateIndex(
+                name: "IX_ProductTranslation_LanguageCode",
+                table: "product_translations",
+                column: "LanguageCode");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_ProductTranslation_Unique_ProductId_LanguageCode",
+                table: "product_translations",
+                columns: new[] { "ProductId", "LanguageCode" },
+                unique: true);
+
+            migrationBuilder.CreateIndex(
                 name: "IX_ProductDetail_ProductOrder",
                 table: "ProductDetails",
                 columns: new[] { "ProductId", "DisplayOrder" });
@@ -1865,6 +2019,17 @@ namespace IndeConnect_Back.Infrastructure.Migrations
                 column: "UserId");
 
             migrationBuilder.CreateIndex(
+                name: "IX_SizeTranslation_LanguageCode",
+                table: "size_translations",
+                column: "LanguageCode");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_SizeTranslation_Unique_SizeId_LanguageCode",
+                table: "size_translations",
+                columns: new[] { "SizeId", "LanguageCode" },
+                unique: true);
+
+            migrationBuilder.CreateIndex(
                 name: "IX_Size_CategoryId",
                 table: "Sizes",
                 column: "CategoryId");
@@ -1961,6 +2126,9 @@ namespace IndeConnect_Back.Infrastructure.Migrations
                 name: "AuditLogs");
 
             migrationBuilder.DropTable(
+                name: "brand_translations");
+
+            migrationBuilder.DropTable(
                 name: "BrandEthicScores");
 
             migrationBuilder.DropTable(
@@ -1982,6 +2150,12 @@ namespace IndeConnect_Back.Infrastructure.Migrations
                 name: "CartItems");
 
             migrationBuilder.DropTable(
+                name: "category_translations");
+
+            migrationBuilder.DropTable(
+                name: "color_translations");
+
+            migrationBuilder.DropTable(
                 name: "Deliveries");
 
             migrationBuilder.DropTable(
@@ -2000,6 +2174,9 @@ namespace IndeConnect_Back.Infrastructure.Migrations
                 name: "Payments");
 
             migrationBuilder.DropTable(
+                name: "product_translations");
+
+            migrationBuilder.DropTable(
                 name: "ProductDetails");
 
             migrationBuilder.DropTable(
@@ -2013,6 +2190,9 @@ namespace IndeConnect_Back.Infrastructure.Migrations
 
             migrationBuilder.DropTable(
                 name: "ReturnRequests");
+
+            migrationBuilder.DropTable(
+                name: "size_translations");
 
             migrationBuilder.DropTable(
                 name: "UserPaymentMethods");
