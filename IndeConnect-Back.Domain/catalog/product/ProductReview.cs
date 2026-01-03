@@ -43,10 +43,4 @@ public class ProductReview
         if (Status == ReviewStatus.Disabled) return;
         Status = ReviewStatus.Disabled;
     }
-    
-    public void Approve()
-    {
-        if (Status == ReviewStatus.Disabled) return;
-        Status = ReviewStatus.Enabled;
-    }
 }
