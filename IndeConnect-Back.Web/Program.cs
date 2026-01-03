@@ -229,11 +229,8 @@ if (app.Environment.IsDevelopment())
     app.UseSwagger();
     app.UseSwaggerUI();
 }
-// ⚠️ ACTIVATION DU ROUTAGE (si ce n'est pas implicite, bonne pratique)
 app.UseRouting();
 
-// 💡 ACTIVATION DU MIDDLEWARE CORS (AJOUTER CECI)
-// Doit être placé avant l'authentification et l'autorisation
 app.UseCors(MyAllowSpecificOrigins);
 
 app.UseHttpsRedirection();

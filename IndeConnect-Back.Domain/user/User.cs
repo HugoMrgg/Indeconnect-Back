@@ -201,7 +201,31 @@ public class User
     {
         if (string.IsNullOrWhiteSpace(customerId))
             throw new ArgumentException("Stripe Customer ID cannot be empty");
-            
+
         StripeCustomerId = customerId;
+    }
+
+    /// <summary>
+    /// Définit le token d'invitation pour l'utilisateur
+    /// </summary>
+    public void SetInvitationToken(string tokenHash, DateTimeOffset expiresAt)
+    {
+        if (string.IsNullOrWhiteSpace(tokenHash))
+            throw new ArgumentException("Token hash cannot be empty", nameof(tokenHash));
+
+        if (expiresAt <= DateTimeOffset.UtcNow)
+            throw new ArgumentException("Expiration date must be in the future", nameof(expiresAt));
+
+        InvitationTokenHash = tokenHash;
+        InvitationExpiresAt = expiresAt;
+    }
+
+    /// <summary>
+    /// Efface le token d'invitation (appelé après activation)
+    /// </summary>
+    public void ClearInvitationToken()
+    {
+        InvitationTokenHash = null;
+        InvitationExpiresAt = null;
     }
 }

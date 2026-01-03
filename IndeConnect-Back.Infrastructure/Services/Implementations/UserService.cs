@@ -53,17 +53,28 @@ public class UserService : IUserService
         }
         else if (currentUserRole == Role.SuperVendor)
         {
-            query =
-                (from user in _context.Users
-                    where user.BrandId == _context.Users
-                        .Where(u => u.Id == currentUserId)
-                        .Select(u => u.BrandId)
-                        .FirstOrDefault()
-                    join brandSeller in _context.BrandSellers on user.Id equals brandSeller.SellerId
-                    where user.Role == Role.Vendor && brandSeller.IsActive
-                    select user)
-                .Distinct();
+            // Récupérer le BrandId du SuperVendor
+            var superVendorBrandId = await _context.Users
+                .Where(u => u.Id == currentUserId)
+                .Select(u => u.BrandId)
+                .FirstOrDefaultAsync();
+
+            if (superVendorBrandId == null)
+            {
+                // Le SuperVendor n'a pas de marque, retourner liste vide
+                return new List<AccountDto>();
+            }
+
+            // Récupérer les Vendors actifs de cette marque via BrandSellers
+            query = _context.Users
+                .Where(u => u.Role == Role.Vendor)
+                .Where(u => _context.BrandSellers.Any(bs => 
+                    bs.SellerId == u.Id && 
+                    bs.BrandId == superVendorBrandId && 
+                    bs.IsActive
+                ));
         }
+
         else
         {
             // Vendor / Client n'ont pas accès à cette liste

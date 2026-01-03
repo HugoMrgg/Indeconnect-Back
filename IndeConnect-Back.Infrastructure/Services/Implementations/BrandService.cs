@@ -158,28 +158,52 @@ public class BrandService : IBrandService
     /// <summary>
     /// Get the brand of the authenticated SuperVendor (for editing/preview)
     /// </summary>
-    public async Task<BrandDetailDto?> GetMyBrandAsync(long? superVendorUserId)
+    public async Task<BrandDetailDto?> GetMyBrandAsync(long? userId)
     {
-        // Récupérer l'utilisateur pour avoir son BrandId
-        var user = await _context.Users
-            .FirstOrDefaultAsync(u => u.Id == superVendorUserId);
-
-        if (user == null || !user.BrandId.HasValue)
+        if (!userId.HasValue)
             return null;
 
-        // Récupérer SA marque (peu importe le Status)
-        var brand = await _context.Brands
-            .Include(b => b.EthicTags)
-            .Include(b => b.Deposits)
-            .Include(b => b.Reviews)
-            .FirstOrDefaultAsync(b => b.Id == user.BrandId.Value);
+        var user = await _context.Users
+            .FirstOrDefaultAsync(u => u.Id == userId);
+
+        if (user == null)
+            return null;
+
+        Brand? brand = null;
+
+        // SuperVendor : a un BrandId direct
+        if (user.BrandId.HasValue)
+        {
+            brand = await _context.Brands
+                .Include(b => b.EthicTags)
+                .Include(b => b.Deposits)
+                .Include(b => b.Reviews)
+                .FirstOrDefaultAsync(b => b.Id == user.BrandId.Value);
+        }
+        // Vendor : chercher via BrandSellers directement depuis le DbSet
+        else
+        {
+
+            var activeBrandSeller = await _context.BrandSellers
+                .Where(bs => bs.SellerId == userId && bs.IsActive)
+                .FirstOrDefaultAsync();
+
+            if (activeBrandSeller != null)
+            {
+                brand = await _context.Brands
+                    .Include(b => b.EthicTags)
+                    .Include(b => b.Deposits)
+                    .Include(b => b.Reviews)
+                    .FirstOrDefaultAsync(b => b.Id == activeBrandSeller.BrandId);
+            }
+        }
 
         if (brand == null)
             return null;
 
-        // Pas de userLat/userLon pour le SuperVendor (pas de multiplicateur de distance)
         return await BuildBrandDetailDtoAsync(brand, userLat: null, userLon: null);
     }
+
 
     /// <summary>
     /// Construit un BrandDetailDto à partir d'une entité Brand.

@@ -141,7 +141,7 @@ public class BrandController : ControllerBase
     * Get my brand (for SuperVendor editing/preview)
     */
     [HttpGet("my-brand")]
-    [Authorize(Roles = "SuperVendor")]
+    [Authorize(Roles = "SuperVendor, Vendor")]
     [ProducesResponseType(typeof(BrandDetailDto), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<ActionResult<BrandDetailDto>> GetMyBrand(

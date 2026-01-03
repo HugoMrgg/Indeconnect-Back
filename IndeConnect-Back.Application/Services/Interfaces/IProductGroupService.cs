@@ -22,10 +22,6 @@ public interface IProductGroupService
     /// <summary>
     /// Met à jour un ProductGroup (nom, description, catégorie)
     /// </summary>
-    Task<ProductGroupDto> UpdateProductGroupAsync(long productGroupId, UpdateProductGroupRequest request, long? currentUserId);
-
-    /// <summary>
-    /// Supprime un ProductGroup (uniquement s'il n'a pas de produits)
-    /// </summary>
-    Task DeleteProductGroupAsync(long productGroupId, long? currentUserId);
+    Task<ProductGroupDto> UpdateProductGroupAsync(long productGroupId, UpdateProductGroupRequest request,
+        long? currentUserId);
 }
