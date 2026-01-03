@@ -19,7 +19,6 @@ public class BrandRequestEmailTemplateService : IBrandRequestEmailTemplateServic
         string Safe(string? s) =>
             string.IsNullOrWhiteSpace(s) ? "—" : WebUtility.HtmlEncode(s.Trim());
 
-        // ✅ lien qui ouvre le modal sur /admin/accounts (via querystring)
         var adminInviteUrl = $"{_frontendUrl}/admin/accounts?invite=1";
 
         // mailto : encode minimal pour éviter soucis d'espaces
