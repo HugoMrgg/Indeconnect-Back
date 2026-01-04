@@ -73,6 +73,8 @@ builder.Services.AddScoped<IOrderService, OrderService>();
 builder.Services.AddScoped<IPaymentService, PaymentService>();
 builder.Services.AddScoped<IPaymentMethodService, PaymentMethodService>();
 builder.Services.AddScoped<IModerationReviewService, ModerationReviewService>();
+builder.Services.AddScoped<IBrandRequestEmailTemplateService, BrandRequestEmailTemplateService>();
+builder.Services.AddScoped<IBrandRequestMailService, BrandRequestMailService>();
 
 // Background service for automatic order progression
 builder.Services.AddHostedService<OrderProgressionService>();
