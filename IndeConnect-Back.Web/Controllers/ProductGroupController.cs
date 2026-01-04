@@ -17,11 +17,11 @@ public class ProductGroupController : ControllerBase
     }
 
     /// <summary>
-    /// Crée un nouveau ProductGroup pour la marque du SuperVendor
-    /// Utilisé quand le SuperVendor veut créer un nouveau type de produit
+    /// Crée un nouveau ProductGroup pour la marque du SuperVendor/Vendor
+    /// Utilisé quand le SuperVendor/Vendor veut créer un nouveau type de produit
     /// </summary>
     [HttpPost]
-    [Authorize(Roles = "SuperVendor")]
+    [Authorize(Roles = "SuperVendor,Vendor")] 
     [ProducesResponseType(typeof(ProductGroupDto), StatusCodes.Status201Created)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status403Forbidden)]
@@ -89,7 +89,7 @@ public class ProductGroupController : ControllerBase
     /// Utilisé pour le dropdown de sélection lors de la création d'un produit
     /// </summary>
     [HttpGet("brand/{brandId}")]
-    [Authorize(Roles = "SuperVendor")]
+    [Authorize(Roles = "SuperVendor,Vendor")] // ✅ Ajouté Vendor
     [ProducesResponseType(typeof(IEnumerable<ProductGroupSummaryDto>), StatusCodes.Status200OK)]
     public async Task<ActionResult<IEnumerable<ProductGroupSummaryDto>>> GetProductGroupsByBrand([FromRoute] long brandId)
     {
@@ -101,7 +101,7 @@ public class ProductGroupController : ControllerBase
     /// Met à jour un ProductGroup (nom, description, catégorie)
     /// </summary>
     [HttpPut("{productGroupId}")]
-    [Authorize(Roles = "SuperVendor")]
+    [Authorize(Roles = "SuperVendor,Vendor")] // ✅ Ajouté Vendor
     [ProducesResponseType(typeof(ProductGroupDto), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status403Forbidden)]
@@ -138,52 +138,6 @@ public class ProductGroupController : ControllerBase
             return BadRequest(new ProblemDetails
             {
                 Title = "Invalid input",
-                Detail = ex.Message
-            });
-        }
-        catch (InvalidOperationException ex)
-        {
-            return BadRequest(new ProblemDetails
-            {
-                Title = "Invalid operation",
-                Detail = ex.Message
-            });
-        }
-    }
-
-    /// <summary>
-    /// Supprime un ProductGroup (uniquement s'il n'a pas de produits)
-    /// </summary>
-    [HttpDelete("{productGroupId}")]
-    [Authorize(Roles = "SuperVendor")]
-    [ProducesResponseType(StatusCodes.Status204NoContent)]
-    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
-    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status403Forbidden)]
-    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
-    public async Task<IActionResult> DeleteProductGroup(
-        [FromRoute] long productGroupId,
-        [FromServices] UserHelper userHelper)
-    {
-        var currentUserId = userHelper.GetUserId();
-
-        try
-        {
-            await _productGroupService.DeleteProductGroupAsync(productGroupId, currentUserId);
-            return NoContent();
-        }
-        catch (KeyNotFoundException ex)
-        {
-            return NotFound(new ProblemDetails
-            {
-                Title = "Product group not found",
-                Detail = ex.Message
-            });
-        }
-        catch (UnauthorizedAccessException ex)
-        {
-            return StatusCode(StatusCodes.Status403Forbidden, new ProblemDetails
-            {
-                Title = "Forbidden",
                 Detail = ex.Message
             });
         }

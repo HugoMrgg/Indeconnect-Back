@@ -15,53 +15,73 @@ public class ProductGroupService : IProductGroupService
         _context = context;
     }
 
-    public async Task<ProductGroupDto> CreateProductGroupAsync(CreateProductGroupRequest request, long? currentUserId)
+public async Task<ProductGroupDto> CreateProductGroupAsync(CreateProductGroupRequest request, long? currentUserId)
+{
+    if (string.IsNullOrWhiteSpace(request.Name))
+        throw new ArgumentException("Product group name is required.", nameof(request.Name));
+    if (string.IsNullOrWhiteSpace(request.BaseDescription))
+        throw new ArgumentException("Product group description is required.", nameof(request.BaseDescription));
+
+    // Récupérer l'utilisateur
+    var user = await _context.Users
+        .FirstOrDefaultAsync(u => u.Id == currentUserId);
+
+    if (user == null)
+        throw new UnauthorizedAccessException("User not found.");
+
+    long? brandId = null;
+
+    // SuperVendor : a un BrandId direct
+    if (user.BrandId.HasValue)
     {
-        if (string.IsNullOrWhiteSpace(request.Name))
-            throw new ArgumentException("Product group name is required.", nameof(request.Name));
-        if (string.IsNullOrWhiteSpace(request.BaseDescription))
-            throw new ArgumentException("Product group description is required.", nameof(request.BaseDescription));
+        brandId = user.BrandId.Value;
+    }
+    // Vendor : chercher via BrandSellers
+    else
+    {
+        var activeBrandSeller = await _context.BrandSellers
+            .Where(bs => bs.SellerId == currentUserId && bs.IsActive)
+            .FirstOrDefaultAsync();
 
-        // Vérifier que l'utilisateur est SuperVendor d'une marque
-        var user = await _context.Users
-            .FirstOrDefaultAsync(u => u.Id == currentUserId);
-
-        if (user == null || !user.BrandId.HasValue)
-            throw new UnauthorizedAccessException("You must be a SuperVendor with a brand to create product groups.");
-
-        var brandId = user.BrandId.Value;
-
-        // Vérifier que la catégorie existe
-        var categoryExists = await _context.Categories.AnyAsync(c => c.Id == request.CategoryId);
-        if (!categoryExists)
-            throw new InvalidOperationException($"Category with id {request.CategoryId} not found.");
-
-        // Créer le ProductGroup
-        var productGroup = new ProductGroup(
-            name: request.Name,
-            baseDescription: request.BaseDescription,
-            brandId: brandId,
-            categoryId: request.CategoryId
-        );
-
-        _context.ProductGroups.Add(productGroup);
-        await _context.SaveChangesAsync();
-
-        // Recharger avec les relations pour le DTO
-        var createdGroup = await _context.ProductGroups
-            .Include(pg => pg.Brand)
-            .Include(pg => pg.Category)
-            .Include(pg => pg.Products)
-                .ThenInclude(p => p.PrimaryColor)
-            .Include(pg => pg.Products)
-                .ThenInclude(p => p.Media)
-            .Include(pg => pg.Products)
-                .ThenInclude(p => p.Variants)
-            .FirstOrDefaultAsync(pg => pg.Id == productGroup.Id);
-
-        return MapToDto(createdGroup!);
+        if (activeBrandSeller != null)
+        {
+            brandId = activeBrandSeller.BrandId;
+        }
     }
 
+    if (!brandId.HasValue)
+        throw new UnauthorizedAccessException("You must be associated with a brand to create product groups.");
+
+    // Vérifier que la catégorie existe
+    var categoryExists = await _context.Categories.AnyAsync(c => c.Id == request.CategoryId);
+    if (!categoryExists)
+        throw new InvalidOperationException($"Category with id {request.CategoryId} not found.");
+
+    // Créer le ProductGroup
+    var productGroup = new ProductGroup(
+        name: request.Name,
+        baseDescription: request.BaseDescription,
+        brandId: brandId.Value,
+        categoryId: request.CategoryId
+    );
+
+    _context.ProductGroups.Add(productGroup);
+    await _context.SaveChangesAsync();
+
+    // Recharger avec les relations pour le DTO
+    var createdGroup = await _context.ProductGroups
+        .Include(pg => pg.Brand)
+        .Include(pg => pg.Category)
+        .Include(pg => pg.Products)
+            .ThenInclude(p => p.PrimaryColor)
+        .Include(pg => pg.Products)
+            .ThenInclude(p => p.Media)
+        .Include(pg => pg.Products)
+            .ThenInclude(p => p.Variants)
+        .FirstOrDefaultAsync(pg => pg.Id == productGroup.Id);
+
+    return MapToDto(createdGroup!);
+}
     public async Task<ProductGroupDto?> GetProductGroupByIdAsync(long productGroupId)
     {
         var productGroup = await _context.ProductGroups
@@ -111,21 +131,17 @@ public class ProductGroupService : IProductGroupService
         if (productGroup == null)
             throw new KeyNotFoundException($"Product group with id {productGroupId} not found.");
 
-        // Vérifier que l'utilisateur est SuperVendor de cette marque
-        if (productGroup.Brand.SuperVendorUserId != currentUserId)
-            throw new UnauthorizedAccessException("You are not the SuperVendor of this brand.");
+        // ✅ Vérifier accès (SuperVendor OU Vendor)
+        var hasAccess = await HasBrandAccessAsync(currentUserId, productGroup.BrandId);
+        if (!hasAccess)
+            throw new UnauthorizedAccessException("You do not have access to this brand.");
 
         // Vérifier que la catégorie existe
         var categoryExists = await _context.Categories.AnyAsync(c => c.Id == request.CategoryId);
         if (!categoryExists)
             throw new InvalidOperationException($"Category with id {request.CategoryId} not found.");
 
-        // Mettre à jour (pas de méthode Update sur ProductGroup, on utilise les setters privés via reflection ou on ajoute une méthode Update)
-        // Pour l'instant, je vais accéder directement aux propriétés (EF Core le permet)
-        _context.Entry(productGroup).Property("Name").CurrentValue = request.Name.Trim();
-        _context.Entry(productGroup).Property("BaseDescription").CurrentValue = request.BaseDescription.Trim();
-        _context.Entry(productGroup).Property("CategoryId").CurrentValue = request.CategoryId;
-        // Utiliser la méthode métier du Domain
+        // Mettre à jour
         productGroup.UpdateInfo(request.Name, request.BaseDescription, request.CategoryId);
 
         await _context.SaveChangesAsync();
@@ -135,36 +151,33 @@ public class ProductGroupService : IProductGroupService
             .Include(pg => pg.Brand)
             .Include(pg => pg.Category)
             .Include(pg => pg.Products.Where(p => p.IsEnabled && p.Status == ProductStatus.Online))
-                .ThenInclude(p => p.PrimaryColor)
+            .ThenInclude(p => p.PrimaryColor)
             .Include(pg => pg.Products)
-                .ThenInclude(p => p.Media)
+            .ThenInclude(p => p.Media)
             .Include(pg => pg.Products)
-                .ThenInclude(p => p.Variants)
+            .ThenInclude(p => p.Variants)
             .FirstOrDefaultAsync(pg => pg.Id == productGroupId);
 
         return MapToDto(updatedGroup!);
     }
-
-    public async Task DeleteProductGroupAsync(long productGroupId, long? currentUserId)
+    private async Task<bool> HasBrandAccessAsync(long? userId, long brandId)
     {
-        var productGroup = await _context.ProductGroups
-            .Include(pg => pg.Brand)
-            .Include(pg => pg.Products)
-            .FirstOrDefaultAsync(pg => pg.Id == productGroupId);
+        if (userId == null)
+            return false;
 
-        if (productGroup == null)
-            throw new KeyNotFoundException($"Product group with id {productGroupId} not found.");
+        var brand = await _context.Brands.FirstOrDefaultAsync(b => b.Id == brandId);
+        if (brand == null)
+            return false;
 
-        // Vérifier que l'utilisateur est SuperVendor de cette marque
-        if (productGroup.Brand.SuperVendorUserId != currentUserId)
-            throw new UnauthorizedAccessException("You are not the SuperVendor of this brand.");
+        // SuperVendor
+        if (brand.SuperVendorUserId == userId)
+            return true;
 
-        // Vérifier qu'il n'y a pas de produits
-        if (productGroup.Products.Any())
-            throw new InvalidOperationException("Cannot delete a product group that contains products. Delete all products first.");
+        // Vendor (via BrandSellers)
+        var isVendor = await _context.BrandSellers
+            .AnyAsync(bs => bs.SellerId == userId && bs.BrandId == brandId && bs.IsActive);
 
-        _context.ProductGroups.Remove(productGroup);
-        await _context.SaveChangesAsync();
+        return isVendor;
     }
 
     private ProductGroupDto MapToDto(ProductGroup productGroup)

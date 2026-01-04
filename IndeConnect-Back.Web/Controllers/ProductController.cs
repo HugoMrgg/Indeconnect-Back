@@ -133,10 +133,10 @@ public class ProductController : ControllerBase
     }
 
     /// <summary>
-    /// Create a new product (SuperVendor only, for their brand)
+    /// Create a new product (SuperVendor and Vendor, for their brand)
     /// </summary>
     [HttpPost("create")]
-    [Authorize(Roles = "SuperVendor")]
+    [Authorize(Roles = "SuperVendor,Vendor")]
     [ProducesResponseType(typeof(CreateProductResponse), StatusCodes.Status201Created)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status403Forbidden)]
@@ -175,10 +175,10 @@ public class ProductController : ControllerBase
     }
 
     /// <summary>
-    /// Update an existing product (SuperVendor only, for their brand)
+    /// Update an existing product (SuperVendor and Vendor, for their brand)
     /// </summary>
     [HttpPut("{productId:long}")]
-    [Authorize(Roles = "SuperVendor")]
+    [Authorize(Roles = "SuperVendor,Vendor")]
     [ProducesResponseType(typeof(UpdateProductResponse), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status403Forbidden)]

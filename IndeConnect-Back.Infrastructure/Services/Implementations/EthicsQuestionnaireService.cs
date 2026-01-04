@@ -62,13 +62,12 @@ public class EthicsQuestionnaireService : IEthicsQuestionnaireService
     {
         questionnaire = new BrandQuestionnaire(brandId, catalog.Version.Id);
         _context.BrandQuestionnaires.Add(questionnaire);
-        // IMPORTANT : on sauve ici pour avoir un QuestionnaireId réel pour les FK
+        // Sauvegarde pour obtenir un QuestionnaireId réel nécessaire aux FK
         await _context.SaveChangesAsync();
     }
 
-    // On refuse toute modification si déjà Approved/Rejected (traçabilité)
     if (questionnaire.Status is QuestionnaireStatus.Approved or QuestionnaireStatus.Rejected)
-        throw new InvalidOperationException("Ce questionnaire est déjà clôturé (Approved/Rejected) et ne peut plus être modifié.");
+        throw new InvalidOperationException("This questionnaire is already closed (Approved/Rejected) and cannot be modified.");
 
     var answers = (request.Answers ?? Array.Empty<QuestionAnswerDto>()).ToList();
 
@@ -77,7 +76,7 @@ public class EthicsQuestionnaireService : IEthicsQuestionnaireService
     foreach (var a in answers)
     {
         if (!questionsById.TryGetValue(a.QuestionId, out var q))
-            throw new InvalidOperationException($"Question inconnue ou inactive: {a.QuestionId}");
+            throw new InvalidOperationException($"Unknown or inactive question: {a.QuestionId}");
 
         var optionIds = (a.OptionIds ?? Array.Empty<long>()).Distinct().ToList();
 
@@ -91,15 +90,10 @@ public class EthicsQuestionnaireService : IEthicsQuestionnaireService
         var response = questionnaire.Responses.FirstOrDefault(r => r.QuestionId == q.Id);
         if (response == null)
         {
-            response = new BrandQuestionResponse(questionnaire.Id, q.Id);
+            response = new BrandQuestionResponse(questionnaire.Id, q.Id, q.Key);
             _context.BrandQuestionResponses.Add(response);
-            // IMPORTANT : on sauve ici pour avoir un Id non temporaire,
-            // utile pour les BrandQuestionResponseOptions
+            // Sauvegarde pour obtenir un Id persisté nécessaire aux BrandQuestionResponseOptions
             await _context.SaveChangesAsync();
-
-            // optionnel : garder la collection en phase
-            // (si tu utilises la navigation Responses plus tard)
-            // (_context.Entry(questionnaire).Collection(x => x.Responses).Load();) possible aussi
         }
 
         // Remplacer la sélection (join table)
@@ -153,7 +147,7 @@ public class EthicsQuestionnaireService : IEthicsQuestionnaireService
     {
         var user = await _context.Users.FirstOrDefaultAsync(u => u.Id == superVendorUserId);
         if (user == null || !user.BrandId.HasValue)
-            throw new InvalidOperationException("Utilisateur SuperVendor sans Brand associée.");
+            throw new InvalidOperationException("SuperVendor user without associated Brand.");
 
         return user.BrandId.Value;
     }
@@ -174,7 +168,7 @@ public class EthicsQuestionnaireService : IEthicsQuestionnaireService
             .FirstOrDefaultAsync();
 
         if (version == null)
-            throw new InvalidOperationException("Aucune version active du catalogue n'a été trouvée. Veuillez contacter l'administrateur.");
+            throw new InvalidOperationException("No active version of the catalog found. Please contact the administrator.");
 
         var questions = await _context.EthicsQuestions
             .AsNoTracking()
@@ -297,7 +291,7 @@ public class EthicsQuestionnaireService : IEthicsQuestionnaireService
     {
         if (string.Equals(s, "Single", StringComparison.OrdinalIgnoreCase)) return EthicsAnswerType.Single;
         if (string.Equals(s, "Multiple", StringComparison.OrdinalIgnoreCase)) return EthicsAnswerType.Multiple;
-        throw new InvalidOperationException($"AnswerType invalide: '{s}'. Attendu: 'Single' ou 'Multiple'.");
+        throw new InvalidOperationException($"Invalid AnswerType: '{s}'. Expected: 'Single' or 'Multiple'.");
     }
 
 

@@ -12,6 +12,7 @@ public record ProductDetailDto(
     SaleDto? Sale,
     BrandSummaryDto Brand,
     CategoryDto Category,
+    long CategoryId,
     ColorDto? PrimaryColor, 
     IEnumerable<ProductColorVariantDto> ColorVariants, 
     IEnumerable<ProductMediaDto> Media, 

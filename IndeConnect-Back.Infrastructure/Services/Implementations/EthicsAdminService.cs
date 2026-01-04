@@ -21,7 +21,7 @@ public class EthicsAdminService : IEthicsAdminService
 
         if (draftVersion == null)
         {
-            throw new InvalidOperationException("Aucune version draft du catalogue trouvée. Veuillez créer une nouvelle version.");
+            throw new InvalidOperationException("No draft version of the catalog found. Please create a new version.");
         }
 
         var questions = await _context.EthicsQuestions
@@ -84,37 +84,36 @@ public class EthicsAdminService : IEthicsAdminService
 
         if (draftVersion == null)
         {
-            throw new InvalidOperationException("Aucune version draft trouvée. Impossible de modifier le catalogue.");
+            throw new InvalidOperationException("No draft version found. Cannot modify the catalog.");
         }
 
-        var questionsIn  = (request.Questions  ?? Array.Empty<UpsertQuestionDto>()).ToList();
-        var optionsIn    = (request.Options    ?? Array.Empty<UpsertOptionDto>()).ToList();
+        var questionsIn = (request.Questions ?? Array.Empty<UpsertQuestionDto>()).ToList();
+        var optionsIn = (request.Options ?? Array.Empty<UpsertOptionDto>()).ToList();
 
         // 1) Questions
         foreach (var q in questionsIn)
         {
-            if (string.IsNullOrWhiteSpace(q.Key))         throw new InvalidOperationException("Question.Key est requis.");
-            if (string.IsNullOrWhiteSpace(q.Label))       throw new InvalidOperationException("Question.Label est requis.");
-            if (string.IsNullOrWhiteSpace(q.CategoryKey)) throw new InvalidOperationException($"Question '{q.Key}': CategoryKey est requis.");
+            if (string.IsNullOrWhiteSpace(q.Key)) throw new InvalidOperationException("Question.Key is required.");
+            if (string.IsNullOrWhiteSpace(q.Label)) throw new InvalidOperationException("Question.Label is required.");
+            if (string.IsNullOrWhiteSpace(q.CategoryKey)) throw new InvalidOperationException($"Question '{q.Key}': CategoryKey is required.");
 
             var key = q.Key.Trim();
             var label = q.Label.Trim();
             var catKey = q.CategoryKey.Trim();
 
             if (!Enum.TryParse<EthicsCategory>(catKey, true, out var category))
-                throw new InvalidOperationException($"CategoryKey invalide pour question '{key}': '{catKey}'. Valeurs attendues: Manufacture, Transport");
+                throw new InvalidOperationException($"Invalid CategoryKey for question '{key}': '{catKey}'. Expected values: MaterialsManufacturing, Transport");
 
             if (!Enum.TryParse<EthicsAnswerType>(q.AnswerType, true, out var answerType))
-                throw new InvalidOperationException($"AnswerType invalide: '{q.AnswerType}' (attendu: Single/Multiple).");
+                throw new InvalidOperationException($"Invalid AnswerType: '{q.AnswerType}' (expected: Single/Multiple).");
 
-            if (q.Id.HasValue)
+            if (q.Id.HasValue && q.Id.Value > 0)
             {
                 var entity = await _context.EthicsQuestions.FirstOrDefaultAsync(x => x.Id == q.Id.Value)
-                    ?? throw new InvalidOperationException($"Question introuvable: {q.Id.Value}");
+                    ?? throw new InvalidOperationException($"Question not found: {q.Id.Value}");
 
-                // unicité éventuelle sur Key (si tu l'imposes)
                 var keyConflict = await _context.EthicsQuestions.AnyAsync(x => x.Id != entity.Id && x.CatalogVersionId == draftVersion.Id && x.Key == key);
-                if (keyConflict) throw new InvalidOperationException($"Question.Key déjà utilisé: '{key}'.");
+                if (keyConflict) throw new InvalidOperationException($"Question.Key already used: '{key}'.");
 
                 _context.Entry(entity).Property(nameof(EthicsQuestion.Category)).CurrentValue = category;
                 _context.Entry(entity).Property(nameof(EthicsQuestion.Key)).CurrentValue = key;
@@ -125,6 +124,7 @@ public class EthicsAdminService : IEthicsAdminService
             }
             else
             {
+                // Nouvelle question (id = null ou 0)
                 _context.EthicsQuestions.Add(new EthicsQuestion(draftVersion.Id, category, key, label, answerType, q.Order, q.IsActive));
             }
         }
@@ -134,29 +134,29 @@ public class EthicsAdminService : IEthicsAdminService
         // QuestionKey -> QuestionId
         var questionKeyToId = await _context.EthicsQuestions
             .AsNoTracking()
+            .Where(x => x.CatalogVersionId == draftVersion.Id)  
             .ToDictionaryAsync(x => x.Key, x => x.Id, StringComparer.OrdinalIgnoreCase);
-
-        // 3) Options
+        // 2) Options
         foreach (var o in optionsIn)
         {
-            if (string.IsNullOrWhiteSpace(o.Key))         throw new InvalidOperationException("Option.Key est requis.");
-            if (string.IsNullOrWhiteSpace(o.Label))       throw new InvalidOperationException("Option.Label est requis.");
-            if (string.IsNullOrWhiteSpace(o.QuestionKey)) throw new InvalidOperationException($"Option '{o.Key}': QuestionKey est requis.");
+            if (string.IsNullOrWhiteSpace(o.Key)) throw new InvalidOperationException("Option.Key is required.");
+            if (string.IsNullOrWhiteSpace(o.Label)) throw new InvalidOperationException("Option.Label is required.");
+            if (string.IsNullOrWhiteSpace(o.QuestionKey)) throw new InvalidOperationException($"Option '{o.Key}': QuestionKey is required.");
 
             var key = o.Key.Trim();
             var label = o.Label.Trim();
             var qKey = o.QuestionKey.Trim();
 
             if (!questionKeyToId.TryGetValue(qKey, out var questionId))
-                throw new InvalidOperationException($"QuestionKey invalide pour option '{key}': '{qKey}'.");
+                throw new InvalidOperationException($"Invalid QuestionKey for option '{key}': '{qKey}'.");
 
-            if (o.Id.HasValue)
+            if (o.Id.HasValue && o.Id.Value > 0)
             {
                 var entity = await _context.EthicsOptions.FirstOrDefaultAsync(x => x.Id == o.Id.Value)
-                    ?? throw new InvalidOperationException($"Option introuvable: {o.Id.Value}");
+                    ?? throw new InvalidOperationException($"Option not found: {o.Id.Value}");
 
                 var keyConflict = await _context.EthicsOptions.AnyAsync(x => x.Id != entity.Id && x.Key == key && x.QuestionId == questionId);
-                if (keyConflict) throw new InvalidOperationException($"Option.Key déjà utilisé pour cette question: '{key}'.");
+                if (keyConflict) throw new InvalidOperationException($"Option.Key already used for this question: '{key}'.");
 
                 _context.Entry(entity).Property(nameof(EthicsOption.QuestionId)).CurrentValue = questionId;
                 _context.Entry(entity).Property(nameof(EthicsOption.Key)).CurrentValue = key;
@@ -167,6 +167,7 @@ public class EthicsAdminService : IEthicsAdminService
             }
             else
             {
+                // Nouvelle option (id = null ou 0)
                 _context.EthicsOptions.Add(new EthicsOption(questionId, key, label, o.Score, o.Order, o.IsActive));
             }
         }
@@ -174,7 +175,6 @@ public class EthicsAdminService : IEthicsAdminService
         await _context.SaveChangesAsync();
         await tx.CommitAsync();
 
-        // renvoyer le catalogue à jour (super pratique côté front)
         return await GetCatalogAsync();
     }
 
@@ -185,10 +185,10 @@ public class EthicsAdminService : IEthicsAdminService
             .FirstOrDefaultAsync(q => q.Id == questionnaireId);
 
         if (questionnaire == null)
-            throw new InvalidOperationException("Questionnaire introuvable.");
+            throw new InvalidOperationException("Questionnaire not found.");
 
         if (questionnaire.Status != QuestionnaireStatus.Submitted)
-            throw new InvalidOperationException("Seuls les questionnaires Submitted peuvent être validés/refusés.");
+            throw new InvalidOperationException("Only Submitted questionnaires can be approved or rejected.");
 
         using var tx = await _context.Database.BeginTransactionAsync();
 
@@ -208,18 +208,100 @@ public class EthicsAdminService : IEthicsAdminService
             );
 
             if (!promoted.Any())
-                throw new InvalidOperationException("Aucun score trouvé pour ce questionnaire (le SuperVendor doit soumettre pour générer les scores).");
+                throw new InvalidOperationException("No score found for this questionnaire (the SuperVendor must submit to generate scores).");
         }
         else
         {
             if (string.IsNullOrWhiteSpace(request.RejectionReason))
-                throw new InvalidOperationException("RejectionReason est requis si le questionnaire est rejeté.");
+                throw new InvalidOperationException("RejectionReason is required when rejecting a questionnaire.");
 
             questionnaire.ReviewRejected(adminUserId, request.RejectionReason.Trim());
-            // Scores restent traçables (pending / non officiels)
         }
 
         await _context.SaveChangesAsync();
+        await tx.CommitAsync();
+    }
+    public async Task PublishDraftAsync()
+    {
+        await using var tx = await _context.Database.BeginTransactionAsync();
+
+        var draft = await _context.CatalogVersions
+                        .FirstOrDefaultAsync(v => v.IsDraft)
+                    ?? throw new InvalidOperationException("No draft version to publish.");
+
+        var oldActive = await _context.CatalogVersions
+            .FirstOrDefaultAsync(v => v.IsActive && !v.IsDraft);
+
+        if (oldActive != null)
+        {
+            oldActive.Deactivate();
+
+            // Migration automatique des questionnaires en cours vers la nouvelle version
+            var migrator = new QuestionnaireVersionMigrator(_context);
+            await migrator.MigrateActiveQuestionnairesToNewVersionAsync(oldActive.Id, draft.Id);
+        }
+
+        draft.Publish();
+
+        await _context.SaveChangesAsync();
+
+        // Création d'une nouvelle version draft basée sur la version qui vient d'être publiée
+        var newDraft = new CatalogVersion($"v{DateTime.UtcNow:yyyyMMdd-HHmmss}-draft");
+        _context.CatalogVersions.Add(newDraft);
+        await _context.SaveChangesAsync();
+
+        var publishedQuestions = await _context.EthicsQuestions
+            .AsNoTracking()
+            .Where(q => q.CatalogVersionId == draft.Id)
+            .ToListAsync();
+
+        var questionIdMapping = new Dictionary<long, long>();
+
+        var newQuestions = publishedQuestions.Select(oldQuestion =>
+            new EthicsQuestion(
+                newDraft.Id,
+                oldQuestion.Category,
+                oldQuestion.Key,
+                oldQuestion.Label,
+                oldQuestion.AnswerType,
+                oldQuestion.Order,
+                oldQuestion.IsActive
+            )
+        ).ToList();
+
+        _context.EthicsQuestions.AddRange(newQuestions);
+        await _context.SaveChangesAsync();
+
+        // Mapping des anciens IDs vers les nouveaux IDs
+        for (int i = 0; i < publishedQuestions.Count; i++)
+        {
+            questionIdMapping[publishedQuestions[i].Id] = newQuestions[i].Id;
+        }
+
+        var publishedOptions = await _context.EthicsOptions
+            .AsNoTracking()
+            .Where(o => publishedQuestions.Select(q => q.Id).Contains(o.QuestionId))
+            .ToListAsync();
+
+        var newOptions = new List<EthicsOption>();
+
+        foreach (var oldOption in publishedOptions)
+        {
+            if (questionIdMapping.TryGetValue(oldOption.QuestionId, out var newQuestionId))
+            {
+                newOptions.Add(new EthicsOption(
+                    newQuestionId,
+                    oldOption.Key,
+                    oldOption.Label,
+                    oldOption.Score,
+                    oldOption.Order,
+                    oldOption.IsActive
+                ));
+            }
+        }
+
+        await _context.SaveChangesAsync();
+
         await tx.CommitAsync();
     }
 }

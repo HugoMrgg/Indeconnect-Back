@@ -6,6 +6,7 @@ public interface IEthicsAdminService
 {
     Task<AdminCatalogDto> GetCatalogAsync();
     Task<AdminCatalogDto> UpsertCatalogAsync(AdminUpsertCatalogRequest request);
+    Task PublishDraftAsync();
 
     Task ReviewQuestionnaireAsync(long questionnaireId, long adminUserId, ReviewQuestionnaireRequest request);
 }

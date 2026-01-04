@@ -16,15 +16,20 @@ public class CategoryConfiguration : IEntityTypeConfiguration<Category>
             .IsRequired()
             .HasMaxLength(100);
         
-        // Relation with Product
+        // Relation avec Product
         builder.HasMany<Product>()
             .WithOne(p => p.Category)
             .HasForeignKey(p => p.CategoryId)
             .OnDelete(DeleteBehavior.Restrict);
         
+        // Relation avec Size (déjà configurée dans SizeConfiguration, mais on l'explicite ici aussi)
+        builder.HasMany(c => c.Sizes)
+            .WithOne(s => s.Category)
+            .HasForeignKey(s => s.CategoryId)
+            .OnDelete(DeleteBehavior.Restrict);
+        
         builder.HasIndex(c => c.Name)
             .IsUnique()
             .HasDatabaseName("IX_Category_UniqueName");
-        
     }
 }

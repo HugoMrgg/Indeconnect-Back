@@ -1,6 +1,5 @@
 ﻿using IndeConnect_Back.Application.DTOs.Ethics;
 using IndeConnect_Back.Application.Services.Interfaces;
-using IndeConnect_Back.Web;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -25,10 +24,17 @@ public class AdminEthicsController : ControllerBase
         => Ok(await _service.GetCatalogAsync());
 
     [HttpPut("catalog")]
-    public async Task<IActionResult> UpsertCatalog([FromBody] AdminUpsertCatalogRequest request)
+    public async Task<ActionResult<AdminCatalogDto>> UpsertCatalog([FromBody] AdminUpsertCatalogRequest request)
     {
-        await _service.UpsertCatalogAsync(request);
-        return NoContent();
+        var updated = await _service.UpsertCatalogAsync(request);
+        return Ok(updated);
+    }
+
+    [HttpPost("catalog/publish")]
+    public async Task<IActionResult> PublishCatalog()
+    {
+        await _service.PublishDraftAsync();
+        return Ok(new { message = "Catalog published successfully. Active questionnaires have been migrated automatically." });
     }
 
     [HttpPut("questionnaires/{questionnaireId:long}/review")]

@@ -20,6 +20,11 @@ public class BrandQuestionnaire
     private readonly List<BrandQuestionResponse> _responses = new();
     public IReadOnlyCollection<BrandQuestionResponse> Responses => _responses;
 
+    public bool NeedsUpdate { get; private set; } = false;  
+    public long? MigratedFromQuestionnaireId { get; private set; } 
+    public DateTimeOffset? MigratedAt { get; private set; }
+
+    
     private BrandQuestionnaire() { }
 
     public BrandQuestionnaire(long brandId, long catalogVersionId)
@@ -49,5 +54,21 @@ public class BrandQuestionnaire
         ReviewerAdminUserId = reviewerAdminUserId;
         ReviewedAt = DateTimeOffset.UtcNow;
         RejectionReason = reason?.Trim();
+    }
+    public void MarkAsNeedingUpdate()
+    {
+        NeedsUpdate = true;
+    }
+    
+    public void MarkAsUpdated()
+    {
+        NeedsUpdate = false;
+    }
+    
+    public void MarkAsMigrated(long fromQuestionnaireId)
+    {
+        MigratedFromQuestionnaireId = fromQuestionnaireId;
+        MigratedAt = DateTimeOffset.UtcNow;
+        NeedsUpdate = true; 
     }
 }

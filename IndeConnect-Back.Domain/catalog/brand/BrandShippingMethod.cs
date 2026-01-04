@@ -48,9 +48,9 @@ public class BrandShippingMethod
         ProviderName = providerName?.Trim() ?? throw new ArgumentNullException(nameof(providerName));
         MethodType = methodType;
         DisplayName = displayName?.Trim() ?? throw new ArgumentNullException(nameof(displayName));
-        Price = price >= 0 ? price : throw new ArgumentException("Le prix ne peut pas être négatif");
-        EstimatedMinDays = estimatedMinDays > 0 ? estimatedMinDays : throw new ArgumentException("Le délai minimum doit être supérieur à 0");
-        EstimatedMaxDays = estimatedMaxDays >= estimatedMinDays ? estimatedMaxDays : throw new ArgumentException("Le délai maximum doit être >= au minimum");
+        Price = price >= 0 ? price : throw new ArgumentException("Price cannot be negative");
+        EstimatedMinDays = estimatedMinDays > 0 ? estimatedMinDays : throw new ArgumentException("Minimum delay must be greater than 0");
+        EstimatedMaxDays = estimatedMaxDays >= estimatedMinDays ? estimatedMaxDays : throw new ArgumentException("Maximum delay must be >= minimum");
         MaxWeight = maxWeight;
         ProviderConfig = providerConfig;
         IsEnabled = true;

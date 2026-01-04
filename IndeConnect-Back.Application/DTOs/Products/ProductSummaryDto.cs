@@ -11,5 +11,6 @@ public record ProductSummaryDto(
     double AverageRating,
     int ReviewCount,
     ColorDto? PrimaryColor,
-    ProductStatus Status
+    ProductStatus Status,
+    SaleDto? Sale
 );

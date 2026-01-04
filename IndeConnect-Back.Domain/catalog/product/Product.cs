@@ -45,7 +45,11 @@ public class Product
 
     private readonly List<ProductReview> _reviews = new();
     public IReadOnlyCollection<ProductReview> Reviews => _reviews;
-    
+
+    // Translations
+    private readonly List<ProductTranslation> _translations = new();
+    public IReadOnlyCollection<ProductTranslation> Translations => _translations;
+
     private Product() { }
 
     public Product(string name, string description, decimal price, long brandId, long categoryId, long? productGroupId = null, long? primaryColorId = null)
@@ -164,5 +168,42 @@ public class Product
     public string? GetPrimaryImageUrl()
     {
         return GetPrimaryImage()?.Url;
+    }
+    // Dans Product.cs
+    public void SetSale(long saleId)
+    {
+        SaleId = saleId;
+    }
+
+    public void RemoveSale()
+    {
+        SaleId = null;
+    }
+
+    public void AddOrUpdateTranslation(string languageCode, string name, string description)
+    {
+        var existing = _translations.FirstOrDefault(t => t.LanguageCode == languageCode);
+
+        if (existing != null)
+        {
+            existing.UpdateTranslation(name, description);
+        }
+        else
+        {
+            var translation = new ProductTranslation(Id, languageCode, name, description);
+            _translations.Add(translation);
+        }
+    }
+
+    public string GetTranslatedName(string languageCode = "fr")
+    {
+        var translation = _translations.FirstOrDefault(t => t.LanguageCode == languageCode);
+        return translation?.Name ?? _translations.FirstOrDefault(t => t.LanguageCode == "fr")?.Name ?? Name;
+    }
+
+    public string GetTranslatedDescription(string languageCode = "fr")
+    {
+        var translation = _translations.FirstOrDefault(t => t.LanguageCode == languageCode);
+        return translation?.Description ?? _translations.FirstOrDefault(t => t.LanguageCode == "fr")?.Description ?? Description;
     }
 }

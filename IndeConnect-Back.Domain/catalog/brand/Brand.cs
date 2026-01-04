@@ -48,6 +48,11 @@ public class Brand
 
     private readonly List<BrandQuestionnaire> _questionnaires = new();
     public IReadOnlyCollection<BrandQuestionnaire> Questionnaires => _questionnaires;
+
+    // Translations
+    private readonly List<BrandTranslation> _translations = new();
+    public IReadOnlyCollection<BrandTranslation> Translations => _translations;
+
     private Brand() { }
 
     public Brand(string name, long? superVendorUserId = null)
@@ -142,7 +147,7 @@ public class Brand
     public void AddShippingMethod(BrandShippingMethod method)
     {
         if (method.BrandId != Id)
-            throw new InvalidOperationException("Cette méthode appartient à une autre marque");
+            throw new InvalidOperationException("This method belongs to another brand");
 
         _shippingMethods.Add(method);
     }
@@ -187,5 +192,38 @@ public class Brand
             .ToList();
 
         return distances.Min();
+    }
+
+    /// <summary>
+    /// Adds or updates a translation for this brand.
+    /// </summary>
+    public void AddOrUpdateTranslation(
+        string languageCode,
+        string name,
+        string? description = null,
+        string? aboutUs = null,
+        string? whereAreWe = null,
+        string? otherInfo = null)
+    {
+        var existing = _translations.FirstOrDefault(t => t.LanguageCode == languageCode);
+
+        if (existing != null)
+        {
+            existing.UpdateTranslation(name, description, aboutUs, whereAreWe, otherInfo);
+        }
+        else
+        {
+            var translation = new BrandTranslation(Id, languageCode, name, description, aboutUs, whereAreWe, otherInfo);
+            _translations.Add(translation);
+        }
+    }
+
+    /// <summary>
+    /// Gets the translated name for the specified language code, with fallback to French.
+    /// </summary>
+    public string GetTranslatedName(string languageCode = "fr")
+    {
+        var translation = _translations.FirstOrDefault(t => t.LanguageCode == languageCode);
+        return translation?.Name ?? _translations.FirstOrDefault(t => t.LanguageCode == "fr")?.Name ?? Name;
     }
 }

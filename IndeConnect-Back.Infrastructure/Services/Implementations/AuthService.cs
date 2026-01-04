@@ -124,6 +124,14 @@ public class AuthService : IAuthService
 
     public async Task InviteUserAsync(InviteUserRequest request, long invitedBy)
     {
+        // Récupérer l'utilisateur qui invite (pour vérifier son rôle et BrandId)
+        var invitingUser = await _context.Users
+            .Include(u => u.Brand)
+            .FirstOrDefaultAsync(u => u.Id == invitedBy);
+
+        if (invitingUser == null)
+            throw new InvalidOperationException("Inviting user not found.");
+
         var existingUser = await _context.Users
             .FirstOrDefaultAsync(u => u.Email == request.Email);
 
@@ -136,8 +144,13 @@ public class AuthService : IAuthService
                     "Un compte existe déjà avec cet email."
                 );
             }
-            
-            var newToken = await _resetTokenService.CreateResetTokenAsync(existingUser.Id);
+
+            // Génère un nouveau token d'invitation
+            var newToken = Guid.NewGuid().ToString("N");
+            var expiresAt = DateTimeOffset.UtcNow.AddHours(24);
+            existingUser.SetInvitationToken(newToken, expiresAt);
+            await _context.SaveChangesAsync();
+
             var activationLink = $"{_frontendUrl}/set-password?token={newToken}";
             var htmlContent = BuildActivationEmailHtml(existingUser.FirstName, activationLink);
 
@@ -173,6 +186,8 @@ public class AuthService : IAuthService
                     role: role
                 );
 
+                user.SetEnabled(true);
+
                 _context.Users.Add(user);
                 await _context.SaveChangesAsync(); // Nécessaire pour avoir user.Id
 
@@ -192,6 +207,17 @@ public class AuthService : IAuthService
                     await _context.SaveChangesAsync();
                 }
 
+                // Si un SuperVendor invite un Vendor → Créer BrandSeller pour l'associer à la marque
+                if (role == Role.Vendor && invitingUser.Role == Role.SuperVendor)
+                {
+                    if (invitingUser.BrandId == null)
+                        throw new InvalidOperationException("SuperVendor must have a Brand to invite Vendors.");
+
+                    var brandSeller = new BrandSeller(invitingUser.BrandId.Value, user.Id);
+                    _context.BrandSellers.Add(brandSeller);
+                    await _context.SaveChangesAsync();
+                }
+
                 await transaction.CommitAsync();
             }
             catch
@@ -201,8 +227,13 @@ public class AuthService : IAuthService
             }
         }
 
+        // Génère le token d'invitation
+        var token = Guid.NewGuid().ToString("N");
+        var tokenExpiresAt = DateTimeOffset.UtcNow.AddHours(24);
+        user.SetInvitationToken(token, tokenExpiresAt);
+        await _context.SaveChangesAsync();
+
         // Envoi de l'email d'activation
-        var token = await _resetTokenService.CreateResetTokenAsync(user.Id);
         var activationLinkNew = $"{_frontendUrl}/set-password?token={token}";
         var htmlContentNew = BuildActivationEmailHtml(user.FirstName, activationLinkNew);
 
@@ -224,21 +255,53 @@ public class AuthService : IAuthService
         if (request.Password != request.ConfirmPassword)
             throw new InvalidOperationException("Passwords do not match.");
 
-        // Valide et utilise le token
+        // Chercher d'abord un utilisateur avec ce token d'invitation
+        var user = await _context.Users
+            .FirstOrDefaultAsync(u => u.InvitationTokenHash == request.Token);
+
+        if (user != null)
+        {
+            // Cas : Activation via token d'invitation
+            if (user.InvitationExpiresAt == null || user.InvitationExpiresAt < DateTimeOffset.UtcNow)
+                throw new InvalidOperationException("Invitation token expired.");
+
+            // Définit le mot de passe
+            user.SetPasswordHash(BCrypt.Net.BCrypt.HashPassword(request.Password));
+
+            // Efface le token d'invitation
+            user.ClearInvitationToken();
+
+            // Activer le compte
+            user.SetEnabled(true);
+
+            await _auditTrail.LogAsync(
+                action: "UserActivated",
+                userId: user.Id,
+                details: $"{user.FirstName} {user.LastName} activated their account"
+            );
+
+            await _context.SaveChangesAsync();
+            return;
+        }
+
+        // Sinon, vérifier si c'est un token de reset de mot de passe
         var resetToken = await _resetTokenService.ValidateAndUseTokenAsync(request.Token);
 
         // Récupère l'utilisateur
-        var user = await _context.Users.FindAsync(resetToken.UserId);
+        user = await _context.Users.FindAsync(resetToken.UserId);
         if (user == null)
             throw new InvalidOperationException("User not found.");
 
         // Définit le mot de passe
         user.SetPasswordHash(BCrypt.Net.BCrypt.HashPassword(request.Password));
 
+        // Activer le compte maintenant que le mot de passe est défini
+        user.SetEnabled(true);
+
         await _auditTrail.LogAsync(
-            action: "UserActivated",
+            action: "PasswordReset",
             userId: user.Id,
-            details: $"{user.FirstName} {user.LastName} activated their account"
+            details: $"{user.FirstName} {user.LastName} reset their password"
         );
 
         await _context.SaveChangesAsync();
@@ -375,48 +438,94 @@ public class AuthService : IAuthService
         };
     }
 
-    private static string BuildActivationEmailHtml(string firstName, string activationLink)
-    {
-        return $@"
+private static string BuildActivationEmailHtml(string firstName, string activationLink)
+{
+    return $@"
 <!DOCTYPE html>
 <html>
 <head>
-    <style>
-        body {{ font-family: Arial, sans-serif; }}
-        .container {{ max-width: 600px; margin: 0 auto; padding: 20px; }}
-        .header {{ background-color: #000; color: #fff; padding: 20px; text-align: center; }}
-        .content {{ padding: 20px; background-color: #f9f9f9; }}
-        .button {{ 
-            display: inline-block; 
-            background-color: #000; 
-            color: #fff; 
-            padding: 12px 24px; 
-            text-decoration: none; 
-            border-radius: 5px; 
-            margin-top: 20px; 
-        }}
-        .footer {{ text-align: center; padding-top: 20px; font-size: 12px; color: #666; }}
-    </style>
+    <meta name=""viewport"" content=""width=device-width, initial-scale=1.0"">
+    <meta http-equiv=""Content-Type"" content=""text/html; charset=UTF-8"">
 </head>
-<body>
-    <div class=""container"">
-        <div class=""header"">
-            <h1>IndeConnect</h1>
-        </div>
-        <div class=""content"">
-            <p>Bonjour {firstName},</p>
-            <p>Un compte a été créé pour vous sur IndeConnect.</p>
-            <p>Cliquez sur le lien ci-dessous pour activer votre compte et définir votre mot de passe :</p>
-            <a href=""{activationLink}"" class=""button"">Activer mon compte</a>
-            <p style=""margin-top: 20px; color: #666; font-size: 12px;"">
-                Ce lien expire dans 24 heures.
-            </p>
-        </div>
-        <div class=""footer"">
-            <p>&copy; 2025 IndeConnect. Tous droits réservés.</p>
-        </div>
-    </div>
+<body style=""margin: 0; padding: 0; font-family: Arial, sans-serif; background-color: #f4f4f4;"">
+    <table role=""presentation"" style=""width: 100%; border-collapse: collapse; background-color: #f4f4f4;"">
+        <tr>
+            <td align=""center"" style=""padding: 20px 0;"">
+                <table role=""presentation"" style=""max-width: 600px; width: 100%; border-collapse: collapse; background-color: #ffffff; border-radius: 8px; overflow: hidden;"">
+                    
+                    <!-- Header -->
+                    <tr>
+                        <td style=""background-color: #000000; padding: 30px; text-align: center;"">
+                            <h1 style=""color: #ffffff; margin: 0; font-size: 28px; font-family: Arial, sans-serif;"">IndeConnect</h1>
+                        </td>
+                    </tr>
+                    
+                    <!-- Content -->
+                    <tr>
+                        <td style=""padding: 40px 30px; background-color: #f9f9f9;"">
+                            <p style=""margin: 0 0 20px 0; font-size: 16px; line-height: 24px; color: #333333; font-family: Arial, sans-serif;"">
+                                Bonjour <strong>{firstName}</strong>,
+                            </p>
+                            <p style=""margin: 0 0 20px 0; font-size: 16px; line-height: 24px; color: #333333; font-family: Arial, sans-serif;"">
+                                Un compte a été créé pour vous sur IndeConnect.
+                            </p>
+                            <p style=""margin: 0 0 30px 0; font-size: 16px; line-height: 24px; color: #333333; font-family: Arial, sans-serif;"">
+                                Cliquez sur le bouton ci-dessous pour activer votre compte et définir votre mot de passe :
+                            </p>
+                            
+                            <!-- Button (structure table pour compatibilité) -->
+                            <table role=""presentation"" style=""width: 100%; border-collapse: collapse;"">
+                                <tr>
+                                    <td align=""center"" style=""padding: 10px 0;"">
+                                        <table role=""presentation"" style=""border-collapse: collapse;"">
+                                            <tr>
+                                                <td style=""background-color: #000000; border-radius: 5px; text-align: center;"">
+                                                    <a href=""{activationLink}"" 
+                                                       style=""display: inline-block; 
+                                                              padding: 16px 32px; 
+                                                              background-color: #000000; 
+                                                              color: #ffffff; 
+                                                              text-decoration: none; 
+                                                              border-radius: 5px; 
+                                                              font-size: 16px; 
+                                                              font-weight: bold;
+                                                              font-family: Arial, sans-serif;"">
+                                                        Activer mon compte
+                                                    </a>
+                                                </td>
+                                            </tr>
+                                        </table>
+                                    </td>
+                                </tr>
+                            </table>
+                            
+                            <p style=""margin: 30px 0 0 0; font-size: 12px; line-height: 18px; color: #666666; font-family: Arial, sans-serif;"">
+                                Ce lien expire dans 24 heures.
+                            </p>
+                            
+                            <!-- Lien de secours -->
+                            <p style=""margin: 20px 0 0 0; font-size: 11px; line-height: 16px; color: #999999; font-family: Arial, sans-serif;"">
+                                Si le bouton ne fonctionne pas, copiez-collez ce lien dans votre navigateur :
+                            </p>
+                            <p style=""margin: 5px 0 0 0; font-size: 11px; line-height: 16px; word-break: break-all; font-family: Arial, sans-serif;"">
+                                <a href=""{activationLink}"" style=""color: #0066cc; text-decoration: underline;"">{activationLink}</a>
+                            </p>
+                        </td>
+                    </tr>
+                    
+                    <!-- Footer -->
+                    <tr>
+                        <td style=""padding: 30px; text-align: center; background-color: #ffffff; border-top: 1px solid #eeeeee;"">
+                            <p style=""margin: 0; font-size: 12px; color: #666666; font-family: Arial, sans-serif;"">
+                                &copy; 2025 IndeConnect. Tous droits réservés.
+                            </p>
+                        </td>
+                    </tr>
+                </table>
+            </td>
+        </tr>
+    </table>
 </body>
 </html>";
-    }
+}
 }

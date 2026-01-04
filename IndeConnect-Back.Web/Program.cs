@@ -12,6 +12,7 @@ using IndeConnect_Back.Web;
 using IndeConnect_Back.Web.Attributes;
 using IndeConnect_Back.Web.Handlers;
 using IndeConnect_Back.Web.Middlewares;
+using IndeConnect_Back.Web.Services;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.EntityFrameworkCore;
@@ -61,7 +62,6 @@ builder.Services.AddScoped<IColorService, ColorService>();
 builder.Services.AddScoped<IAuditTrailService, AuditTrailService>();
 builder.Services.AddScoped<IEthicsService, EthicsService>();
 builder.Services.AddScoped<IEthicsQuestionnaireService, EthicsQuestionnaireService>();
-builder.Services.AddScoped<ICatalogService, CatalogService>();
 builder.Services.AddScoped<IEthicsAdminService, EthicsAdminService>();
 builder.Services.AddScoped<ICartService, CartService>();
 builder.Services.AddScoped<IEmailService, SendGridEmailService>();
@@ -73,6 +73,15 @@ builder.Services.AddScoped<IOrderService, OrderService>();
 builder.Services.AddScoped<IPaymentService, PaymentService>();
 builder.Services.AddScoped<IPaymentMethodService, PaymentMethodService>();
 builder.Services.AddScoped<IModerationReviewService, ModerationReviewService>();
+builder.Services.AddScoped<IRecommendationService, RecommendationService>();
+builder.Services.AddScoped<ICategoryService, CategoryService>();
+builder.Services.AddScoped<ISizeService, SizeService>();
+
+// Translation services
+builder.Services.AddHttpContextAccessor(); // Required for CurrentLanguageProvider
+builder.Services.AddScoped<ICurrentLanguageProvider, CurrentLanguageProvider>();
+builder.Services.AddScoped<IAutoTranslationService, DeepLTranslationService>();
+builder.Services.AddScoped<ITranslationService, TranslationService>();
 builder.Services.AddScoped<IBrandRequestEmailTemplateService, BrandRequestEmailTemplateService>();
 builder.Services.AddScoped<IBrandRequestMailService, BrandRequestMailService>();
 
@@ -229,11 +238,8 @@ if (app.Environment.IsDevelopment())
     app.UseSwagger();
     app.UseSwaggerUI();
 }
-// ⚠️ ACTIVATION DU ROUTAGE (si ce n'est pas implicite, bonne pratique)
 app.UseRouting();
 
-// 💡 ACTIVATION DU MIDDLEWARE CORS (AJOUTER CECI)
-// Doit être placé avant l'authentification et l'autorisation
 app.UseCors(MyAllowSpecificOrigins);
 
 app.UseHttpsRedirection();
