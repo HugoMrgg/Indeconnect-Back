@@ -1,4 +1,6 @@
-﻿namespace IndeConnect_Back.Application.DTOs.Brands;
+﻿using IndeConnect_Back.Domain.catalog.brand;
+
+namespace IndeConnect_Back.Application.DTOs.Brands;
 
 public record BrandDetailDto(
     long Id,
@@ -17,6 +19,8 @@ public record BrandDetailDto(
     IEnumerable<DepositDto> Deposits,
     double EthicsScoreProduction,
     double EthicsScoreTransport,
-    string? AccentColor
+    string? AccentColor,
+    BrandStatus? Status = null,
+    string? LatestRejectionComment = null
 );
 

@@ -12,7 +12,7 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace IndeConnect_Back.Infrastructure.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    [Migration("20260104131453_InitialCreate")]
+    [Migration("20260104192605_InitialCreate")]
     partial class InitialCreate
     {
         /// <inheritdoc />
@@ -155,6 +155,42 @@ namespace IndeConnect_Back.Infrastructure.Migrations
                         .HasDatabaseName("IX_BrandEthicTag_Unique");
 
                     b.ToTable("BrandEthicTags");
+                });
+
+            modelBuilder.Entity("IndeConnect_Back.Domain.catalog.brand.BrandModerationHistory", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("Id"));
+
+                    b.Property<string>("Action")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<long>("BrandId")
+                        .HasColumnType("bigint");
+
+                    b.Property<string>("Comment")
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<long>("ModeratorUserId")
+                        .HasColumnType("bigint");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("BrandId");
+
+                    b.HasIndex("CreatedAt");
+
+                    b.HasIndex("ModeratorUserId");
+
+                    b.ToTable("BrandModerationHistory");
                 });
 
             modelBuilder.Entity("IndeConnect_Back.Domain.catalog.brand.BrandPolicy", b =>
@@ -2573,6 +2609,25 @@ namespace IndeConnect_Back.Infrastructure.Migrations
                     b.Navigation("Brand");
                 });
 
+            modelBuilder.Entity("IndeConnect_Back.Domain.catalog.brand.BrandModerationHistory", b =>
+                {
+                    b.HasOne("IndeConnect_Back.Domain.catalog.brand.Brand", "Brand")
+                        .WithMany("ModerationHistory")
+                        .HasForeignKey("BrandId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("IndeConnect_Back.Domain.user.User", "ModeratorUser")
+                        .WithMany()
+                        .HasForeignKey("ModeratorUserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Brand");
+
+                    b.Navigation("ModeratorUser");
+                });
+
             modelBuilder.Entity("IndeConnect_Back.Domain.catalog.brand.BrandPolicy", b =>
                 {
                     b.HasOne("IndeConnect_Back.Domain.catalog.brand.Brand", "Brand")
@@ -3215,6 +3270,8 @@ namespace IndeConnect_Back.Infrastructure.Migrations
                     b.Navigation("Deposits");
 
                     b.Navigation("EthicTags");
+
+                    b.Navigation("ModerationHistory");
 
                     b.Navigation("Policies");
 

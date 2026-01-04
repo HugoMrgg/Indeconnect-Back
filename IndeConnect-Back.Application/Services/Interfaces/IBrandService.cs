@@ -9,4 +9,9 @@ public interface IBrandService
     Task<BrandDetailDto?> GetMyBrandAsync(long? superVendorUserId);
     Task UpdateBrandAsync(long brandId, UpdateBrandRequest request, long? currentUserId);
     Task<DepositDto> UpsertMyBrandDepositAsync(long? currentUserId, UpsertBrandDepositRequest request);
+    Task<IEnumerable<BrandModerationListDto>> GetBrandsForModerationAsync();
+    Task<BrandModerationDetailDto?> GetBrandForModerationAsync(long brandId);
+    Task SubmitBrandAsync(long brandId, long superVendorUserId);
+    Task ApproveBrandAsync(long brandId, long moderatorUserId);
+    Task RejectBrandAsync(long brandId, long moderatorUserId, string reason);
 }

@@ -451,6 +451,35 @@ namespace IndeConnect_Back.Infrastructure.Migrations
                 });
 
             migrationBuilder.CreateTable(
+                name: "BrandModerationHistory",
+                columns: table => new
+                {
+                    Id = table.Column<long>(type: "bigint", nullable: false)
+                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
+                    BrandId = table.Column<long>(type: "bigint", nullable: false),
+                    ModeratorUserId = table.Column<long>(type: "bigint", nullable: false),
+                    Action = table.Column<string>(type: "text", nullable: false),
+                    Comment = table.Column<string>(type: "character varying(2000)", maxLength: 2000, nullable: true),
+                    CreatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_BrandModerationHistory", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_BrandModerationHistory_Brands_BrandId",
+                        column: x => x.BrandId,
+                        principalTable: "Brands",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                    table.ForeignKey(
+                        name: "FK_BrandModerationHistory_Users_ModeratorUserId",
+                        column: x => x.ModeratorUserId,
+                        principalTable: "Users",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Restrict);
+                });
+
+            migrationBuilder.CreateTable(
                 name: "BrandSellers",
                 columns: table => new
                 {
@@ -1438,6 +1467,21 @@ namespace IndeConnect_Back.Infrastructure.Migrations
                 unique: true);
 
             migrationBuilder.CreateIndex(
+                name: "IX_BrandModerationHistory_BrandId",
+                table: "BrandModerationHistory",
+                column: "BrandId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_BrandModerationHistory_CreatedAt",
+                table: "BrandModerationHistory",
+                column: "CreatedAt");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_BrandModerationHistory_ModeratorUserId",
+                table: "BrandModerationHistory",
+                column: "ModeratorUserId");
+
+            migrationBuilder.CreateIndex(
                 name: "IX_BrandPolicy_BrandActive",
                 table: "BrandPolicies",
                 columns: new[] { "BrandId", "IsActive" });
@@ -2133,6 +2177,9 @@ namespace IndeConnect_Back.Infrastructure.Migrations
 
             migrationBuilder.DropTable(
                 name: "BrandEthicTags");
+
+            migrationBuilder.DropTable(
+                name: "BrandModerationHistory");
 
             migrationBuilder.DropTable(
                 name: "BrandPolicies");

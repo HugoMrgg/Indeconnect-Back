@@ -197,4 +197,175 @@ public class BrandController : ControllerBase
         await _mailService.SendBecomeBrandRequestAsync(request);
         return Ok(new { message = "Demande envoyée." });
     }
+    // ============================================================================
+    // MODERATION ROUTES
+    // ============================================================================
+
+    /// <summary>
+    /// SuperVendor soumet sa marque pour validation
+    /// </summary>
+    [HttpPost("{brandId}/submit")]
+    [Authorize(Roles = "SuperVendor")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> SubmitBrand(
+        [FromRoute] long brandId,
+        [FromServices] UserHelper userHelper)
+    {
+        var currentUserId = userHelper.GetUserId();
+
+        if (!currentUserId.HasValue)
+            return Unauthorized(new { message = "User not authenticated" });
+
+        try
+        {
+            await _brandService.SubmitBrandAsync(brandId, currentUserId.Value);
+            return NoContent();
+        }
+        catch (KeyNotFoundException ex)
+        {
+            return NotFound(new ProblemDetails
+            {
+                Title = "Brand not found",
+                Detail = ex.Message
+            });
+        }
+        catch (UnauthorizedAccessException ex)
+        {
+            return StatusCode(StatusCodes.Status403Forbidden, new ProblemDetails
+            {
+                Title = "Forbidden",
+                Detail = ex.Message
+            });
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(new ProblemDetails
+            {
+                Title = "Invalid operation",
+                Detail = ex.Message
+            });
+        }
+    }
+
+    /// <summary>
+    /// Moderator récupère la liste des marques à modérer
+    /// </summary>
+    [HttpGet("moderation")]
+    [Authorize(Roles = "Moderator,Administrator")]
+    [ProducesResponseType(typeof(IEnumerable<BrandModerationListDto>), StatusCodes.Status200OK)]
+    public async Task<ActionResult<IEnumerable<BrandModerationListDto>>> GetBrandsForModeration()
+    {
+        var brands = await _brandService.GetBrandsForModerationAsync();
+        return Ok(brands);
+    }
+
+    /// <summary>
+    /// Moderator récupère les détails d'une marque pour modération
+    /// </summary>
+    [HttpGet("moderation/{brandId}")]
+    [Authorize(Roles = "Moderator,Administrator")]
+    [ProducesResponseType(typeof(BrandModerationDetailDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<ActionResult<BrandModerationDetailDto>> GetBrandForModeration(
+        [FromRoute] long brandId)
+    {
+        var brand = await _brandService.GetBrandForModerationAsync(brandId);
+
+        if (brand == null)
+            return NotFound(new { message = "Brand not found" });
+
+        return Ok(brand);
+    }
+
+    /// <summary>
+    /// Moderator approuve une marque
+    /// </summary>
+    [HttpPost("{brandId}/approve")]
+    [Authorize(Roles = "Moderator,Administrator")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> ApproveBrand(
+        [FromRoute] long brandId,
+        [FromServices] UserHelper userHelper)
+    {
+        var moderatorUserId = userHelper.GetUserId();
+
+        if (!moderatorUserId.HasValue)
+            return Unauthorized(new { message = "User not authenticated" });
+
+        try
+        {
+            await _brandService.ApproveBrandAsync(brandId, moderatorUserId.Value);
+            return NoContent();
+        }
+        catch (KeyNotFoundException ex)
+        {
+            return NotFound(new ProblemDetails
+            {
+                Title = "Brand not found",
+                Detail = ex.Message
+            });
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(new ProblemDetails
+            {
+                Title = "Invalid operation",
+                Detail = ex.Message
+            });
+        }
+    }
+
+    /// <summary>
+    /// Moderator rejette une marque avec un commentaire
+    /// </summary>
+    [HttpPost("{brandId}/reject")]
+    [Authorize(Roles = "Moderator,Administrator")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> RejectBrand(
+        [FromRoute] long brandId,
+        [FromBody] RejectBrandRequest request,
+        [FromServices] UserHelper userHelper)
+    {
+        var moderatorUserId = userHelper.GetUserId();
+
+        if (!moderatorUserId.HasValue)
+            return Unauthorized(new { message = "User not authenticated" });
+
+        if (string.IsNullOrWhiteSpace(request.Reason))
+            return BadRequest(new ProblemDetails
+            {
+                Title = "Validation error",
+                Detail = "Rejection reason is required"
+            });
+
+        try
+        {
+            await _brandService.RejectBrandAsync(brandId, moderatorUserId.Value, request.Reason);
+            return NoContent();
+        }
+        catch (KeyNotFoundException ex)
+        {
+            return NotFound(new ProblemDetails
+            {
+                Title = "Brand not found",
+                Detail = ex.Message
+            });
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(new ProblemDetails
+            {
+                Title = "Invalid operation",
+                Detail = ex.Message
+            });
+        }
+    }
+
 }

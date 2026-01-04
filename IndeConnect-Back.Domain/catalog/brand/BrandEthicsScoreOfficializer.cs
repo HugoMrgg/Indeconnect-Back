@@ -33,7 +33,7 @@ public static class BrandEthicsScoreOfficializer
 
         foreach (var score in currentOfficials)
         {
-            score.MarkNonOfficial();
+            score.MarkOfficial();
         }
 
         // 2) Promouvoir les scores du questionnaire approuvé

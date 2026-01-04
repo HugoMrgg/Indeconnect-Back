@@ -26,7 +26,7 @@ public class BrandQuestionResponseConfiguration : IEntityTypeConfiguration<Brand
                .IsRequired();
         
         builder.Property(br => br.CalculatedScore).IsRequired(false);
-        
+
         builder.HasMany(br => br.SelectedOptions)
                .WithOne(x => x.Response)
                .HasForeignKey(x => x.ResponseId)

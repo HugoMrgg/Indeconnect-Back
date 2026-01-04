@@ -13,7 +13,7 @@ public class BrandQuestionResponse
 
     private readonly List<BrandQuestionResponseOption> _selectedOptions = new();
     public IReadOnlyCollection<BrandQuestionResponseOption> SelectedOptions => _selectedOptions;
-    public decimal? CalculatedScore { get; private set; } 
+    public decimal? CalculatedScore { get; private set; }
     public string QuestionKey { get; private set; } = default!;
     private BrandQuestionResponse() { }
 

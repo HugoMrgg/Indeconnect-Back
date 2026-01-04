@@ -53,6 +53,9 @@ public class Brand
     private readonly List<BrandTranslation> _translations = new();
     public IReadOnlyCollection<BrandTranslation> Translations => _translations;
 
+    private readonly List<BrandModerationHistory> _moderationHistory = new();
+    public IReadOnlyCollection<BrandModerationHistory> ModerationHistory => _moderationHistory;
+    
     private Brand() { }
 
     public Brand(string name, long? superVendorUserId = null)
@@ -226,4 +229,92 @@ public class Brand
         var translation = _translations.FirstOrDefault(t => t.LanguageCode == languageCode);
         return translation?.Name ?? _translations.FirstOrDefault(t => t.LanguageCode == "fr")?.Name ?? Name;
     }
+    /// <summary>
+    /// SuperVendor soumet sa marque pour validation (Draft/Rejected → Submitted)
+    /// </summary>
+    public void Submit(long superVendorUserId)
+    {
+        if (Status != BrandStatus.Draft && Status != BrandStatus.Rejected)
+            throw new InvalidOperationException($"Cannot submit brand with status {Status}");
+
+        Status = BrandStatus.Submitted;
+        
+        var history = new BrandModerationHistory(
+            brandId: Id,
+            moderatorUserId: superVendorUserId, // SuperVendor fait l'action
+            action: ModerationAction.Submitted
+        );
+        _moderationHistory.Add(history);
+    }
+
+    /// <summary>
+    /// SuperVendor modifie une marque Approved → passe en PendingUpdate
+    /// </summary>
+    public void SubmitUpdate(long superVendorUserId)
+    {
+        if (Status != BrandStatus.Approved)
+            throw new InvalidOperationException($"Cannot submit update for brand with status {Status}");
+
+        Status = BrandStatus.PendingUpdate;
+        
+        var history = new BrandModerationHistory(
+            brandId: Id,
+            moderatorUserId: superVendorUserId,
+            action: ModerationAction.Submitted,
+            comment: "Modification submitted for review"
+        );
+        _moderationHistory.Add(history);
+    }
+
+    /// <summary>
+    /// Moderator approuve la marque (Submitted/PendingUpdate → Approved)
+    /// </summary>
+    public void Approve(long moderatorUserId)
+    {
+        if (Status != BrandStatus.Submitted && Status != BrandStatus.PendingUpdate)
+            throw new InvalidOperationException($"Cannot approve brand with status {Status}");
+
+        Status = BrandStatus.Approved;
+        
+        var history = new BrandModerationHistory(
+            brandId: Id,
+            moderatorUserId: moderatorUserId,
+            action: ModerationAction.Approved
+        );
+        _moderationHistory.Add(history);
+    }
+
+    /// <summary>
+    /// Moderator rejette la marque avec un commentaire
+    /// </summary>
+    public void Reject(long moderatorUserId, string reason)
+    {
+        if (Status != BrandStatus.Submitted && Status != BrandStatus.PendingUpdate)
+            throw new InvalidOperationException($"Cannot reject brand with status {Status}");
+
+        if (string.IsNullOrWhiteSpace(reason))
+            throw new ArgumentException("Rejection reason is required", nameof(reason));
+
+        Status = BrandStatus.Rejected;
+        
+        var history = new BrandModerationHistory(
+            brandId: Id,
+            moderatorUserId: moderatorUserId,
+            action: ModerationAction.Rejected,
+            comment: reason
+        );
+        _moderationHistory.Add(history);
+    }
+
+    /// <summary>
+    /// Récupère le dernier commentaire de rejet (pour affichage au SuperVendor)
+    /// </summary>
+    public string? GetLatestRejectionComment()
+    {
+        return _moderationHistory
+            .Where(h => h.Action == ModerationAction.Rejected)
+            .OrderByDescending(h => h.CreatedAt)
+            .FirstOrDefault()?.Comment;
+    }
 }
+

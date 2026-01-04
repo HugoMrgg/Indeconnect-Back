@@ -596,109 +596,285 @@ VALUES
 
 -- ============================================
 -- RÉSUMÉ FINAL
--- ============================================
-DELETE FROM "brand_translations";
-DELETE FROM "product_translations";
-DELETE FROM "category_translations";
-DELETE FROM "color_translations";
-DELETE FROM "size_translations";
+-- ============================================-- ============================================
+-- -- TRANSLATIONS (FR / EN / NL / DE)
+-- -- ============================================
+-- 
+-- DELETE FROM "brand_translations";
+-- DELETE FROM "product_translations";
+-- DELETE FROM "category_translations";
+-- DELETE FROM "color_translations";
+-- DELETE FROM "size_translations";
+-- 
+-- -- ============================================
+-- -- CATEGORIES
+-- -- ============================================
+
+
+
 INSERT INTO "category_translations" ("CategoryId", "LanguageCode", "Name") VALUES
--- T-Shirts
+-- 100 T-Shirts
 (100, 'en', 'T-Shirts'),
 (100, 'fr', 'T-shirts'),
+(100, 'nl', 'T-shirts'),
+(100, 'de', 'T-Shirts'),
 
--- Jeans
+-- 101 Jeans
 (101, 'en', 'Jeans'),
 (101, 'fr', 'Jeans'),
+(101, 'nl', 'Jeans'),
+(101, 'de', 'Jeans'),
 
--- Shoes
+-- 102 Shoes
 (102, 'en', 'Shoes'),
 (102, 'fr', 'Chaussures'),
+(102, 'nl', 'Schoenen'),
+(102, 'de', 'Schuhe'),
 
--- Accessories
+-- 103 Accessories
 (103, 'en', 'Accessories'),
 (103, 'fr', 'Accessoires'),
+(103, 'nl', 'Accessoires'),
+(103, 'de', 'Accessoires'),
 
--- Dresses
+-- 104 Dresses
 (104, 'en', 'Dresses'),
 (104, 'fr', 'Robes'),
+(104, 'nl', 'Jurken'),
+(104, 'de', 'Kleider'),
 
--- Jackets
+-- 105 Jackets
 (105, 'en', 'Jackets'),
 (105, 'fr', 'Vestes'),
+(105, 'nl', 'Jassen'),
+(105, 'de', 'Jacken'),
 
--- Hoodies
+-- 106 Hoodies
 (106, 'en', 'Hoodies'),
 (106, 'fr', 'Sweats à capuche'),
+(106, 'nl', 'Hoodies'),
+(106, 'de', 'Kapuzenpullover'),
 
--- Pants
+-- 107 Pants
 (107, 'en', 'Pants'),
 (107, 'fr', 'Pantalons'),
+(107, 'nl', 'Broeken'),
+(107, 'de', 'Hosen'),
 
--- Skirts
+-- 108 Skirts
 (108, 'en', 'Skirts'),
 (108, 'fr', 'Jupes'),
+(108, 'nl', 'Rokken'),
+(108, 'de', 'Röcke'),
 
--- Swimwear
+-- 109 Swimwear
 (109, 'en', 'Swimwear'),
-(109, 'fr', 'Maillots de bain');
+(109, 'fr', 'Maillots de bain'),
+(109, 'nl', 'Zwemkleding'),
+(109, 'de', 'Bademode');
+
+-- ============================================
+-- COLORS
+-- ============================================
+
 INSERT INTO "color_translations" ("ColorId", "LanguageCode", "Name") VALUES
-                                                                         (100, 'en', 'Red'),     (100, 'fr', 'Rouge'),
-                                                                         (101, 'en', 'Blue'),    (101, 'fr', 'Bleu'),
-                                                                         (102, 'en', 'Black'),   (102, 'fr', 'Noir'),
-                                                                         (103, 'en', 'White'),   (103, 'fr', 'Blanc'),
-                                                                         (104, 'en', 'Green'),   (104, 'fr', 'Vert'),
-                                                                         (105, 'en', 'Yellow'),  (105, 'fr', 'Jaune'),
-                                                                         (106, 'en', 'Navy'),    (106, 'fr', 'Bleu marine'),
-                                                                         (107, 'en', 'Gray'),    (107, 'fr', 'Gris'),
-                                                                         (108, 'en', 'Purple'),  (108, 'fr', 'Violet'),
-                                                                         (109, 'en', 'Orange'),  (109, 'fr', 'Orange');
+                                                                         (100, 'en', 'Red'),     (100, 'fr', 'Rouge'),        (100, 'nl', 'Rood'),        (100, 'de', 'Rot'),
+                                                                         (101, 'en', 'Blue'),    (101, 'fr', 'Bleu'),         (101, 'nl', 'Blauw'),       (101, 'de', 'Blau'),
+                                                                         (102, 'en', 'Black'),   (102, 'fr', 'Noir'),         (102, 'nl', 'Zwart'),       (102, 'de', 'Schwarz'),
+                                                                         (103, 'en', 'White'),   (103, 'fr', 'Blanc'),        (103, 'nl', 'Wit'),         (103, 'de', 'Weiß'),
+                                                                         (104, 'en', 'Green'),   (104, 'fr', 'Vert'),         (104, 'nl', 'Groen'),       (104, 'de', 'Grün'),
+                                                                         (105, 'en', 'Yellow'),  (105, 'fr', 'Jaune'),        (105, 'nl', 'Geel'),        (105, 'de', 'Gelb'),
+                                                                         (106, 'en', 'Navy'),    (106, 'fr', 'Bleu marine'),  (106, 'nl', 'Marineblauw'), (106, 'de', 'Navy'),
+                                                                         (107, 'en', 'Gray'),    (107, 'fr', 'Gris'),         (107, 'nl', 'Grijs'),       (107, 'de', 'Grau'),
+                                                                         (108, 'en', 'Purple'),  (108, 'fr', 'Violet'),       (108, 'nl', 'Paars'),       (108, 'de', 'Lila'),
+                                                                         (109, 'en', 'Orange'),  (109, 'fr', 'Orange'),       (109, 'nl', 'Oranje'),      (109, 'de', 'Orange');
+
+-- ============================================
+-- SIZES (4 langues)
+-- Note: tailles = identiques dans toutes les langues
+-- ============================================
+
 INSERT INTO "size_translations" ("SizeId", "LanguageCode", "Name")
 SELECT "Id", 'en', "Name" FROM "Sizes"
 UNION ALL
-SELECT "Id", 'fr', "Name" FROM "Sizes";
+SELECT "Id", 'fr', "Name" FROM "Sizes"
+UNION ALL
+SELECT "Id", 'nl', "Name" FROM "Sizes"
+UNION ALL
+SELECT "Id", 'de', "Name" FROM "Sizes";
+
+-- ============================================
+-- BRANDS (4 langues)
+-- ============================================
+
 INSERT INTO "brand_translations"
 ("BrandId", "LanguageCode", "Name", "Description", "AboutUs", "WhereAreWe", "OtherInfo")
 VALUES
--- EcoWear
-(100, 'en', 'EcoWear',
- 'Eco-responsible clothing',
- 'Founded in 2015 with sustainability at heart',
- 'Paris, France',
- 'Certified organic materials'),
+-- 100 EcoWear
+(100, 'en', 'EcoWear', 'Eco-responsible clothing', 'Founded in 2015 with sustainability at heart', 'Paris, France', 'Certified organic materials'),
+(100, 'fr', 'EcoWear', 'Vêtements éco-responsables', 'Fondée en 2015 avec une mission durable', 'Paris, France', 'Matériaux certifiés bio'),
+(100, 'nl', 'EcoWear', 'Duurzame kleding', 'Opgericht in 2015 met duurzaamheid als kern', 'Parijs, Frankrijk', 'Gecertificeerde biologische materialen'),
+(100, 'de', 'EcoWear', 'Nachhaltige Kleidung', 'Gegründet 2015 mit Nachhaltigkeit im Fokus', 'Paris, Frankreich', 'Zertifizierte Bio-Materialien'),
 
-(100, 'fr', 'EcoWear',
- 'Vêtements éco-responsables',
- 'Fondée en 2015 avec une mission durable',
- 'Paris, France',
- 'Matériaux certifiés bio'),
+-- 101 NaturalStyle
+(101, 'en', 'NaturalStyle', '100% organic clothing', 'Fully certified organic brand', 'Lyon, France', 'Low carbon footprint'),
+(101, 'fr', 'NaturalStyle', 'Vêtements 100% bio', 'Marque certifiée biologique', 'Lyon, France', 'Faible empreinte carbone'),
+(101, 'nl', 'NaturalStyle', '100% biologische kleding', 'Volledig biologisch gecertificeerd merk', 'Lyon, Frankrijk', 'Lage CO₂-voetafdruk'),
+(101, 'de', 'NaturalStyle', '100% Bio-Kleidung', 'Vollständig biozertifizierte Marke', 'Lyon, Frankreich', 'Geringer CO₂-Fußabdruck'),
 
--- NaturalStyle
-(101, 'en', 'NaturalStyle',
- '100% organic clothing',
- 'Fully certified organic brand',
- 'Lyon, France',
- 'Low carbon footprint'),
+-- 102 UrbanFit
+(102, 'en', 'UrbanFit', 'Streetwear with an urban edge', 'Designed for everyday city life', 'Marseille, France', 'Modern cuts and durable fabrics'),
+(102, 'fr', 'UrbanFit', 'Streetwear urbain', 'Pensé pour la vie de tous les jours', 'Marseille, France', 'Coupes modernes et tissus résistants'),
+(102, 'nl', 'UrbanFit', 'Urban streetwear', 'Ontworpen voor het dagelijkse stadsleven', 'Marseille, Frankrijk', 'Moderne pasvormen en stevige stoffen'),
+(102, 'de', 'UrbanFit', 'Urbaner Streetwear-Style', 'Gemacht für den Alltag in der Stadt', 'Marseille, Frankreich', 'Moderne Schnitte und robuste Stoffe'),
 
-(101, 'fr', 'NaturalStyle',
- 'Vêtements 100% bio',
- 'Marque certifiée biologique',
- 'Lyon, France',
- 'Faible empreinte carbone');
+-- 103 LuxeBrand
+(103, 'en', 'LuxeBrand', 'Sustainable luxury fashion', 'Premium quality with responsible choices', 'Milan, Italy', 'High-end materials and craftsmanship'),
+(103, 'fr', 'LuxeBrand', 'Luxe durable', 'Qualité premium et choix responsables', 'Milan, Italie', 'Matériaux haut de gamme et savoir-faire'),
+(103, 'nl', 'LuxeBrand', 'Duurzame luxe', 'Premium kwaliteit met verantwoorde keuzes', 'Milaan, Italië', 'Hoogwaardige materialen en vakmanschap'),
+(103, 'de', 'LuxeBrand', 'Nachhaltiger Luxus', 'Premiumqualität mit verantwortungsvollen Entscheidungen', 'Mailand, Italien', 'Hochwertige Materialien und Handwerk'),
+
+-- 104 SportWear Pro
+(104, 'en', 'SportWear Pro', 'Performance sportswear', 'Built for comfort and movement', 'Amsterdam, Netherlands', 'Technical fabrics and durable design'),
+(104, 'fr', 'SportWear Pro', 'Vêtements de sport', 'Conçu pour la performance', 'Amsterdam, Pays-Bas', 'Textiles techniques et durables'),
+(104, 'nl', 'SportWear Pro', 'Sportkleding voor prestaties', 'Gemaakt voor comfort en beweging', 'Amsterdam, Nederland', 'Technische stoffen en duurzaam ontwerp'),
+(104, 'de', 'SportWear Pro', 'Sportbekleidung für Leistung', 'Für Komfort und Bewegung entwickelt', 'Amsterdam, Niederlande', 'Technische Stoffe und langlebiges Design'),
+
+-- 105 VintageTales
+(105, 'en', 'VintageTales', 'Vintage-inspired pieces', 'Retro style with a unique touch', 'Berlin, Germany', 'Limited runs and timeless aesthetics'),
+(105, 'fr', 'VintageTales', 'Style vintage', 'Rétro et unique', 'Berlin, Allemagne', 'Séries limitées et esthétique intemporelle'),
+(105, 'nl', 'VintageTales', 'Vintage-stijl', 'Retro met een unieke touch', 'Berlijn, Duitsland', 'Beperkte oplages en tijdloze look'),
+(105, 'de', 'VintageTales', 'Vintage-Stil', 'Retro mit einzigartigem Flair', 'Berlin, Deutschland', 'Limitierte Stückzahlen und zeitlose Ästhetik'),
+
+-- 106 EthicalDenim
+(106, 'en', 'EthicalDenim', 'Ethical denim essentials', 'Responsible jeans, made to last', 'Barcelona, Spain', 'Fair practices and durable denim'),
+(106, 'fr', 'EthicalDenim', 'Denim éthique', 'Jeans responsables, faits pour durer', 'Barcelone, Espagne', 'Pratiques équitables et denim robuste'),
+(106, 'nl', 'EthicalDenim', 'Ethische denim', 'Verantwoorde jeans, gemaakt om lang mee te gaan', 'Barcelona, Spanje', 'Eerlijke praktijken en stevig denim'),
+(106, 'de', 'EthicalDenim', 'Ethischer Denim', 'Verantwortungsvolle Jeans, gemacht für Langlebigkeit', 'Barcelona, Spanien', 'Faire Praktiken und robuster Denim'),
+
+-- 107 MinimalStyle
+(107, 'en', 'MinimalStyle', 'Minimalist wardrobe staples', 'Timeless design, everyday comfort', 'Stockholm, Sweden', 'Clean lines and neutral tones'),
+(107, 'fr', 'MinimalStyle', 'Minimalisme', 'Design intemporel et confort', 'Stockholm, Suède', 'Lignes épurées et tons neutres'),
+(107, 'nl', 'MinimalStyle', 'Minimalistische essentials', 'Tijdloos design en dagelijks comfort', 'Stockholm, Zweden', 'Strakke lijnen en neutrale tinten'),
+(107, 'de', 'MinimalStyle', 'Minimalistische Basics', 'Zeitloses Design, Alltagkomfort', 'Stockholm, Schweden', 'Klare Linien und neutrale Farben'),
+
+-- 108 ArtisanCraft
+(108, 'en', 'ArtisanCraft', 'Handmade artisan pieces', 'Crafted with care and tradition', 'Athens, Greece', 'Small-batch production and unique details'),
+(108, 'fr', 'ArtisanCraft', 'Artisanal', 'Fabriqué à la main avec soin', 'Athènes, Grèce', 'Petites séries et détails uniques'),
+(108, 'nl', 'ArtisanCraft', 'Ambachtelijk', 'Met zorg en traditie handgemaakt', 'Athene, Griekenland', 'Kleine oplages en unieke details'),
+(108, 'de', 'ArtisanCraft', 'Handwerklich', 'Mit Sorgfalt und Tradition handgefertigt', 'Athen, Griechenland', 'Kleinserien und einzigartige Details'),
+
+-- 109 EcoKids
+(109, 'en', 'EcoKids', 'Eco-friendly kidswear', 'Safe materials for little ones', 'Copenhagen, Denmark', 'Soft fabrics and responsible sourcing'),
+(109, 'fr', 'EcoKids', 'Vêtements enfants', 'Matériaux sûrs pour les petits', 'Copenhague, Danemark', 'Textiles doux et sourcing responsable'),
+(109, 'nl', 'EcoKids', 'Duurzame kinderkleding', 'Veilige materialen voor kleintjes', 'Kopenhagen, Denemarken', 'Zachte stoffen en verantwoord ingekocht'),
+(109, 'de', 'EcoKids', 'Nachhaltige Kinderkleidung', 'Sichere Materialien für die Kleinsten', 'Kopenhagen, Dänemark', 'Weiche Stoffe und verantwortungsvolle Herkunft');
+
+-- ============================================
+-- PRODUCTS (4 langues)
+-- ============================================
+
 INSERT INTO "product_translations"
 ("ProductId", "LanguageCode", "Name", "Description")
 VALUES
-    (100, 'en', 'Organic Cotton Tee - Red', 'Soft organic cotton t-shirt in bright red'),
-    (100, 'fr', 'T-shirt coton bio - Rouge', 'T-shirt en coton biologique rouge vif'),
+-- 100
+(100, 'en', 'Organic Cotton Tee - Red', 'Soft organic cotton t-shirt in bright red'),
+(100, 'fr', 'T-shirt coton bio - Rouge', 'T-shirt en coton biologique rouge vif'),
+(100, 'nl', 'Biologisch katoenen T-shirt - Rood', 'Zacht biologisch katoenen T-shirt in felrood'),
+(100, 'de', 'Bio-Baumwoll-T-Shirt - Rot', 'Weiches Bio-Baumwoll-T-Shirt in kräftigem Rot'),
 
-    (101, 'en', 'Organic Cotton Tee - Blue', 'Organic cotton t-shirt in ocean blue'),
-    (101, 'fr', 'T-shirt coton bio - Bleu', 'T-shirt en coton biologique bleu océan'),
+-- 101
+(101, 'en', 'Organic Cotton Tee - Blue', 'Organic cotton t-shirt in ocean blue'),
+(101, 'fr', 'T-shirt coton bio - Bleu', 'T-shirt en coton biologique bleu océan'),
+(101, 'nl', 'Biologisch katoenen T-shirt - Blauw', 'Biologisch katoenen T-shirt in oceaanblauw'),
+(101, 'de', 'Bio-Baumwoll-T-Shirt - Blau', 'Bio-Baumwoll-T-Shirt in Ozeanblau'),
 
-    (103, 'en', 'Eco Hoodie - Black', 'Classic black eco hoodie'),
-    (103, 'fr', 'Hoodie éco - Noir', 'Hoodie écologique noir classique');
+-- 102
+(102, 'en', 'Organic Cotton Tee - White', 'Organic cotton t-shirt in pure white'),
+(102, 'fr', 'T-shirt coton bio - Blanc', 'T-shirt en coton biologique blanc pur'),
+(102, 'nl', 'Biologisch katoenen T-shirt - Wit', 'Biologisch katoenen T-shirt in zuiver wit'),
+(102, 'de', 'Bio-Baumwoll-T-Shirt - Weiß', 'Bio-Baumwoll-T-Shirt in reinem Weiß'),
 
--- ============================================
--- RÉSUMÉ FINAL
--- ============================================
+-- 103
+(103, 'en', 'Eco Hoodie - Black', 'Classic black eco hoodie'),
+(103, 'fr', 'Hoodie éco - Noir', 'Hoodie écologique noir classique'),
+(103, 'nl', 'Eco hoodie - Zwart', 'Klassieke zwarte eco-hoodie'),
+(103, 'de', 'Eco-Hoodie - Schwarz', 'Klassischer schwarzer Eco-Hoodie'),
 
-SELECT * FROM brand_translations LIMIT 5;
+-- 104
+(104, 'en', 'Eco Hoodie - Gray', 'Eco hoodie in heather gray'),
+(104, 'fr', 'Hoodie éco - Gris', 'Hoodie écologique gris chiné'),
+(104, 'nl', 'Eco hoodie - Grijs', 'Eco-hoodie in gemêleerd grijs'),
+(104, 'de', 'Eco-Hoodie - Grau', 'Eco-Hoodie in meliertem Grau'),
+
+-- 105
+(105, 'en', 'Sustainable Jeans - Blue', 'Durable sustainable denim in blue'),
+(105, 'fr', 'Jean durable - Bleu', 'Jean durable bleu denim'),
+(105, 'nl', 'Duurzame jeans - Blauw', 'Duurzame denim jeans in blauw'),
+(105, 'de', 'Nachhaltige Jeans - Blau', 'Langlebige nachhaltige Denim-Jeans in Blau'),
+
+-- 106
+(106, 'en', 'Sustainable Jeans - Black', 'Durable sustainable denim in deep black'),
+(106, 'fr', 'Jean durable - Noir', 'Jean durable noir intense'),
+(106, 'nl', 'Duurzame jeans - Zwart', 'Duurzame denim jeans in diepzwart'),
+(106, 'de', 'Nachhaltige Jeans - Schwarz', 'Langlebige nachhaltige Denim-Jeans in tiefem Schwarz'),
+
+-- 107
+(107, 'en', 'Premium Jacket - Black', 'Elegant premium jacket in black'),
+(107, 'fr', 'Veste premium - Noir', 'Veste premium noire élégante'),
+(107, 'nl', 'Premium jas - Zwart', 'Elegante premium jas in zwart'),
+(107, 'de', 'Premium-Jacke - Schwarz', 'Elegante Premium-Jacke in Schwarz'),
+
+-- 108
+(108, 'en', 'Premium Jacket - Navy', 'Premium jacket in navy blue'),
+(108, 'fr', 'Veste premium - Bleu marine', 'Veste premium bleu marine'),
+(108, 'nl', 'Premium jas - Marineblauw', 'Premium jas in marineblauw'),
+(108, 'de', 'Premium-Jacke - Navy', 'Premium-Jacke in Navy'),
+
+-- 109
+(109, 'en', 'Premium Jacket - Gray', 'Sophisticated premium jacket in gray'),
+(109, 'fr', 'Veste premium - Gris', 'Veste premium grise sophistiquée'),
+(109, 'nl', 'Premium jas - Grijs', 'Verfijnde premium jas in grijs'),
+(109, 'de', 'Premium-Jacke - Grau', 'Edle Premium-Jacke in Grau'),
+
+-- 110
+(110, 'en', 'Sport Leggings - Black', 'Technical black sports leggings'),
+(110, 'fr', 'Leggings sport - Noir', 'Leggings sport noir technique'),
+(110, 'nl', 'Sportlegging - Zwart', 'Technische zwarte sportlegging'),
+(110, 'de', 'Sportleggings - Schwarz', 'Technische schwarze Sportleggings'),
+
+-- 111
+(111, 'en', 'Sport Leggings - Purple', 'Sport leggings in dynamic purple'),
+(111, 'fr', 'Leggings sport - Violet', 'Leggings sport violet dynamique'),
+(111, 'nl', 'Sportlegging - Paars', 'Sportlegging in dynamisch paars'),
+(111, 'de', 'Sportleggings - Lila', 'Sportleggings in dynamischem Lila'),
+
+-- 112
+(112, 'en', 'Vintage Dress', 'One-of-a-kind vintage dress'),
+(112, 'fr', 'Robe vintage', 'Robe vintage unique'),
+(112, 'nl', 'Vintage jurk', 'Unieke vintage jurk'),
+(112, 'de', 'Vintage-Kleid', 'Einzigartiges Vintage-Kleid'),
+
+-- 113
+(113, 'en', 'Ethical Denim Blue', 'Ethical blue denim jeans'),
+(113, 'fr', 'Denim éthique - Bleu', 'Jean éthique bleu'),
+(113, 'nl', 'Ethische denim - Blauw', 'Ethische blauwe denim jeans'),
+(113, 'de', 'Ethischer Denim - Blau', 'Ethische blaue Denim-Jeans'),
+
+-- 114
+(114, 'en', 'Minimal Tee White', 'Minimal white t-shirt'),
+(114, 'fr', 'T-shirt minimal - Blanc', 'T-shirt minimal blanc'),
+(114, 'nl', 'Minimal T-shirt - Wit', 'Minimalistisch wit T-shirt'),
+(114, 'de', 'Minimal-T-Shirt - Weiß', 'Minimalistisches weißes T-Shirt'),
+
+-- 115
+(115, 'en', 'Artisan Bag Brown', 'Handcrafted brown artisan bag'),
+(115, 'fr', 'Sac artisanal - Marron', 'Sac artisanal marron'),
+(115, 'nl', 'Ambachtelijke tas - Bruin', 'Handgemaakte ambachtelijke tas in bruin'),
+(115, 'de', 'Handwerkstas - Braun', 'Handgefertigte handwerkliche Tasche in Braun'),
+
+-- 116
+(116, 'en', 'Kids Organic Tee', 'Organic t-shirt for kids'),
+(116, 'fr', 'T-shirt enfant bio', 'T-shirt enfant bio'),
+(116, 'nl', 'Biologisch kinder T-shirt', 'Biologisch T-shirt voor kinderen'),
+(116, 'de', 'Bio-Kinder-T-Shirt', 'Bio-T-Shirt für Kinder');

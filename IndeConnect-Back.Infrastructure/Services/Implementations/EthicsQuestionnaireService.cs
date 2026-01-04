@@ -106,7 +106,21 @@ public class EthicsQuestionnaireService : IEthicsQuestionnaireService
             _context.BrandQuestionResponseOptions.Add(link);
         }
 
+        Console.WriteLine($"[DEBUG] Calculating score for QuestionId={q.Id}, OptionIds={string.Join(",", optionIds)}");
+        foreach (var optId in optionIds)
+        {
+            if (optionsById.TryGetValue(optId, out var option))
+            {
+                Console.WriteLine($"[DEBUG]   - OptionId={optId}, Score={option.Score}");
+            }
+            else
+            {
+                Console.WriteLine($"[DEBUG]   - OptionId={optId} NOT FOUND in optionsById!");
+            }
+        }
+
         var calculatedScore = BrandQuestionResponse.CalculateScore(optionsById, optionIds);
+        Console.WriteLine($"[DEBUG] Calculated score for QuestionId={q.Id}: {calculatedScore}");
         response.SetCalculatedScore(calculatedScore);
     }
 
@@ -265,14 +279,29 @@ public class EthicsQuestionnaireService : IEthicsQuestionnaireService
         var categories = Enum.GetValues<EthicsCategory>();
         foreach (var category in categories)
         {
+            Console.WriteLine($"\n[DEBUG] === Processing category: {category} ===");
+
             var raw = _scorer.ComputeRawScore(questionnaire.Responses, category);
 
             // Calculer le score max possible pour cette catégorie
-            var maxPossibleScore = activeQuestions
+            var questionsInCategory = activeQuestions
                 .Where(q => q.Category == category)
-                .Sum(q => q.Options.Max(o => o.Score));
+                .ToList();
+
+            Console.WriteLine($"[DEBUG] Questions in category {category}: {questionsInCategory.Count}");
+
+            var maxPossibleScore = questionsInCategory
+                .Sum(q => {
+                    var maxScore = q.Options.Any() ? q.Options.Max(o => o.Score) : 0;
+                    Console.WriteLine($"[DEBUG] QuestionId={q.Id}, MaxScore={maxScore}");
+                    return maxScore;
+                });
+
+            Console.WriteLine($"[DEBUG] Category {category}: raw={raw}, maxPossible={maxPossibleScore}");
 
             var final = _scorer.ComputeFinalScore(raw, maxPossibleScore);
+
+            Console.WriteLine($"[DEBUG] Category {category}: finalScore={final}");
 
             _context.BrandEthicScores.Add(new BrandEthicScore(
                 brandId: brandId,

@@ -40,6 +40,7 @@ public class AppDbContext : DbContext
     public DbSet<EthicsOption> EthicsOptions { get; set; }
     public DbSet<BrandShippingMethod> BrandShippingMethods { get; set; }
 
+    public DbSet<BrandModerationHistory> BrandModerationHistory { get; set; }
     // CATALOG - PRODUCT DOMAIN
     public DbSet<Category> Categories { get; set; }
     public DbSet<CategoryTranslation> CategoryTranslations { get; set; }

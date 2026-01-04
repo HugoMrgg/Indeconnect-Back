@@ -1,4 +1,5 @@
-﻿using System.Text.Json;
+﻿using System.Globalization;
+using System.Text.Json;
 using System.Text.Json.Serialization;
 using IndeConnect_Back.Application.Services.Interfaces;
 using Microsoft.Extensions.Caching.Memory;
@@ -74,7 +75,21 @@ public class NominatimGeocodeService : IGeocodeService
             }
 
             var result = results.First();
-            var coords = (double.Parse(result.Lat), double.Parse(result.Lon));
+
+            if (!double.TryParse(result.Lat, NumberStyles.Float, CultureInfo.InvariantCulture, out var latitude))
+            {
+                _logger.LogError("Failed to parse latitude: {LatString}", result.Lat);
+                return null;
+            }
+
+            if (!double.TryParse(result.Lon, NumberStyles.Float, CultureInfo.InvariantCulture, out var longitude))
+            {
+                _logger.LogError("Failed to parse longitude: {LonString}", result.Lon);
+                return null;
+            }
+
+            var coords = (latitude, longitude);
+
 
             // Store result in cache for 1 year (addresses rarely change)
             _cache.Set(cacheKey, coords, TimeSpan.FromDays(365));

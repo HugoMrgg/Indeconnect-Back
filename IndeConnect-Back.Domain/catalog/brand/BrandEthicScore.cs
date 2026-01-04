@@ -31,4 +31,5 @@ public class BrandEthicScore
 
     public void MarkOfficial() => IsOfficial = true;
     public void MarkNonOfficial() => IsOfficial = false;
+    
 }

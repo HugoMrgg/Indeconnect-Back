@@ -6,5 +6,6 @@ public enum BrandStatus
     Submitted = 1,  // questionnaire soumis, en revue
     Approved = 2,   // publiée
     Rejected = 3,   // renvoyée avec motif
-    Disabled = 4    // désactivée
+    Disabled = 4,    // désactivée
+    PendingUpdate = 5
 }
