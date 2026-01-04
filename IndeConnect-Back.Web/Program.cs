@@ -82,6 +82,8 @@ builder.Services.AddHttpContextAccessor(); // Required for CurrentLanguageProvid
 builder.Services.AddScoped<ICurrentLanguageProvider, CurrentLanguageProvider>();
 builder.Services.AddScoped<IAutoTranslationService, DeepLTranslationService>();
 builder.Services.AddScoped<ITranslationService, TranslationService>();
+builder.Services.AddScoped<IBrandRequestEmailTemplateService, BrandRequestEmailTemplateService>();
+builder.Services.AddScoped<IBrandRequestMailService, BrandRequestMailService>();
 
 // Background service for automatic order progression
 builder.Services.AddHostedService<OrderProgressionService>();

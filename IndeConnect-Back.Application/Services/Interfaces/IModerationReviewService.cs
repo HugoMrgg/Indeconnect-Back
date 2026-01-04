@@ -12,6 +12,6 @@ public interface IModerationReviewService
         string? q = null
     );
 
-    Task ApproveAsync(long reviewId, long moderatorUserId);
-    Task RejectAsync(long reviewId, long moderatorUserId);
+    Task ApproveAsync(long reviewId);
+    Task RejectAsync(long reviewId);
 }

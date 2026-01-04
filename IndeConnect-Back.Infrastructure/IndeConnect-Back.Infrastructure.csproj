@@ -50,4 +50,8 @@
     <Compile Remove="Migrations\20251219120325_InitialCreate.Designer.cs" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Folder Include="Migrations\" />
+  </ItemGroup>
+
 </Project>

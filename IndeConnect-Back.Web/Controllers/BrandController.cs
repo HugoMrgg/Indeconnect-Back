@@ -15,12 +15,14 @@ public class BrandController : ControllerBase
     private readonly IBrandService _brandService;
     private readonly IProductService _productService;
     private readonly UserHelper _userHelper;
+    private readonly IBrandRequestMailService _mailService;
 
-    public BrandController(IBrandService brandService, IProductService productService, UserHelper userHelper) 
+    public BrandController(IBrandService brandService, IProductService productService, UserHelper userHelper, IBrandRequestMailService mailService) 
     {
         _brandService = brandService;
         _productService = productService;
         _userHelper = userHelper;
+        _mailService = mailService;
     }
 
     /**
@@ -179,5 +181,20 @@ public class BrandController : ControllerBase
                 Detail = ex.Message
             });
         }
+    }
+    
+    [HttpPost("request")]
+    [ProducesResponseType(StatusCodes.Status201Created)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    public async Task<IActionResult> Create([FromBody] BecomeBrandRequestDto request)
+    {
+        if (string.IsNullOrWhiteSpace(request.BrandName))
+            return BadRequest("BrandName est requis.");
+
+        if (string.IsNullOrWhiteSpace(request.Email))
+            return BadRequest("Email est requis.");
+
+        await _mailService.SendBecomeBrandRequestAsync(request);
+        return Ok(new { message = "Demande envoyée." });
     }
 }

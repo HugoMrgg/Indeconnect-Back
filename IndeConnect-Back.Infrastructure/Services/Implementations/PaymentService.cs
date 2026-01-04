@@ -115,28 +115,31 @@ public class PaymentService : IPaymentService
             throw new InvalidOperationException("Stripe provider not configured");
         }
 
-        // Create PaymentIntent with PayPal support and Customer
+        // C'est ici que j'ai modifié la grestion automatique de stripe pour les paiements en fonction du pays ou tu te situes
         var options = new PaymentIntentCreateOptions
         {
             Amount = (long)(order.TotalAmount * 100),
             Currency = order.Currency.ToLower(),
             Customer = customerId,
 
-            PaymentMethodTypes = new List<string>
+            // ✅ Laisse Stripe gérer les moyens de paiement via le Dashboard
+            AutomaticPaymentMethods = new PaymentIntentAutomaticPaymentMethodsOptions
             {
-                "card",        // Credit/debit cards
-                "paypal",      // PayPal
-                "bancontact"   // Bancontact
+                Enabled = true
             },
-            
+
+            // ⚠️ SetupFutureUsage: garde-le UNIQUEMENT si tu veux réutiliser la méthode plus tard (wallet).
+            // Avec certaines méthodes (bancontact/paiements redirect), ça peut être non pertinent.
+            // Tu peux le laisser, mais si tu vois des comportements bizarres, mets-le à null.
             SetupFutureUsage = "off_session",
-            
+
             Metadata = new Dictionary<string, string>
             {
                 { "order_id", orderId.ToString() },
                 { "user_id", order.UserId.ToString() }
             }
         };
+
 
         try
         {
